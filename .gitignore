@@ -8,3 +8,6 @@ data/*.db-shm
 uploads/*
 !uploads/.gitkeep
 !data/.gitkeep
+
+# Bozze del logo (concept, varianti, anteprima): i file definitivi sono in brand/
+logos/
