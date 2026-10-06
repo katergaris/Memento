@@ -15,6 +15,7 @@ const SHELL_ASSETS = [
   '/icon-64.png',
   '/icon-192.png',
   '/icon-512.png',
+  '/icon.svg',
   '/offline.html',
   '/wallpapers/wp-tramonto.jpg',
   '/wallpapers/wp-palma.jpg',
@@ -53,7 +54,9 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(title, {
       body: data.body || '',
       icon: '/icon-192.png',
-      badge: '/icon-192.png',
+      // Android mostra il badge come silhouette monocromatica: con l'icona
+      // piena a colori comparirebbe un quadrato bianco.
+      badge: '/badge-96.png',
       tag: data.tag || undefined,
       data: { url: data.url || '/' },
     })

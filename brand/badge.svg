@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <g id="icon" transform="translate(-20 -6)">
+    <path d="M164 362V264A46 46 0 0 1 256 264V362M256 264A46 46 0 0 1 348 264V362" fill="none" stroke="#FFFFFF" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="382" cy="168" r="30" fill="#FFFFFF"/>
+  </g>
+</svg>
