@@ -5,7 +5,7 @@ let configured = false;
 function ensureConfigured() {
   if (configured) return;
   webpush.setVapidDetails(
-    'mailto:mindkeep@localhost',
+    'mailto:memento@localhost',
     process.env.VAPID_PUBLIC_KEY,
     process.env.VAPID_PRIVATE_KEY
   );

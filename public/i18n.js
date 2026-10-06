@@ -1,10 +1,25 @@
 'use strict';
+// Rinomina Mindkeep -> Memento: le preferenze del dispositivo (lingua, sfondo,
+// skin, geometria finestre, cronologia CLI) erano salvate con prefisso
+// "mindkeep-". Le sposta una volta sola sul nuovo prefisso, senza
+// sovrascrivere un valore "memento-" gia' presente. Sta qui perche' i18n.js
+// e' il primo script caricato da index.html (cli.js migra da solo la sua chiave).
+try {
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const oldKey = localStorage.key(i);
+    if (!oldKey || !oldKey.startsWith('mindkeep-')) continue;
+    const newKey = 'memento-' + oldKey.slice('mindkeep-'.length);
+    if (localStorage.getItem(newKey) === null) localStorage.setItem(newKey, localStorage.getItem(oldKey));
+    localStorage.removeItem(oldKey);
+  }
+} catch (_) { /* localStorage non disponibile: si riparte dai default */ }
+
 // Traduzioni IT/EN: dizionario piatto chiave -> testo, interpolazione minima
 // con {placeholder}. La lingua e' una preferenza del dispositivo (come lo
 // sfondo), non un dato dell'utente: si sceglie al primo avvio, prima ancora
 // che esista un account, quindi non puo' vivere sul server.
-window.MindkeepI18n = (() => {
-  const LANG_KEY = 'mindkeep-lang';
+window.MementoI18n = (() => {
+  const LANG_KEY = 'memento-lang';
   const LANGS = ['it', 'en'];
 
   const STRINGS = {

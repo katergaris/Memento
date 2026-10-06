@@ -2,9 +2,9 @@
 // Uscita di sicurezza: disattiva la verifica in due passaggi da riga di comando,
 // per quando il telefono si perde e i codici di recupero non sono a portata.
 //
-//   docker compose exec mindkeep node server/disable-2fa.js
+//   docker compose exec memento node server/disable-2fa.js
 //
-// Richiede l'accesso al server su cui gira Mindkeep: chi puo' eseguire questo
+// Richiede l'accesso al server su cui gira Memento: chi puo' eseguire questo
 // comando ha gia' accesso al database, quindi non indebolisce la protezione.
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const db = require('./db');

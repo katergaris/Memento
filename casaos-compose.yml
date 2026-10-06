@@ -1,8 +1,11 @@
+# "name", il nome del servizio e x-casaos.id restano "mindkeep": CasaOS ne
+# ricava $AppID, cioe' la cartella dei dati (/DATA/AppData/$AppID). Cambiarli
+# farebbe ripartire le installazioni esistenti da una cartella vuota.
 name: mindkeep
 services:
   mindkeep:
-    image: ghcr.io/katergaris/mindkeep:latest
-    container_name: mindkeep
+    image: ghcr.io/katergaris/memento:latest
+    container_name: memento
     restart: unless-stopped
     ports:
       - target: 3000
@@ -28,8 +31,8 @@ services:
       ports:
         - container: "3000"
           description:
-            en_US: Mindkeep web UI
-            it_IT: Interfaccia web di Mindkeep
+            en_US: Memento web UI
+            it_IT: Interfaccia web di Memento
       volumes:
         - container: /app/data
           description:
@@ -50,14 +53,14 @@ x-casaos:
   developer: katergaris
   category: Productivity
   title:
-    en_US: Mindkeep
-    it_IT: Mindkeep
+    en_US: Memento
+    it_IT: Memento
   tagline:
     en_US: Self-hosted personal space for ideas, projects, passwords and documents
     it_IT: Spazio personale self-hosted per idee, progetti, password e documenti
   description:
-    en_US: "Mindkeep is a self-hosted personal space for ideas, projects, an encrypted password vault, accounts and documents, linked together by dossiers. No data leaves your server. On first access it asks you to create your own username and password; no configuration required."
-    it_IT: "Mindkeep e' uno spazio personale self-hosted per idee, progetti, un vault password cifrato, account e documenti, collegati tra loro dai fascicoli. Nessun dato lascia il tuo server. Al primo accesso chiede di creare username e password: nessuna configurazione richiesta."
+    en_US: "Memento is a self-hosted personal space for ideas, projects, an encrypted password vault, accounts and documents, linked together by dossiers. No data leaves your server. On first access it asks you to create your own username and password; no configuration required."
+    it_IT: "Memento e' uno spazio personale self-hosted per idee, progetti, un vault password cifrato, account e documenti, collegati tra loro dai fascicoli. Nessun dato lascia il tuo server. Al primo accesso chiede di creare username e password: nessuna configurazione richiesta."
   icon: https://raw.githubusercontent.com/katergaris/MindKeep/main/public/icon.svg
   thumbnail: https://raw.githubusercontent.com/katergaris/MindKeep/main/public/icon-512.png
   index: /

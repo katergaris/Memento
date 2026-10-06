@@ -124,10 +124,10 @@
   }
 
   // ---------------- Cronologia comandi (frecce su/giu', persistente) ----------------
-  const HISTORY_KEY = 'mindkeep-cli-history';
+  const HISTORY_KEY = 'memento-cli-history';
   const MAX_HISTORY = 100;
   function loadHistory() {
-    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch (e) { return []; }
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || localStorage.getItem('mindkeep-cli-history') || '[]'); } catch (e) { return []; }
   }
   function pushHistory(cmd) {
     const history = loadHistory();

@@ -15,7 +15,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 // ENCRYPTION_KEY viene ulteriormente validata (presenza/lunghezza minima) da server/crypto.js al primo require
 
-// Mindkeep gira spesso dietro un reverse proxy che termina TLS (Caddy/Traefik/
+// Memento gira spesso dietro un reverse proxy che termina TLS (Caddy/Traefik/
 // Nginx, vedi README): senza "trust proxy" Express vede solo la connessione
 // in chiaro tra proxy e app, quindi req.protocol risulta sempre "http" (anche
 // se il browser e' su https) e req.ip e' sempre l'IP del proxy, non del
@@ -24,7 +24,7 @@ const PORT = process.env.PORT || 3000;
 // bruta sul login (tutte le richieste sembrano venire dallo stesso IP). Ci si
 // fida degli header X-Forwarded-* solo se la connessione arriva da una rete
 // privata/locale (dove tipicamente gira il proxy), non da un client pubblico
-// che potrebbe falsificarli con Mindkeep esposto direttamente senza proxy.
+// che potrebbe falsificarli con Memento esposto direttamente senza proxy.
 app.set('trust proxy', 'loopback, linklocal, uniquelocal');
 
 // --- Durata dell'accesso (SESSION_DAYS nel file .env) ---
@@ -217,7 +217,7 @@ app.use((err, req, res, next) => {
 });
 
 const server = app.listen(PORT, () => {
-  console.log(`Mindkeep in ascolto su http://localhost:${PORT}`);
+  console.log(`Memento in ascolto su http://localhost:${PORT}`);
   console.log(
     SESSION_MAX_AGE >= NEVER_MS
       ? 'Accesso: nessuna scadenza automatica (imposta SESSION_DAYS nel file .env per cambiarla)'

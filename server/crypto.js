@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const RAW_KEY = process.env.ENCRYPTION_KEY;
 if (!RAW_KEY || RAW_KEY.length < 8) {
   console.error(
-    'ENCRYPTION_KEY mancante o troppo corta. Impostala nel file .env prima di avviare Mindkeep.'
+    'ENCRYPTION_KEY mancante o troppo corta. Impostala nel file .env prima di avviare Memento.'
   );
   process.exit(1);
 }

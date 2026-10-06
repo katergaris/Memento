@@ -91,7 +91,7 @@ function verify(secret, token, { window = 1, now = Date.now() } = {}) {
 }
 
 // URI standard che le app di autenticazione leggono dal QR.
-function otpauthUrl(secret, { account = 'Mindkeep', issuer = 'Mindkeep' } = {}) {
+function otpauthUrl(secret, { account = 'Memento', issuer = 'Memento' } = {}) {
   const label = encodeURIComponent(`${issuer}:${account}`);
   const params = new URLSearchParams({
     secret,

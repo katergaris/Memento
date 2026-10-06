@@ -2,7 +2,7 @@
   'use strict';
 
   // ---------------- Lingua ----------------
-  const I18N = window.MindkeepI18n;
+  const I18N = window.MementoI18n;
   const tr = I18N.t;
 
   // ---------------- PWA: cache del guscio per installabilita' e avvio offline ----------------
@@ -355,7 +355,7 @@
     if (closeModal()) closedSomething = true;
     if (typeof closeStartMenu === 'function' && closeStartMenu()) closedSomething = true;
     if (typeof closeQuickCapture === 'function' && closeQuickCapture()) closedSomething = true;
-    if (!closedSomething && window.MindkeepWM) window.MindkeepWM.closeFocusedWindow();
+    if (!closedSomething && window.MementoWM) window.MementoWM.closeFocusedWindow();
   });
 
   function el(html) {
@@ -598,7 +598,7 @@
 
   function buildStartMenu() {
     startMenu.innerHTML = '';
-    const sidebar = el('<div class="start-menu-sidebar">MINDKEEP</div>');
+    const sidebar = el('<div class="start-menu-sidebar">MEMENTO</div>');
     const items = el('<div class="start-menu-items"></div>');
     SECTIONS.forEach((s, i) => {
       const prev = SECTIONS[i - 1];
@@ -643,7 +643,7 @@
   });
   // wm.js chiede di aprire il menu Avvio quando l'utente tocca "Affianca" su
   // mobile, per scegliere la seconda app da mettere in split.
-  window.addEventListener('mindkeep:request-start-menu', openStartMenu);
+  window.addEventListener('memento:request-start-menu', openStartMenu);
 
   // Gesto swipe-up per aprire il menu Avvio su mobile (paradigma "pocket PC"
   // suggerito dalla skill Windows 95): il tasto Avvio resta comunque sempre
@@ -676,7 +676,7 @@
 
   // ---------------- Desktop: sfondo, cartelle e note recenti come icone ----------------
   // Lo sfondo e' una preferenza solo del dispositivo (localStorage), non un
-  // dato di Mindkeep: niente migrazione, niente sincronizzazione fra dispositivi.
+  // dato di Memento: niente migrazione, niente sincronizzazione fra dispositivi.
   // "classico" non ha un suo themeColor: lascia che sia lo skin attivo a
   // decidere il colore (vedi updateThemeColorMeta) invece di forzare sempre
   // il teal di Windows 95 anche quando e' selezionato un altro skin.
@@ -691,7 +691,7 @@
   const desktopIconsEl = document.getElementById('desktop-icons');
 
   function currentWallpaper() {
-    return localStorage.getItem('mindkeep-wallpaper') || 'classico';
+    return localStorage.getItem('memento-wallpaper') || 'classico';
   }
 
   // Colore della barra del browser/PWA: il wallpaper vince se ne ha uno suo
@@ -726,12 +726,12 @@
       desktopWallpaperEl.style.background = '';
       desktopWallpaperEl.appendChild(el('<img class="wallpaper-logo" src="/icon-512.png" alt="" />'));
     }
-    localStorage.setItem('mindkeep-wallpaper', name);
+    localStorage.setItem('memento-wallpaper', name);
     applyGlobalTheme(name);
   }
 
   // Tema del chrome (finestre/taskbar/menu Avvio/pulsanti/campi) — skill
-  // mindkeep-ui, ramo sperimentale. Stessa logica di applyWallpaper: solo
+  // memento-ui, ramo sperimentale. Stessa logica di applyWallpaper: solo
   // dispositivo, niente sync. 'windows-95' e' il default e non serve un
   // attributo (nessun file themes.css da caricare per quel caso).
   // themeColor qui sotto = --accent di ciascuno skin in themes.css (il
@@ -751,7 +751,7 @@
   };
 
   function currentTheme() {
-    return localStorage.getItem('mindkeep-theme') || 'windows-95';
+    return localStorage.getItem('memento-theme') || 'windows-95';
   }
 
   function applyTheme(name) {
@@ -761,7 +761,7 @@
       document.documentElement.removeAttribute('data-theme');
       name = 'windows-95';
     }
-    localStorage.setItem('mindkeep-theme', name);
+    localStorage.setItem('memento-theme', name);
     updateThemeColorMeta();
   }
 
@@ -1069,7 +1069,7 @@
         const idea = await api('/ideas', { method: 'POST', body: JSON.stringify({ title, body: text, tags }) });
         if (qcSelectedDossier) {
           await api(`/dossiers/${qcSelectedDossier.id}/links`, { method: 'POST', body: JSON.stringify({ item_type: 'idea', item_id: idea.id }) });
-          if (MindkeepWM.getWindow(windowId('dossiers'))) render('dossiers', { highlight: qcSelectedDossier.id });
+          if (MementoWM.getWindow(windowId('dossiers'))) render('dossiers', { highlight: qcSelectedDossier.id });
         }
         toast(tr('toast_idea_saved'));
         closeQuickCapture();
@@ -1099,7 +1099,7 @@
   function windowId(view) { return 'win-' + view; }
 
   async function render(view, opts = {}) {
-    const win = MindkeepWM.openWindow({
+    const win = MementoWM.openWindow({
       id: windowId(view),
       title: VIEW_LABELS[view] || view,
       icon: appIcon(view, 14),
@@ -2944,7 +2944,7 @@
     wallpaperBlock.appendChild(wallpaperRow);
     root.appendChild(wallpaperBlock);
 
-    const themeBlock = el('<div class="section-block"><h3>Aspetto</h3><p class="card-sub">Stile di finestre, taskbar e pulsanti — solo su questo dispositivo. Sperimentale (skill mindkeep-ui).</p></div>');
+    const themeBlock = el('<div class="section-block"><h3>Aspetto</h3><p class="card-sub">Stile di finestre, taskbar e pulsanti — solo su questo dispositivo. Sperimentale (skill memento-ui).</p></div>');
     const themeRow = el('<div class="card-actions" style="padding-top:10px"></div>');
     Object.entries(THEMES).forEach(([key, th]) => {
       const btn = el(`<button class="btn btn-sm${key === currentTheme() ? ' btn-primary' : ''}" data-theme-key="${key}"></button>`);
@@ -2969,7 +2969,7 @@
     const help = el(`<div class="section-block"><h3>${esc(tr('section_lost_phone'))}</h3></div>`);
     help.appendChild(el(`
       <p class="card-sub">${esc(tr('lost_phone_hint'))}</p>
-      <p><code class="cmd-line">docker compose exec mindkeep node server/disable-2fa.js</code></p>
+      <p><code class="cmd-line">docker compose exec memento node server/disable-2fa.js</code></p>
     `));
     root.appendChild(help);
   };

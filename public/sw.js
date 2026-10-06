@@ -3,8 +3,8 @@
 // l'app all'istante e renderla installabile, non per usare i dati offline
 // (idee, vault, ecc. servono comunque il server). Bump della versione per
 // invalidare la cache quando cambiano gli asset precaricati qui sotto.
-const CACHE_VERSION = 'v4';
-const CACHE_NAME = `mindkeep-shell-${CACHE_VERSION}`;
+const CACHE_VERSION = 'v5';
+const CACHE_NAME = `memento-shell-${CACHE_VERSION}`;
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -41,7 +41,7 @@ self.addEventListener('activate', (event) => {
 // generica, con l'icona del browser invece della nostra) se questo handler
 // non ne mostra una propria in tempo, o se lancia un errore prima di
 // arrivare a showNotification(): da qui l'esito segnalato dall'utente
-// ("si vede solo Mindkeep con l'icona di Chrome") quando il payload non
+// ("si vede solo Memento con l'icona di Chrome") quando il payload non
 // arriva o non si legge come previsto. Il try/catch sotto copre il caso di
 // payload non-JSON, ma un body vuoto puo' comunque produrre una notifica
 // dall'aspetto "vuoto": vedi il fallback in reminder-notifier.js.

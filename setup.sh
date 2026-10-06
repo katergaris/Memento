@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Script di installazione guidata per Mindkeep (Linux / macOS).
+# Script di installazione guidata per Memento (Linux / macOS).
 # Controlla i prerequisiti, prepara il file .env con segreti generati
 # automaticamente, avvia il container e attende che sia pronto.
 
 set -euo pipefail
 cd "$(dirname "$0")"
 
-echo "== Mindkeep — installazione =="
+echo "== Memento — installazione =="
 echo ""
 
 # --- 1. Verifica Docker ---
@@ -130,12 +130,15 @@ PORT="$CANDIDATE_PORT"
 export GIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo dev)"
 
 echo ""
-echo "Avvio Mindkeep (la prima volta può richiedere qualche minuto per scaricare e compilare le dipendenze)..."
-$COMPOSE up -d --build
+echo "Avvio Memento (la prima volta può richiedere qualche minuto per scaricare e compilare le dipendenze)..."
+# --remove-orphans: dopo la rinomina Mindkeep -> Memento il servizio si chiama
+# "memento"; il vecchio container "mindkeep" (stessi dati in ./data) va tolto
+# o terrebbe occupata la porta.
+$COMPOSE up -d --build --remove-orphans
 
 # --- 5. Attende che sia pronto ---
 echo ""
-echo -n "Attendo che Mindkeep risponda su http://localhost:${PORT} "
+echo -n "Attendo che Memento risponda su http://localhost:${PORT} "
 READY=0
 for _ in $(seq 1 40); do
   if command -v curl >/dev/null 2>&1; then
@@ -150,11 +153,11 @@ echo ""
 
 if [ "$READY" = "1" ]; then
   echo ""
-  echo "✓ Mindkeep è pronto: http://localhost:${PORT}"
+  echo "✓ Memento è pronto: http://localhost:${PORT}"
   echo "  Al primo accesso ti verrà chiesto di creare username e password."
 else
   echo ""
-  echo "Mindkeep non ha ancora risposto. Può essere solo questione di qualche secondo in più,"
+  echo "Memento non ha ancora risposto. Può essere solo questione di qualche secondo in più,"
   echo "oppure qualcosa è andato storto. Controlla i log con:"
   echo "  $COMPOSE logs -f"
 fi
