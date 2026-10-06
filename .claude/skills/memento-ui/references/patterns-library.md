@@ -42,7 +42,7 @@ many open windows degrade to a swipeable strip instead of wrapping.
   listener: `if (launcher.contains(target) || trigger.contains(target)) return;`
   then close. This is what makes it work identically for mouse and touch,
   where `blur`/`focusout` are unreliable.
-- The trigger control also needs a `mindkeep:request-*`-style custom event
+- The trigger control also needs a `memento:request-*`-style custom event
   it listens for, so the mobile split control (§6 in the main contract)
   can open it programmatically without the two modules needing to import
   each other directly.

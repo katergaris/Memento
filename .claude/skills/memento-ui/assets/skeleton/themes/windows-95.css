@@ -1,5 +1,5 @@
-/* Theme: Windows 95 — reference skin, matches MindKeep's own chrome exactly.
-   Pairs with mindkeep-ui skeleton.css. See windows-95-web-designer for the
+/* Theme: Windows 95 — reference skin, matches Memento's own chrome exactly.
+   Pairs with memento-ui skeleton.css. See windows-95-web-designer for the
    full authentic component library this theme is drawn from. */
 :root[data-theme="windows-95"] {
   --mk-font-ui: 'Tahoma', 'Segoe UI', Verdana, sans-serif;

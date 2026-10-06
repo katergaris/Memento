@@ -1,4 +1,4 @@
-# Continua da qui — Mindkeep, redesign Windows 95
+# Continua da qui — Memento, redesign Windows 95
 
 Se stai leggendo questo file all'inizio di una nuova chat: questo documento ti dà
 tutto il contesto per continuare esattamente da dove si era interrotto. Leggi
@@ -533,7 +533,7 @@ già usa pulsanti a icona 40×40 su mobile).
   caldo prima di considerare la richiesta chiusa.
 - Nota tecnica: per il test è stato lanciato un secondo processo
   `node server/index.js` con `DB_PATH=:memory:` e `SESSION_SECRET`/
-  `ENCRYPTION_KEY` dummy, così da non toccare `data/mindkeep.db` né
+  `ENCRYPTION_KEY` dummy, così da non toccare `data/memento.db` né
   `data/.secrets.env` reali (verificato: mtime invariato). Il processo
   di test è stato terminato a fine verifica.
 
@@ -627,7 +627,7 @@ progetto.
   modale "Collega a cartella" (nessun errore, anche a zero cartelle
   esistenti), eliminazione — tutto testato sia a 1280px che a 390px,
   zero errori console. Suite server 34/34 invariata.
-- Commit: `27c16e8` (+ skill `mindkeep-run`/`mindkeep-handoff` in
+- Commit: `27c16e8` (+ skill `memento-run`/`memento-handoff` in
   `8e51d42`, create nella stessa sessione su richiesta esplicita
   dell'utente, non legate a questo lavoro sui Progetti).
 - **Non ancora confermato dall'utente sull'uso reale** — quando se ne

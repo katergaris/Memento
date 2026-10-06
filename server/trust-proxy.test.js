@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const express = require('express');
 
-// Mindkeep gira spesso dietro un reverse proxy che termina TLS (vedi
+// Memento gira spesso dietro un reverse proxy che termina TLS (vedi
 // server/index.js): senza "trust proxy" req.protocol resta sempre "http" e
 // req.ip resta l'IP del proxy, il che rompe sia la verifica dell'origine
 // WebAuthn sia il blocco anti forza bruta sul login. Qui si verifica che
@@ -37,11 +37,11 @@ test('senza reverse proxy davanti: protocollo e host sono quelli reali della ric
 test('dietro un reverse proxy TLS-terminating (X-Forwarded-Proto): il protocollo diventa https', async () => {
   await withApp(async (base) => {
     const body = await fetch(`${base}/whoami`, {
-      headers: { 'X-Forwarded-Proto': 'https', 'X-Forwarded-Host': 'mindkeep.esempio.it' },
+      headers: { 'X-Forwarded-Proto': 'https', 'X-Forwarded-Host': 'memento.esempio.it' },
     }).then((r) => r.json());
     // Il client di test si connette da 127.0.0.1 (loopback, di cui ci si fida):
     // Express deve leggere gli header X-Forwarded-* invece di ignorarli.
     assert.equal(body.protocol, 'https');
-    assert.equal(body.hostname, 'mindkeep.esempio.it');
+    assert.equal(body.hostname, 'memento.esempio.it');
   });
 });

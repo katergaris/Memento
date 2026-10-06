@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the mindkeep-ui skill.
+All notable changes to the memento-ui skill.
 
 ## [1.1.0] - 2026-09-03
 
@@ -14,7 +14,7 @@ All notable changes to the mindkeep-ui skill.
   drop-in — swapping `data-theme` re-skins the whole app with no JS changes
 - 10 ready-made themes in `assets/skeleton/themes/`, refined from the design
   canvas exploration into working token sets: `windows-95` (the reference
-  skin, matches MindKeep's real chrome), `neumorphism`, `glassmorphism`,
+  skin, matches Memento's real chrome), `neumorphism`, `glassmorphism`,
   `macos-modern`, `windows-11-fluent`, `material-3`, `neubrutalism`,
   `cyberpunk`, `minimal-flat`, `aero-glass`
 - A "Ready-Made Skeleton + Themes" section in SKILL.md explaining how to
@@ -37,7 +37,7 @@ All notable changes to the mindkeep-ui skill.
 
 ### Added
 - Initial release: skin-agnostic behavior contract for a multi-window
-  desktop app shell, extracted from MindKeep's production `wm.js`/`app.js`
+  desktop app shell, extracted from Memento's production `wm.js`/`app.js`
 - Window state machine (normal/minimized, maximized as a modifier)
 - Focus/z-index rules, including click-anywhere-to-focus
 - Drag/resize mechanics via pointer capture, with viewport clamping

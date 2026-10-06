@@ -1,5 +1,5 @@
 {
-  "name": "mindkeep",
+  "name": "memento",
   "version": "1.0.0",
   "description": "Spazio personale self-hosted: idee, progetti, vault password, account, drive documenti e fascicoli collegati.",
   "main": "server/index.js",

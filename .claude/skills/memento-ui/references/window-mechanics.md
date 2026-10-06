@@ -1,6 +1,6 @@
 # Window Mechanics — Worked Example
 
-Concrete numbers and technique, as implemented in MindKeep's `wm.js`
+Concrete numbers and technique, as implemented in Memento's `wm.js`
 (a standalone module with zero knowledge of the app's views/data — it only
 exposes `openWindow / closeWindow / focusWindow / minimizeWindow /
 restoreWindow / getWindow`, consumed by the rest of the app). Reuse the

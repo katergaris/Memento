@@ -1,11 +1,11 @@
-# Script di installazione guidata per Mindkeep (Windows PowerShell).
+# Script di installazione guidata per Memento (Windows PowerShell).
 # Controlla i prerequisiti, prepara il file .env con segreti generati
 # automaticamente, avvia il container e attende che sia pronto.
 
 $ErrorActionPreference = "Stop"
 Set-Location -Path $PSScriptRoot
 
-Write-Host "== Mindkeep — installazione =="
+Write-Host "== Memento — installazione =="
 Write-Host ""
 
 # --- 1. Verifica Docker ---
@@ -126,12 +126,15 @@ if (-not $gitSha) { $gitSha = "dev" }
 $env:GIT_SHA = $gitSha
 
 Write-Host ""
-Write-Host "Avvio Mindkeep (la prima volta può richiedere qualche minuto)..."
-docker compose up -d --build
+Write-Host "Avvio Memento (la prima volta può richiedere qualche minuto)..."
+# --remove-orphans: dopo la rinomina Mindkeep -> Memento il servizio si chiama
+# "memento"; il vecchio container "mindkeep" (stessi dati in ./data) va tolto
+# o terrebbe occupata la porta.
+docker compose up -d --build --remove-orphans
 
 # --- 5. Attende che sia pronto ---
 Write-Host ""
-Write-Host "Attendo che Mindkeep risponda su http://localhost:$port ..."
+Write-Host "Attendo che Memento risponda su http://localhost:$port ..."
 $ready = $false
 for ($i = 0; $i -lt 40; $i++) {
   try {
@@ -143,10 +146,10 @@ for ($i = 0; $i -lt 40; $i++) {
 
 if ($ready) {
   Write-Host ""
-  Write-Host "OK Mindkeep è pronto: http://localhost:$port"
+  Write-Host "OK Memento è pronto: http://localhost:$port"
   Write-Host "   Al primo accesso ti verrà chiesto di creare username e password."
 } else {
   Write-Host ""
-  Write-Host "Mindkeep non ha ancora risposto. Controlla i log con:"
+  Write-Host "Memento non ha ancora risposto. Controlla i log con:"
   Write-Host "  docker compose logs -f"
 }

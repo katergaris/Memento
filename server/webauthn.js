@@ -6,10 +6,10 @@ const {
 } = require('@simplewebauthn/server');
 const db = require('./db');
 
-const RP_NAME = 'Mindkeep';
+const RP_NAME = 'Memento';
 const CHALLENGE_TTL_MS = 2 * 60 * 1000;
 
-// Mindkeep e' self-hosted e puo' essere raggiunto da domini diversi (IP della
+// Memento e' self-hosted e puo' essere raggiunto da domini diversi (IP della
 // rete locale, dominio personale, Tailscale, ...): l'RP ID di WebAuthn viene
 // preso dall'host della richiesta invece che fissato una volta per tutte, cosi'
 // la stessa impronta funziona da qualunque indirizzo si usi per aprire l'app

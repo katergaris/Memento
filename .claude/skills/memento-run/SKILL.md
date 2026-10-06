@@ -1,12 +1,12 @@
 ---
-name: mindkeep-run
-description: Launch and drive Mindkeep (this app) in an isolated instance to manually test or screenshot a change — never against the user's real database or vault encryption key. Use when asked to run, test, or screenshot Mindkeep, or to verify a UI/UX change actually works before calling it done. NOT for the automated test suite (use `npm test`), and NOT a substitute for reading server/routes code when the question is about API behavior rather than the rendered UI.
+name: memento-run
+description: Launch and drive Memento (this app) in an isolated instance to manually test or screenshot a change — never against the user's real database or vault encryption key. Use when asked to run, test, or screenshot Memento, or to verify a UI/UX change actually works before calling it done. NOT for the automated test suite (use `npm test`), and NOT a substitute for reading server/routes code when the question is about API behavior rather than the rendered UI.
 ---
 
-# Running Mindkeep for manual/visual verification
+# Running Memento for manual/visual verification
 
-Mindkeep is a personal, self-hosted Express + vanilla-JS app (no build
-step) with a real password vault. `data/mindkeep.db` and
+Memento is a personal, self-hosted Express + vanilla-JS app (no build
+step) with a real password vault. `data/memento.db` and
 `data/.secrets.env` hold the user's actual encrypted passwords and
 encryption keys. **Never launch the app against those files.** Always
 run an isolated instance and tear it down when done.
@@ -32,7 +32,7 @@ timeout 20 bash -c 'until curl -sf http://localhost:3911/api/health >/dev/null; 
 - Pick a `PORT` that isn't the user's real instance (3000 by default).
 - After you're done, kill whatever's listening on that port — don't
   leave a stray node process around.
-- Sanity check afterwards: `data/mindkeep.db` and `data/.secrets.env`
+- Sanity check afterwards: `data/memento.db` and `data/.secrets.env`
   mtimes should be untouched (`ls -la data/`).
 
 ## 2. Get a browser

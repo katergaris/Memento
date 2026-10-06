@@ -1,6 +1,6 @@
 ---
-name: mindkeep-handoff
-description: Read and maintain .claude/HANDOFF.md, Mindkeep's cross-session continuity log. Use at the start of a Mindkeep session to get up to speed on where things stand, and at the end of one (after real, committed work) to record what happened so the next session can resume cold. NOT for routine commit messages, code comments, or one-off exploratory questions that don't change project state.
+name: memento-handoff
+description: Read and maintain .claude/HANDOFF.md, Memento's cross-session continuity log. Use at the start of a Memento session to get up to speed on where things stand, and at the end of one (after real, committed work) to record what happened so the next session can resume cold. NOT for routine commit messages, code comments, or one-off exploratory questions that don't change project state.
 ---
 
 # Maintaining .claude/HANDOFF.md
@@ -15,7 +15,7 @@ disagree — the file can go stale if a session forgot to update it.
 
 ## Reading it (start of session)
 
-If the user references past Mindkeep work, asks to continue, or you're
+If the user references past Memento work, asks to continue, or you're
 about to touch a view/feature that plausibly has history, read the file
 — at minimum the top "## Leggi prima questo: stato al DD/MM/YYYY, fine
 sessione" section, which is a deliberately short resume-here summary

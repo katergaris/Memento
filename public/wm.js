@@ -1,10 +1,10 @@
 'use strict';
 // Gestore finestre in stile Windows 95: crea/sposta/ridimensiona/mette a fuoco
 // le finestre, gestisce la taskbar e il comportamento desktop/mobile.
-// app.js chiama solo le funzioni esposte su window.MindkeepWM; qui dentro non
-// si conosce nulla delle view o dei dati di Mindkeep (nessuna dipendenza
+// app.js chiama solo le funzioni esposte su window.MementoWM; qui dentro non
+// si conosce nulla delle view o dei dati di Memento (nessuna dipendenza
 // nell'altro verso), cosi' i due file restano disaccoppiati.
-window.MindkeepWM = (() => {
+window.MementoWM = (() => {
   const windowLayer = document.getElementById('window-layer');
   const taskbarWindows = document.getElementById('taskbar-windows');
   const taskbarClock = document.getElementById('taskbar-clock');
@@ -67,7 +67,7 @@ window.MindkeepWM = (() => {
   // ridimensionamento, riapplicata (con i limiti dell'attuale viewport,
   // nel caso la finestra del browser sia piu' piccola di quando fu salvata)
   // quando la stessa app viene riaperta in una sessione successiva.
-  const GEOMETRY_KEY = 'mindkeep-window-geometry';
+  const GEOMETRY_KEY = 'memento-window-geometry';
   function loadGeometryStore() {
     try { return JSON.parse(localStorage.getItem(GEOMETRY_KEY) || '{}'); } catch (e) { return {}; }
   }
@@ -265,7 +265,7 @@ window.MindkeepWM = (() => {
     const titlebarEl = el.querySelector('.titlebar');
     const contentEl = el.querySelector('.win-content');
     el.id = id;
-    if (window.MindkeepI18n) window.MindkeepI18n.applyStaticTranslations(el);
+    if (window.MementoI18n) window.MementoI18n.applyStaticTranslations(el);
     el.querySelector('.titlebar-icon').innerHTML = icon || '';
     el.querySelector('.titlebar-label').textContent = title;
     if (!resizable) el.querySelectorAll('.resize-handle').forEach((h) => h.remove());
@@ -288,7 +288,7 @@ window.MindkeepWM = (() => {
       else if (action === 'split') {
         splitPending = true;
         btn.classList.add('hidden');
-        window.dispatchEvent(new CustomEvent('mindkeep:request-start-menu'));
+        window.dispatchEvent(new CustomEvent('memento:request-start-menu'));
       }
     });
 

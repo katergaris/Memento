@@ -1,5 +1,5 @@
 services:
-  mindkeep:
+  memento:
     build:
       context: .
       # Passato dagli script di setup (git rev-parse --short HEAD) cosi' la
@@ -9,7 +9,7 @@ services:
       # --build" ha davvero preso l'ultimo codice o ha riusato una build vecchia.
       args:
         GIT_SHA: ${GIT_SHA:-dev}
-    container_name: mindkeep
+    container_name: memento
     restart: unless-stopped
     ports:
       - "${HOST_PORT:-3000}:${PORT:-3000}"
@@ -25,7 +25,7 @@ services:
     volumes:
       - ./data:/app/data
       # Punta a un disco esterno (es. un HDD montato) impostando UPLOADS_DIR
-      # nel tuo .env, es: UPLOADS_DIR=/mnt/hdd1/mindkeep-uploads
+      # nel tuo .env, es: UPLOADS_DIR=/mnt/hdd1/memento-uploads
       - ${UPLOADS_DIR:-./uploads}:/app/uploads
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:'+(process.env.PORT||3000)+'/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]

@@ -1,5 +1,5 @@
 'use strict';
-/* mindkeep-ui skeleton — window manager.
+/* memento-ui skeleton — window manager.
    Implements the behavior contract from ../SKILL.md: window state machine,
    focus/z-index, pointer-capture drag/resize, geometry persistence,
    cascade placement, the taskbar toggle rule, the launcher, and the

@@ -1,6 +1,6 @@
 ---
-name: mindkeep-ui
-description: Skin-agnostic behavior contract AND a working, themeable skeleton for a multi-window desktop app shell — windows, taskbar, launcher, mobile split-view — extracted from MindKeep's production window manager. Ships assets/skeleton/ (index.html, skeleton.css, wm.js) plus 10 ready CSS themes (Win95, neumorphism, glassmorphism, macOS, Win11, Material 3, neubrutalism, cyberpunk, minimal flat, aero glass), swappable via a data-theme attribute, no JS changes. Use for a "gestionale"/management app, internal tool, admin dashboard, or any app with multiple resizable/draggable windows, a taskbar-style switcher, or a Start-menu-style launcher, desktop AND mobile. Activate on "multi-window", "window manager", "desktop shell", "taskbar", "start menu", "launcher", "gestionale", "draggable resizable windows", "split view on mobile", "theme switcher". NOT for single-panel apps, NOT for color/font picking outside this shell, NOT for generic responsive-grid advice.
+name: memento-ui
+description: Skin-agnostic behavior contract AND a working, themeable skeleton for a multi-window desktop app shell — windows, taskbar, launcher, mobile split-view — extracted from Memento's production window manager. Ships assets/skeleton/ (index.html, skeleton.css, wm.js) plus 10 ready CSS themes (Win95, neumorphism, glassmorphism, macOS, Win11, Material 3, neubrutalism, cyberpunk, minimal flat, aero glass), swappable via a data-theme attribute, no JS changes. Use for a "gestionale"/management app, internal tool, admin dashboard, or any app with multiple resizable/draggable windows, a taskbar-style switcher, or a Start-menu-style launcher, desktop AND mobile. Activate on "multi-window", "window manager", "desktop shell", "taskbar", "start menu", "launcher", "gestionale", "draggable resizable windows", "split view on mobile", "theme switcher". NOT for single-panel apps, NOT for color/font picking outside this shell, NOT for generic responsive-grid advice.
 allowed-tools: Read,Write,Edit,Glob,Grep
 metadata:
   category: Design & Creative
@@ -13,16 +13,16 @@ metadata:
   - mobile-ux
   pairs-with:
   - skill: windows-95-web-designer
-    reason: Ready-made visual skin (gradients, bevels, Start menu chrome) that already satisfies this contract — MindKeep itself is built on this exact pairing
+    reason: Ready-made visual skin (gradients, bevels, Start menu chrome) that already satisfies this contract — Memento itself is built on this exact pairing
   - skill: windows-3-1-web-designer
     reason: Alternate flatter retro skin compatible with the same window/taskbar/launcher behavior contract
   - skill: design
     reason: Use its multi-artboard canvas to explore new visual skins (modern, non-retro) for this same behavior contract before committing to one
 ---
 
-# MindKeep UI — Multi-Window Desktop Shell (Behavior Contract)
+# Memento UI — Multi-Window Desktop Shell (Behavior Contract)
 
-This skill is **not an aesthetic**. It captures how MindKeep's window manager
+This skill is **not an aesthetic**. It captures how Memento's window manager
 *behaves* — proven in a real, daily-used "gestionale" app — deliberately
 separated from how it *looks*. Windows 95 is one skin that satisfies this
 contract; it is not the contract itself. Use this skill to build or reason
@@ -169,7 +169,7 @@ happens to be.
 
 This is the pattern most worth stealing wholesale. A generic "shrink the
 desktop metaphor to fit a phone" approach (icon grid + one modal window)
-throws away the multi-window value proposition entirely. MindKeep's answer
+throws away the multi-window value proposition entirely. Memento's answer
 keeps it, on the user's terms:
 
 **Default: one window fills the screen.** Opening any window on mobile
@@ -364,12 +364,12 @@ drag/resize don't apply there) — don't fight this override per-theme.
 
 Read the relevant reference file when implementing that piece precisely —
 this document is the contract summary, the references carry the worked
-example (MindKeep's actual implementation) each rule was extracted from.
+example (Memento's actual implementation) each rule was extracted from.
 
 ## Pairs With
 
 - **windows-95-web-designer** — drop-in compatible skin; this is the skin
-  MindKeep itself uses today
+  Memento itself uses today
 - **windows-3-1-web-designer** — alternate flatter retro skin, same
   compatibility rules apply
 - **design** — use its multi-artboard canvas to explore new, non-retro

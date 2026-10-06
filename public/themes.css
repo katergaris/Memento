@@ -1,5 +1,5 @@
-/* Temi alternativi per il chrome di MindKeep (finestre, taskbar, menu Avvio,
-   pulsanti, campi) — esperimento su branch, skill mindkeep-ui.
+/* Temi alternativi per il chrome di Memento (finestre, taskbar, menu Avvio,
+   pulsanti, campi) — esperimento su branch, skill memento-ui.
    Ogni blocco ridefinisce l'intero set di variabili di style.css sotto
    [data-theme="…"]; il tema Windows 95 resta quello di default (nessun
    attributo o data-theme="windows-95") e non ha bisogno di un blocco qui.
@@ -10,7 +10,7 @@
    in style.css). Superfici più specifiche — calendario, vault, composer,
    notifiche, schermata di login, modali — ereditano solo la palette
    colore (restano "a rilievo" in stile Windows 95): non sono nel perimetro
-   della skill mindkeep-ui, che governa finestre/taskbar/launcher. */
+   della skill memento-ui, che governa finestre/taskbar/launcher. */
 
 [data-theme="neumorphism"] {
   --bg: linear-gradient(160deg,#e6ebf3,#dbe1ec);
@@ -97,7 +97,7 @@
 }
 /* Pallini colorati al posto dei tre pulsanti generici — unico tema che lo fa,
    perché è il dettaglio più riconoscibile di macOS. Le classi win-btn-close/
-   -min/-max esistono già nel template di MindKeep (index.html). */
+   -min/-max esistono già nel template di Memento (index.html). */
 [data-theme="macos-modern"] .win-btn-close,
 [data-theme="macos-modern"] .win-btn-min,
 [data-theme="macos-modern"] .win-btn-max { border-radius: 50%; color: transparent; box-shadow: none; }
