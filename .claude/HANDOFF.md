@@ -4,6 +4,20 @@ Se stai leggendo questo file all'inizio di una nuova chat: questo documento ti d
 tutto il contesto per continuare esattamente da dove si era interrotto. Leggi
 anche i file collegati sotto, poi procedi.
 
+## Stato al 07/10/2026 (sera) — nuova interfaccia IN PRODUZIONE
+
+- `nuova-ui` unito in `main` (fast-forward) e pushato insieme a `classico` e
+  al tag `v1-classico`. Fase 2 fatta (commit `9fa32e2`): pagina Cartella stile
+  "C" (#/dossiers/ID, scadenze in cima, contenuto per tipo, scollega, modifica),
+  Progetti a schede con avanzamento, Note come post-it.
+- Produzione aggiornata su ZimaOS (container `mindkeep-memento`, porta 3012)
+  dopo backup verificato; dettagli, percorso del backup e verifiche in
+  `ProxMox/diario-modifiche.md` (2026-10-07). Dati identici, vault 14/14
+  decifrato. Nessun cron di autoupdate attivo: aggiornamento lanciato a mano.
+- Prossimi passi possibili: rifiniture dall'uso reale dell'utente; reimpostare
+  l'autoupdate; eventuale rinomina del repo GitHub e della voce "MindKeep
+  Memento" nella dashboard The Hook.
+
 ## Stato al 07/10/2026 — nuova interfaccia (branch `nuova-ui`)
 
 - **Rinomina Mindkeep → Memento** fatta in tutto il codice (commit `771a10c`):
