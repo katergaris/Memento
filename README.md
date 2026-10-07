@@ -1,21 +1,24 @@
-# Memento
+<p align="center"><img src="brand/logo-1024.png" alt="Memento" width="420"></p>
 
-Spazio personale self-hosted per idee, progetti, password, account e documenti — con **fascicoli** che li collegano tra loro. Gira interamente sul tuo computer o server, dentro Docker: nessun dato lascia la tua macchina.
+Spazio personale self-hosted per idee, progetti, password, abbonamenti e documenti, con **cartelle** che li collegano tra loro. Gira interamente sul tuo computer o server, dentro Docker: nessun dato lascia la tua macchina.
+
+Gratuito e open source (licenza MIT). Pagina del progetto: **[phloppy.it/memento](https://www.phloppy.it/memento)**.
 
 ## Cosa contiene
 
+- **Oggi** — la schermata d'ingresso: tutto quello che scade (promemoria, progetti, rinnovi, documenti) scritto come "domani", "tra 12 giorni", i progetti in corso con le spunte toccabili sul posto, le note recenti e le cartelle
 - **Note** — libere, con tag, `#hashtag` e checklist spuntabile
-- **Cattura veloce** — finestrella sempre disponibile (icona "+" in basso) per annotare al volo senza aprire una sezione; `@` collega a una cartella, `#` aggiunge un tag, il pulsante "Cambia tipo" trasforma la nota in promemoria/progetto al momento del salvataggio
-- **Progetti** — stato (da fare / in corso / fatto), checklist, scadenza, persone/contatti e budget, in una Bacheca kanban
+- **Cattura veloce** — "Annota" è sempre a un tocco (in alto su computer, il "+" giallo su telefono); `@` collega a una cartella, `#` aggiunge un tag, il pulsante "…" trasforma la nota in promemoria/progetto al momento del salvataggio
+- **Progetti** — stato (da fare / in corso / fatto), checklist, scadenza, persone/contatti e budget; ogni progetto è una scheda con avanzamento e scadenza visibili senza aprirla
 - **Vault password** — voci cifrate (AES-256-GCM), con **import da CSV**
 - **Abbonamenti** — account digitali o abbonamenti cartacei/fisici, con campi propri per ciascuno e data di rinnovo
 - **Drive** — upload documenti, organizzati in cartelle, con nome personalizzato, anteprima (immagini e PDF) e scadenza opzionale
-- **Cartelle** — collegano insieme note, progetti, voci del vault, abbonamenti, documenti e scadenze sullo stesso tema
+- **Cartelle** — collegano insieme note, progetti, voci del vault, abbonamenti, documenti e scadenze sullo stesso tema; aprendo una cartella vedi tutto il suo contenuto diviso per tipo, con le sue scadenze in cima
 - **Scadenze e Calendario** — elenco piatto o vista mensile, con notifiche push opzionali (anche ad app chiusa) quando una scadenza arriva a termine
 - **Ricerca globale** — cerca in tutte le sezioni insieme
 - **Cestino** — eliminazione soft con possibilità di ripristino
 - **Backup** — esporta un file .zip con database e documenti caricati
-- **Personalizzazione** — sfondo del desktop e skin dell'interfaccia, vedi [sezione dedicata](#personalizzazione-sfondo-e-skin)
+- **Italiano e inglese** — si sceglie al primo avvio, si cambia da Sicurezza
 
 ## Requisiti
 
@@ -104,22 +107,13 @@ Il conteggio riparte a ogni utilizzo: con `SESSION_DAYS=7`, se apri Memento alme
 
 ## Dal telefono
 
-L'interfaccia si adatta agli schermi piccoli: al posto del menu laterale compare una **barra in basso su due righe** con quasi tutte le sezioni, mentre "Altro" apre un elenco con tutte le sezioni più "Esporta backup" ed "Esci". La ricerca sta dietro l'icona della lente e si apre al tocco.
+L'interfaccia è pensata prima di tutto per il telefono: al posto della barra laterale compare una **barra in basso** con Oggi, Cerca, il "+" per annotare, Cartelle e "Sezioni" (tutte le altre, più "Esci"). Il tasto "indietro" del telefono torna alla sezione precedente.
 
 Puoi anche **aggiungerlo alla schermata home** e usarlo come un'app, senza barra del browser: dal telefono apri l'indirizzo di Memento e scegli "Aggiungi a schermata Home" (Safari) o "Installa app" / "Aggiungi a schermata Home" (Chrome). Serve che il telefono raggiunga il server: stessa rete di casa, oppure una VPN.
 
-## Personalizzazione: sfondo e skin
-
-Da **Sicurezza** nel menu laterale puoi scegliere:
-
-- **Sfondo del desktop**: Classico, Vaporwave Tramonto, Vaporwave Palma, Grigio — un'immagine o un colore dietro le icone del desktop.
-- **Skin dell'interfaccia**: Windows 95 (predefinita), Neumorphism, Glassmorphism, macOS moderno, Windows 11 Fluent, Material 3, Neubrutalismo, Cyberpunk, Minimal flat, Aero glass — cambia l'aspetto di finestre, taskbar, pulsanti e campi in tutta l'app.
-
-Entrambe le scelte sono **una preferenza del singolo dispositivo/browser** (salvate in `localStorage`, non nel database): non si sincronizzano tra dispositivi diversi e si applicano anche alla schermata di accesso, non solo al desktop dopo il login.
-
 ## Verifica in due passaggi (Google Authenticator)
 
-Facoltativa, si attiva da **Sicurezza** nel menu laterale. Una volta attiva, per entrare servono la password *e* un codice a 6 cifre generato dal telefono.
+Facoltativa, si attiva da **Sicurezza**. Una volta attiva, per entrare servono la password *e* un codice a 6 cifre generato dal telefono.
 
 1. Premi "Attiva con QR": Memento mostra un codice QR.
 2. Apri **Google Authenticator** (vanno bene anche Aegis, 1Password, Authy, Bitwarden: è lo standard TOTP, non un meccanismo proprietario di Google) e inquadralo. Se la fotocamera non collabora, nell'app scegli "Inserisci chiave di configurazione" e digita il segreto scritto sotto al QR.
@@ -146,7 +140,7 @@ Facoltativa, si attiva da **Sicurezza** con "Aggiungi impronta su questo disposi
 
 ## Backup
 
-Dal menu laterale, "Esporta backup" scarica uno `.zip` con il database e tutti i documenti del Drive. Conservalo, insieme a una copia del file `.env`, in un posto sicuro e separato dal server.
+Da **Sicurezza**, "Esporta backup" scarica uno `.zip` con il database e tutti i documenti del Drive. Conservalo, insieme a una copia del file `.env`, in un posto sicuro e separato dal server.
 
 ## Import CSV nel vault
 

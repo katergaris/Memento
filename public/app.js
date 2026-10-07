@@ -3138,6 +3138,11 @@
     }
     root.appendChild(notifyBlock);
 
+    // Backup: uno .zip con database e documenti, generato dal server con una
+    // copia coerente anche mentre l'app e' in uso (vedi server/routes/backup.js).
+    const backupBlock = el(`<div class="section-block"><h3>${esc(tr('section_backup'))}</h3><p class="card-sub">${esc(tr('backup_hint'))}</p><div class="card-actions" style="padding-top:10px"><a class="btn btn-primary" href="/api/backup" download>${esc(tr('btn_export_backup'))}</a></div></div>`);
+    root.appendChild(backupBlock);
+
     const langBlock = el(`<div class="section-block"><h3>${esc(tr('settings_language'))}</h3><p class="card-sub">${esc(tr('settings_language_hint'))}</p></div>`);
     const langRow = el('<div class="card-actions" style="padding-top:10px"></div>');
     [['it', 'Italiano'], ['en', 'English']].forEach(([code, label]) => {
