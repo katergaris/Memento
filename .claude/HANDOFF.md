@@ -1,8 +1,44 @@
-# Continua da qui — Memento, redesign Windows 95
+# Continua da qui — Memento
 
 Se stai leggendo questo file all'inizio di una nuova chat: questo documento ti dà
 tutto il contesto per continuare esattamente da dove si era interrotto. Leggi
 anche i file collegati sotto, poi procedi.
+
+## Stato al 07/10/2026 — nuova interfaccia (branch `nuova-ui`)
+
+- **Rinomina Mindkeep → Memento** fatta in tutto il codice (commit `771a10c`):
+  `data/mindkeep.db` viene rinominato da solo in `memento.db` al primo avvio,
+  le chiavi `localStorage` `mindkeep-*` migrano a `memento-*`, l'immagine
+  Docker esce sia come `memento` che come `mindkeep` (legacy). CasaOS tiene
+  `name`/`id` = `mindkeep` apposta (decidono la cartella dati). Repo GitHub
+  ancora `katergaris/MindKeep`. La cartella locale si chiama ancora
+  `Mindkeep\`: l'utente la rinominera' a mano in `Memento\`.
+- **Nuovo logo** (commit `9220fe2`): monogramma "m" con puntino giallo su
+  gradiente petrolio→blu, scritta in Manrope. Sorgenti e PNG in `brand/`,
+  bozze in `logos/` (fuori da git).
+- **Branch**: `classico` + tag `v1-classico` = ultima versione col desktop
+  Windows 95, congelata ("definitiva ma morta", parole dell'utente). La nuova
+  UI si sviluppa su `nuova-ui`; `main` resta com'e' finche' non e' pronta
+  (un push su `main` ricostruisce l'immagine e aggiorna la produzione).
+  **Nulla di questo e' ancora pushato**: chiedere prima di farlo.
+- **Direzione scelta dall'utente**: la "A · Oggi" dei mockup (tela
+  https://claude.ai/artifact/XyRqeXGqJiWv1MtbCFF6jY) con due pezzi della
+  "C": pagina della singola cartella con tutto dentro diviso per tipo, e le
+  sue scadenze in cima.
+- **Fase 1 fatta** (commit `c9bd47c`): guscio nuovo (barra laterale /
+  barra in basso su telefono / foglio "Sezioni"), ricerca sempre visibile,
+  indirizzi `#/sezione` col tasto indietro, sezione "Oggi" (scadenze unificate
+  da promemoria+progetti+rinnovi+documenti, Sposta/Fatto, spunte dei progetti
+  sul posto, note recenti, cartelle), nuovo stile via variabili CSS. Rimossi
+  `wm.js`, `themes.css`, `wallpapers/`, skin e sfondi. `render(view, opts)`
+  ora disegna in `#view-host` invece che in una finestra: le viste esistenti
+  non sono state riscritte. Verificato con Playwright su istanza isolata
+  (computer 1360px e telefono 390px, tutte le sezioni, nessun errore in
+  console, nessuno scorrimento orizzontale) + 39/39 test server.
+- **Prossimi passi**: (1) pagina Cartella stile "C" (oggi la vista Cartelle
+  e' ancora l'esploratore a icone); (2) rifinire le viste una per una (Note
+  come post-it colorati, azioni meno pesanti sulle schede, Vault su
+  telefono); (3) l'utente deve provarla sul serio prima di unirla a `main`.
 
 ## Leggi prima questo: stato al 01/09/2026, fine sessione
 
