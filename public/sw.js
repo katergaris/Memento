@@ -3,7 +3,7 @@
 // l'app all'istante e renderla installabile, non per usare i dati offline
 // (idee, vault, ecc. servono comunque il server). Bump della versione per
 // invalidare la cache quando cambiano gli asset precaricati qui sotto.
-const CACHE_VERSION = 'v7';
+const CACHE_VERSION = 'v8';
 const CACHE_NAME = `memento-shell-${CACHE_VERSION}`;
 const SHELL_ASSETS = [
   '/',
