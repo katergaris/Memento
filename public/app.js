@@ -533,7 +533,7 @@
   function appIcon(nome, size = 18) {
     const tile = APP_TILES[nome];
     if (!tile) return '';
-    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" class="app-tile"><rect width="24" height="24" rx="6.5" fill="${tile.color}"/><g transform="translate(4.4 4.4) scale(0.633)" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${tile.path}</g></svg>`;
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" class="app-tile"><rect width="24" height="24" rx="6.5" fill="${tile.color}"/><g transform="translate(4.4 4.4) scale(0.633)" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${tile.path}</g></svg>`;
   }
 
   // Icone vettoriali "pulite" (tratto, non pixel-art): usate solo per il
@@ -617,7 +617,7 @@
     return a;
   }
 
-  const strokeIcon = (d) => `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const strokeIcon = (d) => `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 
   function buildNavigation() {
     sidebarNav.innerHTML = '';
@@ -722,10 +722,21 @@
     { token: '/progetto', desc: tr('qc_desc_project') },
   ];
 
+  // Aperta "sul posto" (es. dal campo "Annota al volo" di Oggi): il riquadro
+  // prende il posto del campo toccato invece di galleggiare in basso, e alla
+  // chiusura torna nel suo contenitore di sempre.
+  let qcAnchor = null;
+
   function closeQuickCapture() {
     const wasOpen = !quickCaptureEl.classList.contains('hidden');
     quickCaptureEl.classList.add('hidden');
     quickCaptureEl.innerHTML = '';
+    if (qcAnchor) {
+      qcAnchor.classList.remove('hidden');
+      qcAnchor = null;
+      quickCaptureEl.classList.remove('qc-inline');
+      appRoot.appendChild(quickCaptureEl);
+    }
     // Riportata alla posizione di default (in alto al centro): uno
     // spostamento manuale non e' pensato per restare tra un'apertura e
     // l'altra, solo per togliersi di mezzo da quello che stai facendo ora.
@@ -766,9 +777,16 @@
     });
   }
 
-  async function openQuickCapture(presetDossier) {
+  async function openQuickCapture(presetDossier, anchor) {
     closeSectionsSheet();
+    if (qcAnchor) closeQuickCapture();
     quickCaptureEl.innerHTML = '';
+    if (anchor && anchor.parentNode) {
+      qcAnchor = anchor;
+      anchor.parentNode.insertBefore(quickCaptureEl, anchor);
+      anchor.classList.add('hidden');
+      quickCaptureEl.classList.add('qc-inline');
+    }
     const dossiers = await api('/dossiers').catch(() => []);
     const dragHandle = el(`<div class="qc-drag-handle" title="${esc(tr('qc_drag_title'))}">⋮⋮⋮</div>`);
     const composer = el(`
@@ -784,11 +802,11 @@
         </div>
       </div>
     `);
-    quickCaptureEl.appendChild(dragHandle);
+    if (!qcAnchor) quickCaptureEl.appendChild(dragHandle);
     quickCaptureEl.appendChild(composer);
     quickCaptureEl.classList.remove('hidden');
     btnNuovo.classList.add('pressed');
-    attachQcDrag(dragHandle);
+    if (!qcAnchor) attachQcDrag(dragHandle);
 
     const textarea = composer.querySelector('#qc-text');
     const linkBadgeWrap = composer.querySelector('#qc-link-badge');
@@ -972,6 +990,9 @@
     }
     currentView = view;
     closeSectionsSheet();
+    // Il riquadro aperto sul posto vive dentro la vista: va rimesso al suo
+    // posto prima di svuotarla.
+    if (qcAnchor) closeQuickCapture();
     markActiveNav(view);
     viewTitle.textContent = VIEW_LABELS[view] || view;
     document.title = view === 'today' ? 'Memento' : `${VIEW_LABELS[view] || view} — Memento`;
@@ -1086,12 +1107,12 @@
 
     const capture = el(`
       <button type="button" class="capture-bar">
-        <span class="capture-bar-plus" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span class="capture-bar-plus" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
         <span class="capture-bar-text"></span>
       </button>
     `);
     capture.querySelector('.capture-bar-text').textContent = tr('today_capture_placeholder');
-    capture.addEventListener('click', () => openQuickCapture());
+    capture.addEventListener('click', () => openQuickCapture(null, capture));
     root.appendChild(capture);
 
     const grid = el('<div class="today-grid"></div>');

@@ -272,6 +272,7 @@ input:focus, textarea:focus, select:focus {
   flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px;
   padding: 22px 32px 14px;
 }
+.header-logo { display: none; flex: none; }
 .header-title { flex: 1 1 220px; min-width: 0; }
 .header-date { font-size: 14px; font-weight: 600; color: var(--text-muted); }
 .header-title h1 { margin: 2px 0 0; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
@@ -320,6 +321,8 @@ input:focus, textarea:focus, select:focus {
 @media (max-width: 760px) {
   .sidebar { display: none; }
   .app-header { padding: 14px 16px 10px; gap: 10px; }
+  .header-logo { display: block; }
+  .header-title { flex-basis: 0; flex-grow: 1; }
   .header-title h1 { font-size: 22px; }
   .header-date { font-size: 13px; }
   .search-wrap { flex-basis: 100%; max-width: none; order: 3; }
@@ -373,7 +376,13 @@ input:focus, textarea:focus, select:focus {
   cursor: move; touch-action: none; text-align: center; padding: 2px 0 8px;
   letter-spacing: 3px; font-size: 10px; color: var(--text-faint);
 }
+/* Aperta sul posto: prende la forma del campo "Annota al volo" che sostituisce. */
+.quick-capture.qc-inline {
+  position: static; transform: none; width: auto; margin-bottom: 20px;
+  box-shadow: 0 6px 20px rgba(11, 122, 114, 0.10); z-index: auto;
+}
 @media (max-width: 760px) {
+  .quick-capture.qc-inline { margin-bottom: 14px; }
   .quick-capture { top: auto; bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom, 0px)); }
 }
 
@@ -399,7 +408,7 @@ input:focus, textarea:focus, select:focus {
 .panel-head a, .panel-more { font-size: 13px; font-weight: 700; color: var(--accent-soft); text-decoration: none; }
 .panel-head a:hover, .panel-more:hover { text-decoration: underline; }
 .panel-head-sub { margin-top: 8px; }
-.panel-empty { margin: 0; color: var(--text-muted); font-size: 14px; }
+.panel-empty { margin: 0; color: var(--text-muted); font-size: 14px; grid-column: 1 / -1; }
 
 .due-list { display: flex; flex-direction: column; gap: 8px; }
 .due-row { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; border-radius: 12px; flex-wrap: wrap; }
