@@ -45,6 +45,11 @@ window.MementoI18n = (() => {
       taskbar_start: 'Avvio',
       taskbar_new: 'Nuovo',
 
+      toast_dossier_updated: 'Cartella aggiornata',
+      modal_edit_dossier: 'Modifica cartella',
+      dossier_kicker: 'CARTELLA',
+      dossier_add_to: '+ Aggiungi a {title}',
+      dossier_section_vault: 'Password e accessi',
       nav_today: 'Oggi',
       tab_search: 'Cerca',
       tab_sections: 'Sezioni',
@@ -447,6 +452,11 @@ window.MementoI18n = (() => {
       taskbar_start: 'Start',
       taskbar_new: 'New',
 
+      toast_dossier_updated: 'Folder updated',
+      modal_edit_dossier: 'Edit folder',
+      dossier_kicker: 'FOLDER',
+      dossier_add_to: '+ Add to {title}',
+      dossier_section_vault: 'Passwords and logins',
       nav_today: 'Today',
       tab_search: 'Search',
       tab_sections: 'Sections',

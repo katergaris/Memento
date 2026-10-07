@@ -964,7 +964,9 @@
     if (!views[view]) view = 'today';
     // Indirizzo della sezione: un passo nuovo nella cronologia, tranne quando
     // ci si arriva proprio dalla cronologia (indietro/avanti) o all'avvio.
-    const hash = `#/${view}`;
+    // Una cartella aperta ha il suo indirizzo (#/dossiers/12): "indietro"
+    // riporta all'elenco delle cartelle.
+    const hash = view === 'dossiers' && opts.highlight ? `#/dossiers/${opts.highlight}` : `#/${view}`;
     if (!opts.fromHash && location.hash !== hash) {
       if (opts.replace) history.replaceState(null, '', hash); else history.pushState(null, '', hash);
     }
@@ -1643,39 +1645,46 @@
         bodyWrap.appendChild(el(`<div class="empty-state">${esc(tr('empty_none_yet'))}</div>`));
         return;
       }
-      const grid = el('<div class="explorer-grid"></div>');
-      projects.forEach((p) => {
+      // Una scheda per progetto: avanzamento e scadenza si leggono senza
+      // aprirlo; prima quelli in corso, poi da fare, in fondo i fatti.
+      const ORDER = { in_corso: 0, da_fare: 1, fatto: 2 };
+      const sorted = [...projects].sort((a, b) => (ORDER[a.status] ?? 1) - (ORDER[b.status] ?? 1)
+        || (a.deadline || '9999').localeCompare(b.deadline || '9999'));
+      const grid = el('<div class="project-grid"></div>');
+      sorted.forEach((p) => {
         const { done, total } = checklistProgress(p.checklist);
         const statusInfo = STATUSES.find((s) => s.key === p.status) || STATUSES[0];
-        let lateBit = '';
-        if (p.deadline) {
-          const days = daysUntil(p.deadline);
-          if (days < 0) lateBit = `<span class="count count-late">${esc(dueLabel(days))}</span>`;
-        }
-        const icon = el(`
-          <button type="button" class="explorer-icon">
-            <span class="unlink-badge" data-del title="${esc(tr('btn_delete'))}">✕</span>
-            ${appIcon('projects', 52)}
-            <span class="label">${esc(p.title)}</span>
-            <span class="chip-status chip-status-${p.status}">${esc(statusInfo.label)}</span>
-            ${total ? `<span class="count">${done}/${total}</span>` : ''}
-            ${lateBit}
-          </button>
+        const card = el(`
+          <div class="project-card project-${p.status}">
+            <button type="button" class="project-card-main">
+              <span class="project-card-top"><span class="chip-status chip-status-${p.status}"></span><span class="proj-when"></span></span>
+              <span class="project-card-title"></span>
+              <span class="progress"><span class="progress-fill"></span></span>
+              <span class="proj-meta"></span>
+            </button>
+            <button type="button" class="icon-btn project-card-del" title="${esc(tr('btn_delete'))}" aria-label="${esc(tr('btn_delete'))}">${iconaLinea('cestino')}</button>
+          </div>
         `);
-        if (highlightId && String(p.id) === highlightId) icon.classList.add('card-highlight');
-        icon.addEventListener('click', (e) => {
-          if (e.target.closest('[data-del]')) return;
-          renderProject(p);
-        });
-        icon.querySelector('[data-del]').addEventListener('click', async (e) => {
-          e.stopPropagation();
+        card.querySelector('.chip-status').textContent = statusInfo.label;
+        card.querySelector('.project-card-title').textContent = p.title;
+        card.querySelector('.progress-fill').style.width = total ? `${Math.round((done / total) * 100)}%` : '0%';
+        card.querySelector('.proj-meta').textContent = total ? tr('label_completed_count', { done, total }) : tr('today_no_checklist');
+        if (p.deadline && p.status !== 'fatto') {
+          const days = calendarDaysFromToday(p.deadline);
+          const when = card.querySelector('.proj-when');
+          when.textContent = relativeDayLabel(days);
+          when.classList.add(urgencyClass(days));
+        }
+        if (highlightId && String(p.id) === highlightId) card.classList.add('card-highlight');
+        card.querySelector('.project-card-main').addEventListener('click', () => renderProject(p));
+        card.querySelector('.project-card-del').addEventListener('click', async () => {
           if (!confirm(tr('confirm_delete_project'))) return;
           await api(`/projects/${p.id}`, { method: 'DELETE' });
           const idx = projects.findIndex((x) => x.id === p.id);
           if (idx !== -1) projects.splice(idx, 1);
           toast(tr('toast_project_deleted')); renderRoot();
         });
-        grid.appendChild(icon);
+        grid.appendChild(card);
       });
       bodyWrap.appendChild(grid);
     }
@@ -2592,127 +2601,223 @@
   // set icone gia' usato da menu Avvio/taskbar (appIcon), nessuna nuova
   // icona necessaria. Nessuna sotto-cartella: un solo livello di profondita'.
   views.dossiers = async (root, opts = {}) => {
-    const dossiers = await api('/dossiers');
     const highlightId = opts.highlight ? String(opts.highlight) : null;
+    const dossiers = await api('/dossiers');
     root.innerHTML = '';
 
-    const toolbar = el(`
-      <div class="explorer-toolbar">
-        <button type="button" class="btn" id="explorer-up" disabled>${esc(tr('btn_up'))}</button>
-        <span class="explorer-path" id="explorer-path">${esc(tr('nav_dossiers_title'))}</span>
-        <button type="button" class="btn btn-primary" id="new-dossier">${esc(tr('btn_new_dossier'))}</button>
-        <button type="button" class="btn btn-primary hidden" id="new-item-in-dossier">${esc(tr('btn_new_item'))}</button>
-      </div>
-    `);
-    const gridWrap = el('<div></div>');
-    root.appendChild(toolbar);
-    root.appendChild(gridWrap);
-
-    const upBtn = toolbar.querySelector('#explorer-up');
-    const pathEl = toolbar.querySelector('#explorer-path');
-    const newDossierBtn = toolbar.querySelector('#new-dossier');
-    const newItemBtn = toolbar.querySelector('#new-item-in-dossier');
-    newItemBtn.addEventListener('click', () => openQuickCapture(currentDossier));
-
-    toolbar.querySelector('#new-dossier').addEventListener('click', () => {
+    function openDossierForm(existing) {
       const form = el(`
         <form class="modal-body" style="padding:0">
           <div class="form-row"><label>${esc(tr('field_title'))}</label><input type="text" name="title" required /></div>
           <div class="form-row"><label>${esc(tr('field_description'))}</label><textarea name="description" rows="3"></textarea></div>
           <div class="form-actions">
             <button type="button" class="btn btn-ghost" data-cancel>${esc(tr('btn_cancel'))}</button>
-            <button type="submit" class="btn btn-primary">${esc(tr('btn_create'))}</button>
+            <button type="submit" class="btn btn-primary">${esc(tr(existing ? 'btn_save' : 'btn_create'))}</button>
           </div>
         </form>
       `);
+      if (existing) {
+        form.title.value = existing.title;
+        form.description.value = existing.description || '';
+      }
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        await api('/dossiers', { method: 'POST', body: JSON.stringify({ title: form.title.value, description: form.description.value }) });
-        closeModal(); toast(tr('toast_dossier_created')); render('dossiers');
+        const body = JSON.stringify({ title: form.title.value, description: form.description.value });
+        if (existing) {
+          await api(`/dossiers/${existing.id}`, { method: 'PUT', body });
+          closeModal(); toast(tr('toast_dossier_updated')); render('dossiers', { highlight: existing.id, fromHash: true });
+        } else {
+          const created = await api('/dossiers', { method: 'POST', body });
+          closeModal(); toast(tr('toast_dossier_created')); render('dossiers', { highlight: created.id });
+        }
       });
       form.querySelector('[data-cancel]').addEventListener('click', closeModal);
-      openModal(tr('modal_new_dossier'), form);
-    });
+      openModal(tr(existing ? 'modal_edit_dossier' : 'modal_new_dossier'), form);
+    }
 
-    let currentDossier = null;
-
+    // ---- Elenco delle cartelle: una scheda per cartella, un livello solo ----
     function renderRoot() {
-      currentDossier = null;
-      upBtn.disabled = true;
-      pathEl.textContent = tr('nav_dossiers_title');
-      newDossierBtn.classList.remove('hidden');
-      newItemBtn.classList.add('hidden');
-      gridWrap.innerHTML = '';
+      const head = el(`<div class="view-header"><div class="view-header-actions"><button type="button" class="btn btn-primary" id="new-dossier">${esc(tr('btn_new_dossier'))}</button></div></div>`);
+      head.querySelector('#new-dossier').addEventListener('click', () => openDossierForm(null));
+      root.appendChild(head);
       if (!dossiers.length) {
-        gridWrap.appendChild(el(`<div class="empty-state">${esc(tr('empty_dossiers'))}</div>`));
+        root.appendChild(el(`<div class="empty-state">${esc(tr('empty_dossiers'))}</div>`));
         return;
       }
-      const grid = el('<div class="explorer-grid"></div>');
+      const grid = el('<div class="dossier-grid"></div>');
       dossiers.forEach((d) => {
         const n = d.items.length;
-        const icon = el(`
-          <button type="button" class="explorer-icon">
-            <span class="unlink-badge" data-del title="${esc(tr('title_delete_dossier'))}">✕</span>
-            ${appIcon('dossiers', 52)}
-            <span class="label">${esc(d.title)}</span>
-            <span class="count">${esc(tr(n === 1 ? 'count_items_one' : 'count_items_other', { n }))}</span>
-          </button>
+        const counts = {};
+        d.items.forEach((it) => { counts[it.type] = (counts[it.type] || 0) + 1; });
+        const card = el(`
+          <a class="dossier-card" href="#/dossiers/${d.id}">
+            ${appIcon('dossiers', 44)}
+            <span class="dossier-card-body">
+              <span class="dossier-card-title"></span>
+              <span class="dossier-card-sub"></span>
+              <span class="dossier-card-types"></span>
+            </span>
+          </a>
         `);
-        icon.addEventListener('click', (e) => {
-          if (e.target.closest('[data-del]')) return;
-          renderDossier(d);
+        card.querySelector('.dossier-card-title').textContent = d.title;
+        card.querySelector('.dossier-card-sub').textContent = d.description || tr(n === 1 ? 'count_items_one' : 'count_items_other', { n });
+        const types = card.querySelector('.dossier-card-types');
+        Object.entries(counts).forEach(([type, c]) => {
+          const view = TYPE_TO_VIEW[type];
+          types.appendChild(el(`<span class="type-pill">${appIcon(view, 16)}${c}</span>`));
         });
-        icon.querySelector('[data-del]').addEventListener('click', async (e) => {
-          e.stopPropagation();
-          if (!confirm(tr('confirm_delete_dossier'))) return;
-          await api(`/dossiers/${d.id}`, { method: 'DELETE' });
-          toast(tr('toast_dossier_deleted')); render('dossiers');
-        });
-        grid.appendChild(icon);
+        grid.appendChild(card);
       });
-      gridWrap.appendChild(grid);
+      root.appendChild(grid);
     }
 
-    function renderDossier(d) {
-      currentDossier = d;
-      upBtn.disabled = false;
-      pathEl.textContent = tr('dossier_path', { title: d.title });
-      newDossierBtn.classList.add('hidden');
-      newItemBtn.classList.remove('hidden');
-      gridWrap.innerHTML = '';
+    // ---- Una cartella: tutto quello che contiene, diviso per tipo, con le
+    // sue scadenze in cima. Le voci arrivano dal server solo con tipo/id/nome:
+    // i dettagli (avanzamento, date, importi) si prendono dagli elenchi delle
+    // sezioni, gia' disponibili, cosi' il server non cambia. ----
+    async function renderDossier(d) {
+      const has = (type) => d.items.some((it) => it.type === type);
+      const [projects, ideas, reminders, accounts, docs, vault] = await Promise.all([
+        has('project') ? api('/projects') : [], has('idea') ? api('/ideas') : [],
+        has('reminder') ? api('/reminders') : [], has('account') ? api('/accounts') : [],
+        has('document') ? api('/drive') : [], has('vault') ? api('/vault') : [],
+      ]);
+      const pick = (list, type) => {
+        const ids = new Set(d.items.filter((it) => it.type === type).map((it) => String(it.id)));
+        return list.filter((x) => ids.has(String(x.id)));
+      };
+      const mine = {
+        project: pick(projects, 'project'), idea: pick(ideas, 'idea'), reminder: pick(reminders, 'reminder'),
+        account: pick(accounts, 'account'), document: pick(docs, 'document'), vault: pick(vault, 'vault'),
+      };
+
+      const head = el(`
+        <div class="dossier-head">
+          <a class="btn btn-ghost btn-sm dossier-back" href="#/dossiers"></a>
+          <div class="dossier-head-main">
+            <p class="dossier-desc"></p>
+          </div>
+          <div class="view-header-actions">
+            <button type="button" class="btn btn-primary" data-add></button>
+            <button type="button" class="btn" data-edit></button>
+            <button type="button" class="btn btn-danger" data-del></button>
+          </div>
+        </div>
+      `);
+      head.querySelector('.dossier-back').textContent = '← ' + tr('nav_dossiers');
+      const desc = head.querySelector('.dossier-desc');
+      if (d.description) desc.textContent = d.description; else desc.remove();
+      head.querySelector('[data-add]').textContent = tr('dossier_add_to', { title: d.title });
+      head.querySelector('[data-edit]').textContent = tr('btn_edit');
+      head.querySelector('[data-del]').textContent = tr('btn_delete');
+      head.querySelector('[data-add]').addEventListener('click', () => openQuickCapture(d));
+      head.querySelector('[data-edit]').addEventListener('click', () => openDossierForm(d));
+      head.querySelector('[data-del]').addEventListener('click', async () => {
+        if (!confirm(tr('confirm_delete_dossier'))) return;
+        await api(`/dossiers/${d.id}`, { method: 'DELETE' });
+        toast(tr('toast_dossier_deleted')); render('dossiers');
+      });
+      root.appendChild(head);
+      viewTitle.textContent = d.title;
+
+      // Scadenze della cartella, dalla piu' vicina.
+      const due = [];
+      mine.reminder.forEach((r) => due.push({ days: calendarDaysFromToday(r.date), title: r.label, open: () => render('reminders', { only: r.id, fromDossier: d.id }) }));
+      mine.project.filter((p) => p.deadline && p.status !== 'fatto').forEach((p) => due.push({ days: calendarDaysFromToday(p.deadline), title: p.title, open: () => render('projects', { only: p.id, fromDossier: d.id }) }));
+      mine.account.forEach((a) => {
+        const next = nextRenewalDate(a.renewal_day, a.renewal_month, a.billing_frequency) || a.renewal_date;
+        if (next) due.push({ days: calendarDaysFromToday(next), title: tr('today_renewal_of', { name: a.service }), open: () => render('accounts', { only: a.id, fromDossier: d.id }) });
+      });
+      mine.document.filter((x) => x.expiry_date).forEach((x) => due.push({ days: calendarDaysFromToday(x.expiry_date), title: x.display_name || x.original_name, open: () => openDocumentPreview(x) }));
+      const dueSorted = due.filter((x) => x.days !== null).sort((a, b) => a.days - b.days);
+      if (dueSorted.length) {
+        const strip = el('<div class="due-strip"></div>');
+        dueSorted.slice(0, 8).forEach((x) => {
+          const chip = el(`<button type="button" class="due-chip ${urgencyClass(x.days)}"><span class="due-chip-when"></span><span class="due-chip-title"></span></button>`);
+          chip.querySelector('.due-chip-when').textContent = relativeDayLabel(x.days);
+          chip.querySelector('.due-chip-title').textContent = x.title;
+          chip.addEventListener('click', x.open);
+          strip.appendChild(chip);
+        });
+        root.appendChild(strip);
+      }
+
       if (!d.items.length) {
-        gridWrap.appendChild(el(`<div class="empty-state">${esc(tr('empty_dossier_items'))}</div>`));
+        root.appendChild(el(`<div class="empty-state">${esc(tr('empty_dossier_items'))}</div>`));
         return;
       }
-      const grid = el('<div class="explorer-grid"></div>');
-      d.items.forEach((item) => {
-        const view = TYPE_TO_VIEW[item.type];
-        const icon = el(`
-          <button type="button" class="explorer-icon">
-            <span class="unlink-badge" data-unlink title="${esc(tr('title_unlink'))}">✕</span>
-            ${appIcon(view, 34)}
-            <span class="label">${esc(item.label)}</span>
-          </button>
-        `);
-        icon.addEventListener('click', (e) => {
-          if (e.target.closest('[data-unlink]')) return;
-          if (view) render(view, { only: item.id, fromDossier: d.id });
-        });
-        icon.querySelector('[data-unlink]').addEventListener('click', async (e) => {
-          e.stopPropagation();
-          await api(`/dossiers/${d.id}/links/${item.type}/${item.id}`, { method: 'DELETE' });
-          toast(tr('toast_item_unlinked')); render('dossiers');
-        });
-        grid.appendChild(icon);
-      });
-      gridWrap.appendChild(grid);
-    }
 
-    upBtn.addEventListener('click', renderRoot);
+      const grid = el('<div class="dossier-sections"></div>');
+      root.appendChild(grid);
+      const unlinkBtn = (type, id) => {
+        const b = el(`<button type="button" class="icon-btn unlink-btn" title="${esc(tr('title_unlink'))}" aria-label="${esc(tr('title_unlink'))}">${iconaLinea('chiudi')}</button>`);
+        b.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          await api(`/dossiers/${d.id}/links/${type}/${id}`, { method: 'DELETE' });
+          toast(tr('toast_item_unlinked')); render('dossiers', { highlight: d.id, fromHash: true });
+        });
+        return b;
+      };
+      const section = (type, titleKey, n) => {
+        const s = el(`<section class="panel dossier-section"><div class="panel-head"><h2 class="section-title-${type}"></h2></div><div class="dossier-section-body"></div></section>`);
+        s.querySelector('h2').textContent = `${tr(titleKey)} · ${n}`;
+        grid.appendChild(s);
+        return s.querySelector('.dossier-section-body');
+      };
+      const row = (type, item, mainText, sideText, onOpen) => {
+        const r = el('<div class="dossier-row"><button type="button" class="dossier-row-main"><span class="dossier-row-title"></span><span class="dossier-row-side"></span></button></div>');
+        r.querySelector('.dossier-row-title').textContent = mainText;
+        r.querySelector('.dossier-row-side').textContent = sideText || '';
+        r.querySelector('.dossier-row-main').addEventListener('click', onOpen);
+        r.appendChild(unlinkBtn(type, item.id));
+        return r;
+      };
+
+      if (mine.project.length) {
+        const body = section('project', 'nav_projects', mine.project.length);
+        mine.project.forEach((p) => {
+          const { done, total } = checklistProgress(p.checklist);
+          const r = row('project', p, p.title, total ? `${done}/${total}` : (STATUSES.find((s) => s.key === p.status) || STATUSES[0]).label,
+            () => render('projects', { only: p.id, fromDossier: d.id }));
+          if (total) r.appendChild(el(`<div class="progress dossier-progress"><div class="progress-fill" style="width:${Math.round((done / total) * 100)}%"></div></div>`));
+          body.appendChild(r);
+        });
+      }
+      if (mine.reminder.length) {
+        const body = section('reminder', 'nav_reminders', mine.reminder.length);
+        mine.reminder.forEach((x) => body.appendChild(row('reminder', x, x.label, relativeDayLabel(calendarDaysFromToday(x.date)), () => render('reminders', { only: x.id, fromDossier: d.id }))));
+      }
+      if (mine.vault.length) {
+        const body = section('vault', 'dossier_section_vault', mine.vault.length);
+        mine.vault.forEach((v) => body.appendChild(row('vault', v, v.site, v.username || '', () => render('vault', { only: v.id, fromDossier: d.id }))));
+      }
+      if (mine.document.length) {
+        const body = section('document', 'nav_drive', mine.document.length);
+        mine.document.forEach((x) => body.appendChild(row('document', x, x.display_name || x.original_name, x.expiry_date ? relativeDayLabel(calendarDaysFromToday(x.expiry_date)) : fmtSize(x.size), () => openDocumentPreview(x))));
+      }
+      if (mine.account.length) {
+        const body = section('account', 'nav_accounts', mine.account.length);
+        mine.account.forEach((a) => body.appendChild(row('account', a, a.service, a.amount ? `${a.amount} €` : (a.plan || ''), () => render('accounts', { only: a.id, fromDossier: d.id }))));
+      }
+      if (mine.idea.length) {
+        const body = section('idea', 'nav_ideas', mine.idea.length);
+        const notes = el('<div class="note-grid"></div>');
+        const NOTE_TINTS = ['note-yellow', 'note-teal', 'note-blue', 'note-peach'];
+        mine.idea.forEach((idea, i) => {
+          const wrap = el(`<div class="note-tile-wrap"><button type="button" class="note-tile ${NOTE_TINTS[i % NOTE_TINTS.length]}"><span class="note-text"></span></button></div>`);
+          const text = idea.title || idea.body || '';
+          wrap.querySelector('.note-text').textContent = text.length > 120 ? text.slice(0, 120) + '…' : text;
+          wrap.querySelector('.note-tile').addEventListener('click', () => render('ideas', { only: idea.id, fromDossier: d.id }));
+          wrap.appendChild(unlinkBtn('idea', idea.id));
+          notes.appendChild(wrap);
+        });
+        body.appendChild(notes);
+      }
+    }
 
     if (highlightId) {
       const match = dossiers.find((d) => String(d.id) === highlightId);
-      if (match) { renderDossier(match); return; }
+      if (match) { await renderDossier(match); return; }
     }
     renderRoot();
   };
