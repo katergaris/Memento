@@ -3,12 +3,12 @@
 // l'app all'istante e renderla installabile, non per usare i dati offline
 // (idee, vault, ecc. servono comunque il server). Bump della versione per
 // invalidare la cache quando cambiano gli asset precaricati qui sotto.
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v6';
 const CACHE_NAME = `memento-shell-${CACHE_VERSION}`;
 const SHELL_ASSETS = [
   '/',
   '/index.html',
-  '/wm.js',
+  '/i18n.js',
   '/app.js',
   '/style.css',
   '/manifest.webmanifest',
@@ -17,8 +17,6 @@ const SHELL_ASSETS = [
   '/icon-512.png',
   '/icon.svg',
   '/offline.html',
-  '/wallpapers/wp-tramonto.jpg',
-  '/wallpapers/wp-palma.jpg',
 ];
 
 self.addEventListener('install', (event) => {

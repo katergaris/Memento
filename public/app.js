@@ -353,9 +353,8 @@
     let closedSomething = false;
     if (closePreview()) closedSomething = true;
     if (closeModal()) closedSomething = true;
-    if (typeof closeStartMenu === 'function' && closeStartMenu()) closedSomething = true;
     if (typeof closeQuickCapture === 'function' && closeQuickCapture()) closedSomething = true;
-    if (!closedSomething && window.MementoWM) window.MementoWM.closeFocusedWindow();
+    if (!closedSomething && typeof closeSectionsSheet === 'function') closeSectionsSheet();
   });
 
   function el(html) {
@@ -505,30 +504,36 @@
   function startApp() {
     authScreen.classList.add('hidden');
     appRoot.classList.remove('hidden');
-    buildDesktop();
+    buildNavigation();
+    updateHeaderDate();
+    const { view, opts } = routeFromHash();
+    render(view, { ...opts, replace: true });
   }
 
   // ---------------- Navigation ----------------
-  // Icone Windows 95: piene e colorate (stile Program Manager), non il
-  // vecchio tratto monocromo a 8 bit — segnalato poco calzante per questo tema.
-  const APP_ICON_PATHS = {
-    projects: '<rect x="3" y="2.5" width="14" height="16" rx="1" fill="#e9dfc4" stroke="#5c4a1e" stroke-width="0.8"/><rect x="7" y="1" width="6" height="3" rx="1" fill="#9a9aa2" stroke="#4a4a4a" stroke-width="0.6"/><rect x="6" y="7.2" width="8" height="1.6" fill="#4a7fc9"/><rect x="6" y="10.6" width="8" height="1.6" fill="#4a7fc9"/><rect x="6" y="14" width="5" height="1.6" fill="#e0743c"/>',
-    ideas: '<rect x="4" y="2" width="12" height="16" fill="#fff6d8" stroke="#8a7a3a" stroke-width="0.8"/><path d="M12 2 L16 6 L12 6 Z" fill="#e8d48c" stroke="#8a7a3a" stroke-width="0.6"/><rect x="6" y="9" width="8" height="1.4" fill="#a89860"/><rect x="6" y="12" width="8" height="1.4" fill="#a89860"/><rect x="6" y="15" width="5" height="1.4" fill="#a89860"/>',
-    vault: '<path d="M6 9V6.5a4 4 0 0 1 8 0V9" fill="none" stroke="#b8860b" stroke-width="2"/><rect x="4.5" y="9" width="11" height="9" rx="1.2" fill="#b0b0b8" stroke="#4a4a52" stroke-width="0.8"/><circle cx="10" cy="13" r="1.3" fill="#4a4a52"/><rect x="9.3" y="13" width="1.4" height="2.6" fill="#4a4a52"/>',
-    accounts: '<rect x="2" y="4.5" width="16" height="11" rx="1.2" fill="#3a6ea5" stroke="#1f3a5c" stroke-width="0.8"/><rect x="2" y="7.5" width="16" height="2.6" fill="#1f3a5c"/><rect x="4" y="12" width="6" height="1.6" fill="#e8c96b"/>',
-    drive: '<rect x="3" y="2.5" width="14" height="15" rx="0.6" fill="#3a4a8a" stroke="#1a2450" stroke-width="0.8"/><rect x="6" y="3" width="8" height="5" fill="#c8ccd8" stroke="#4a4a52" stroke-width="0.5"/><rect x="7" y="3.6" width="2.4" height="3.8" fill="#8890a0"/><rect x="5" y="12" width="10" height="4" fill="#e8eaf0" stroke="#4a4a52" stroke-width="0.5"/>',
-    dossiers: '<path d="M2 5h7l2 2.5h9v9.5H2z" fill="#e3b23c" stroke="#8a6414" stroke-width="0.8"/><path d="M2 5h7l2 2.5H2z" fill="#f3cf72" stroke="#8a6414" stroke-width="0.8"/>',
-    reminders: '<circle cx="10" cy="10.5" r="7.5" fill="#f5f5f5" stroke="#4a4a52" stroke-width="1"/><path d="M10 6v5l3.2 2" fill="none" stroke="#000080" stroke-width="1.4" stroke-linecap="round"/><rect x="7.5" y="1" width="5" height="1.6" fill="#8a8a92"/>',
-    calendar: '<rect x="3" y="3.5" width="14" height="14" rx="0.8" fill="#f5f5f5" stroke="#4a4a52" stroke-width="0.8"/><rect x="3" y="3.5" width="14" height="4" fill="#c0392b" stroke="#4a4a52" stroke-width="0.8"/><rect x="6" y="1.5" width="1.6" height="3" fill="#8a8a92"/><rect x="12.4" y="1.5" width="1.6" height="3" fill="#8a8a92"/><rect x="5.5" y="10" width="2.6" height="2.2" fill="#4a7fc9"/><rect x="9.2" y="10" width="2.6" height="2.2" fill="#c8c8ce" stroke="#8a8a92" stroke-width="0.4"/><rect x="12.9" y="10" width="2.6" height="2.2" fill="#c8c8ce" stroke="#8a8a92" stroke-width="0.4"/>',
-    trash: '<path d="M4 6h12l-1 11H5z" fill="#c8c8ce" stroke="#4a4a52" stroke-width="0.8"/><rect x="3" y="4.2" width="14" height="2" fill="#a8a8b0" stroke="#4a4a52" stroke-width="0.6"/><rect x="8" y="2" width="4" height="2.2" fill="#a8a8b0" stroke="#4a4a52" stroke-width="0.6"/><line x1="7.5" y1="8.5" x2="8" y2="14.5" stroke="#8a8a92" stroke-width="1"/><line x1="10" y1="8.5" x2="10" y2="14.5" stroke="#8a8a92" stroke-width="1"/><line x1="12.5" y1="8.5" x2="12" y2="14.5" stroke="#8a8a92" stroke-width="1"/>',
-    security: '<path d="M10 1.5 16 3.8v5.3c0 4.4-2.6 7.5-6 8.9-3.4-1.4-6-4.5-6-8.9V3.8z" fill="#4a7fc9" stroke="#1f3a5c" stroke-width="0.8"/><path d="M7 10l2 2.2 4-4.5" fill="none" stroke="#fff" stroke-width="1.3"/>',
-    esci: '<rect x="3" y="2" width="8" height="16" fill="#a5713a" stroke="#5c3a1a" stroke-width="0.8"/><circle cx="8.6" cy="10" r="0.8" fill="#3a2410"/><path d="M12 6l4 4-4 4" fill="none" stroke="#c0392b" stroke-width="1.6"/><line x1="9" y1="10" x2="16" y2="10" stroke="#c0392b" stroke-width="1.6"/>',
+  // Ogni sezione ha un colore pieno e un glifo bianco: le stesse tessere
+  // compaiono nella barra laterale, nel foglio "Sezioni" del telefono e nelle
+  // griglie di Progetti/Cartelle, cosi' una sezione si riconosce dal colore
+  // prima ancora di leggerne il nome (icone piene e colorate, mai grigio minimal).
+  const APP_TILES = {
+    today: { color: '#0B7A72', path: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>' },
+    projects: { color: '#1C5BA8', path: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7.5 9h9M7.5 13h6"/>' },
+    ideas: { color: '#C98F00', path: '<path d="M5 3h10l4 4v14H5z"/><path d="M9 12h6M9 16h4"/>' },
+    vault: { color: '#0B7A72', path: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>' },
+    accounts: { color: '#6D4BC2', path: '<path d="M4 12a8 8 0 0 1 14-5l2 2M20 12a8 8 0 0 1-14 5l-2-2"/><path d="M20 4v5h-5M4 20v-5h5"/>' },
+    drive: { color: '#D2691E', path: '<path d="M12 15V4M7 9l5-5 5 5"/><path d="M4 15v5h16v-5"/>' },
+    dossiers: { color: '#2E8B57', path: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>' },
+    reminders: { color: '#C2410C', path: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2.5h6"/>' },
+    calendar: { color: '#1C5BA8', path: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>' },
+    trash: { color: '#5D7182', path: '<path d="M4.5 7h15M9.5 7V4.5h5V7M7 7l1 12.5h8L17 7"/>' },
+    security: { color: '#5D7182', path: '<path d="M12 2.5l7 2.6v5.8c0 4.6-3 8-7 9.6-4-1.6-7-5-7-9.6V5.1z"/><path d="M9 12l2 2 4-4.5"/>' },
+    esci: { color: '#5D7182', path: '<path d="M10 4H5v16h5M14 8l4 4-4 4M9 12h9"/>' },
   };
 
   function appIcon(nome, size = 18) {
-    const inner = APP_ICON_PATHS[nome];
-    if (!inner) return '';
-    return `<svg width="${size}" height="${size}" viewBox="0 0 20 20" aria-hidden="true">${inner}</svg>`;
+    const tile = APP_TILES[nome];
+    if (!tile) return '';
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" class="app-tile"><rect width="24" height="24" rx="6.5" fill="${tile.color}"/><g transform="translate(4.4 4.4) scale(0.633)" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${tile.path}</g></svg>`;
   }
 
   // Icone vettoriali "pulite" (tratto, non pixel-art): usate solo per il
@@ -556,6 +561,7 @@
 
   // Elenco unico delle app: alimenta il menu Avvio (computer e telefono).
   const SECTIONS = [
+    { view: 'today', label: tr('nav_today') },
     { view: 'projects', label: tr('nav_projects') },
     { view: 'ideas', label: tr('nav_ideas') },
     { view: 'vault', label: tr('nav_vault') },
@@ -592,254 +598,114 @@
     if (btn) btn.addEventListener('click', () => render('dossiers', { highlight: opts.fromDossier }));
   }
 
-  // ---------------- Menu Avvio ----------------
-  const startMenu = document.getElementById('start-menu');
-  const btnStart = document.getElementById('btn-start');
+  // ---------------- Barra laterale, barra del telefono, indirizzi ----------------
+  // Una sezione alla volta nell'area centrale. Ogni sezione ha il suo
+  // indirizzo (#/vault, #/projects...): il tasto "indietro" del telefono e
+  // del browser torna alla sezione precedente invece di uscire dall'app.
+  const sidebarNav = document.getElementById('sidebar-nav');
+  const sidebarSecondary = document.getElementById('sidebar-secondary');
+  const tabbar = document.getElementById('tabbar');
+  const sectionsSheet = document.getElementById('sections-sheet');
+  const viewHost = document.getElementById('view-host');
+  const viewTitle = document.getElementById('view-title');
+  const headerDate = document.getElementById('header-date');
+  let currentView = null;
 
-  function buildStartMenu() {
-    startMenu.innerHTML = '';
-    const sidebar = el('<div class="start-menu-sidebar">MEMENTO</div>');
-    const items = el('<div class="start-menu-items"></div>');
-    SECTIONS.forEach((s, i) => {
-      const prev = SECTIONS[i - 1];
-      if (SETTINGS_VIEWS.has(s.view) && (!prev || !SETTINGS_VIEWS.has(prev.view))) {
-        items.appendChild(el('<div class="menu-divider"></div>'));
-      }
-      const row = el(`<div class="menu-row" data-view="${s.view}">${appIcon(s.view)}<span>${esc(s.label)}</span></div>`);
-      const activate = () => { closeStartMenu(); render(s.view); };
-      row.addEventListener('click', activate);
-      makeActivatable(row, 'menuitem', activate);
-      items.appendChild(row);
+  function navLink(s, extraClass) {
+    const a = el(`<a class="nav-link ${extraClass}" href="#/${s.view}" data-view="${s.view}">${appIcon(s.view, 30)}<span class="nav-label"></span></a>`);
+    a.querySelector('.nav-label').textContent = s.label;
+    return a;
+  }
+
+  const strokeIcon = (d) => `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+
+  function buildNavigation() {
+    sidebarNav.innerHTML = '';
+    sidebarSecondary.innerHTML = '';
+    SECTIONS.forEach((s) => {
+      const quiet = SETTINGS_VIEWS.has(s.view);
+      (quiet ? sidebarSecondary : sidebarNav).appendChild(navLink(s, quiet ? 'nav-link-quiet' : ''));
     });
-    items.appendChild(el('<div class="menu-divider"></div>'));
-    const esci = el(`<div class="menu-row">${appIcon('esci')}<span>${esc(tr('btn_logout'))}</span></div>`);
-    const activateLogout = () => { closeStartMenu(); logout(); };
-    esci.addEventListener('click', activateLogout);
-    makeActivatable(esci, 'menuitem', activateLogout);
-    items.appendChild(esci);
-    items.setAttribute('role', 'menu');
-    startMenu.appendChild(sidebar);
-    startMenu.appendChild(items);
-  }
-  buildStartMenu();
+    const esci = el(`<button type="button" class="nav-link nav-link-quiet">${appIcon('esci', 30)}<span class="nav-label"></span></button>`);
+    esci.querySelector('.nav-label').textContent = tr('btn_logout');
+    esci.addEventListener('click', logout);
+    sidebarSecondary.appendChild(esci);
 
-  function openStartMenu() {
-    startMenu.classList.remove('hidden');
-    btnStart.classList.add('pressed');
+    // Telefono: Oggi, Cerca, + (cattura), Cartelle, Sezioni (tutto il resto).
+    tabbar.innerHTML = '';
+    const tab = (view, label, path) => {
+      const a = el(`<a class="tab" href="#/${view}" data-view="${view}">${strokeIcon(path)}<span></span></a>`);
+      a.querySelector('span').textContent = label;
+      return a;
+    };
+    const button = (cls, label, path, onClick) => {
+      const b = el(`<button type="button" class="${cls}">${strokeIcon(path)}${label ? '<span></span>' : ''}</button>`);
+      if (label) b.querySelector('span').textContent = label;
+      b.addEventListener('click', onClick);
+      return b;
+    };
+    tabbar.appendChild(tab('today', tr('nav_today'), APP_TILES.today.path));
+    tabbar.appendChild(button('tab', tr('tab_search'), '<circle cx="11" cy="11" r="7"/><path d="M16 16l5 5"/>', () => {
+      closeSectionsSheet();
+      searchInput.focus();
+    }));
+    const capture = button('tab-capture', '', '<path d="M12 5v14M5 12h14"/>', () => { closeSectionsSheet(); openQuickCapture(); });
+    capture.setAttribute('aria-label', tr('title_quick_capture'));
+    tabbar.appendChild(capture);
+    tabbar.appendChild(tab('dossiers', tr('nav_dossiers'), APP_TILES.dossiers.path));
+    const more = button('tab', tr('tab_sections'), '<rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/>', () => {
+      if (sectionsSheet.classList.contains('hidden')) openSectionsSheet(); else closeSectionsSheet();
+    });
+    more.setAttribute('aria-haspopup', 'dialog');
+    tabbar.appendChild(more);
+
+    // Foglio "Sezioni" del telefono: tutte le sezioni come tessere grandi.
+    sectionsSheet.innerHTML = '';
+    const grid = el('<div class="sheet-grid"></div>');
+    SECTIONS.forEach((s) => {
+      const a = el(`<a class="sheet-tile" href="#/${s.view}" data-view="${s.view}">${appIcon(s.view, 52)}<span></span></a>`);
+      a.querySelector('span').textContent = s.label;
+      grid.appendChild(a);
+    });
+    const esciTile = el(`<button type="button" class="sheet-tile">${appIcon('esci', 52)}<span></span></button>`);
+    esciTile.querySelector('span').textContent = tr('btn_logout');
+    esciTile.addEventListener('click', logout);
+    grid.appendChild(esciTile);
+    sectionsSheet.appendChild(grid);
   }
-  function closeStartMenu() {
-    const wasOpen = !startMenu.classList.contains('hidden');
-    startMenu.classList.add('hidden');
-    btnStart.classList.remove('pressed');
+
+  function openSectionsSheet() { sectionsSheet.classList.remove('hidden'); }
+  function closeSectionsSheet() {
+    const wasOpen = !sectionsSheet.classList.contains('hidden');
+    sectionsSheet.classList.add('hidden');
     return wasOpen;
   }
-  btnStart.addEventListener('click', () => {
-    if (startMenu.classList.contains('hidden')) openStartMenu(); else closeStartMenu();
+  sectionsSheet.addEventListener('click', (e) => { if (e.target === sectionsSheet) closeSectionsSheet(); });
+
+  function markActiveNav(view) {
+    document.querySelectorAll('.nav-link[data-view], .tab[data-view], .sheet-tile[data-view]').forEach((n) => {
+      const on = n.dataset.view === view;
+      n.classList.toggle('active', on);
+      if (on) n.setAttribute('aria-current', 'page'); else n.removeAttribute('aria-current');
+    });
+  }
+
+  function updateHeaderDate() {
+    const label = new Date().toLocaleDateString(I18N.getLang() === 'en' ? 'en-GB' : 'it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+    headerDate.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+  }
+
+  // #/vault, #/dossiers/12 -> { view, opts }. Sezione sconosciuta: Oggi.
+  function routeFromHash() {
+    const [view, id] = location.hash.replace(/^#\/?/, '').split('/');
+    if (!view || !SECTIONS.some((s) => s.view === view)) return { view: 'today', opts: {} };
+    return { view, opts: id ? { highlight: id } : {} };
+  }
+  window.addEventListener('hashchange', () => {
+    if (appRoot.classList.contains('hidden')) return;
+    const { view, opts } = routeFromHash();
+    render(view, { ...opts, fromHash: true });
   });
-  document.addEventListener('click', (e) => {
-    if (startMenu.classList.contains('hidden')) return;
-    if (startMenu.contains(e.target) || btnStart.contains(e.target)) return;
-    closeStartMenu();
-  });
-  // wm.js chiede di aprire il menu Avvio quando l'utente tocca "Affianca" su
-  // mobile, per scegliere la seconda app da mettere in split.
-  window.addEventListener('memento:request-start-menu', openStartMenu);
-
-  // Gesto swipe-up per aprire il menu Avvio su mobile (paradigma "pocket PC"
-  // suggerito dalla skill Windows 95): il tasto Avvio resta comunque sempre
-  // raggiungibile, questa e' solo una scorciatoia in piu'. Stessa soglia di
-  // breakpoint gia' usata in wm.js/style.css (760px), non una nuova.
-  const startGestureMQ = window.matchMedia('(max-width: 760px)');
-  const SWIPE_ZONE_PX = 70; // quanto vicino alla base dello schermo deve partire il tocco
-  const SWIPE_MIN_DISTANCE = 45;
-  const SWIPE_MAX_DURATION = 600; // ms, oltre e' uno scroll lento, non uno swipe
-  let swipeStartY = null;
-  let swipeStartX = 0;
-  let swipeStartTime = 0;
-  document.addEventListener('touchstart', (e) => {
-    if (!startGestureMQ.matches || !startMenu.classList.contains('hidden')) { swipeStartY = null; return; }
-    const touch = e.touches[0];
-    if (window.innerHeight - touch.clientY > SWIPE_ZONE_PX) { swipeStartY = null; return; }
-    swipeStartY = touch.clientY;
-    swipeStartX = touch.clientX;
-    swipeStartTime = Date.now();
-  }, { passive: true });
-  document.addEventListener('touchend', (e) => {
-    if (swipeStartY == null) return;
-    const touch = e.changedTouches[0];
-    const dy = swipeStartY - touch.clientY;
-    const dx = Math.abs(touch.clientX - swipeStartX);
-    const dt = Date.now() - swipeStartTime;
-    swipeStartY = null;
-    if (dy > SWIPE_MIN_DISTANCE && dx < 60 && dt < SWIPE_MAX_DURATION) openStartMenu();
-  }, { passive: true });
-
-  // ---------------- Desktop: sfondo, cartelle e note recenti come icone ----------------
-  // Lo sfondo e' una preferenza solo del dispositivo (localStorage), non un
-  // dato di Memento: niente migrazione, niente sincronizzazione fra dispositivi.
-  // "classico" non ha un suo themeColor: lascia che sia lo skin attivo a
-  // decidere il colore (vedi updateThemeColorMeta) invece di forzare sempre
-  // il teal di Windows 95 anche quando e' selezionato un altro skin.
-  const WALLPAPERS = {
-    classico: { label: tr('wallpaper_classic') },
-    'vaporwave-tramonto': { label: tr('wallpaper_sunset'), url: '/wallpapers/wp-tramonto.jpg', themeColor: '#442e64' },
-    'vaporwave-palma': { label: tr('wallpaper_palm'), url: '/wallpapers/wp-palma.jpg', themeColor: '#43294b' },
-    grigio: { label: tr('wallpaper_gray'), color: '#6b6b76', themeColor: '#6b6b76' },
-  };
-  const desktopWallpaperEl = document.getElementById('desktop-wallpaper');
-  const authScreenEls = document.querySelectorAll('.auth-screen');
-  const desktopIconsEl = document.getElementById('desktop-icons');
-
-  function currentWallpaper() {
-    return localStorage.getItem('memento-wallpaper') || 'classico';
-  }
-
-  // Colore della barra del browser/PWA: il wallpaper vince se ne ha uno suo
-  // (grigio, vaporwave...), altrimenti decide lo skin attivo - cosi' con
-  // "classico" (che non impone nulla) si vede il colore del tema scelto
-  // invece di un teal fisso che ignorava quale skin fosse selezionato.
-  function updateThemeColorMeta() {
-    const wp = WALLPAPERS[currentWallpaper()] || WALLPAPERS.classico;
-    const theme = THEMES[currentTheme()] || THEMES['windows-95'];
-    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-    if (themeColorMeta) themeColorMeta.setAttribute('content', wp.themeColor || theme.themeColor || '#008080');
-  }
-
-  // Applica lo sfondo anche alle schermate di login/lingua (che non hanno un
-  // elemento "desktop" da riempire, quindi qui usiamo solo colore/immagine
-  // piatti — mai il fallback col logo, pensato solo per il desktop).
-  function applyGlobalTheme(name) {
-    const wp = WALLPAPERS[name] || WALLPAPERS.classico;
-    const bg = wp.url ? `url(${wp.url}) center/cover` : (wp.color || '');
-    authScreenEls.forEach((screenEl) => { screenEl.style.background = bg; });
-    updateThemeColorMeta();
-  }
-
-  function applyWallpaper(name) {
-    const wp = WALLPAPERS[name] || WALLPAPERS.classico;
-    desktopWallpaperEl.innerHTML = '';
-    if (wp.url) {
-      desktopWallpaperEl.style.background = `url(${wp.url}) center/cover`;
-    } else if (wp.color) {
-      desktopWallpaperEl.style.background = wp.color;
-    } else {
-      desktopWallpaperEl.style.background = '';
-      desktopWallpaperEl.appendChild(el('<img class="wallpaper-logo" src="/icon-512.png" alt="" />'));
-    }
-    localStorage.setItem('memento-wallpaper', name);
-    applyGlobalTheme(name);
-  }
-
-  // Tema del chrome (finestre/taskbar/menu Avvio/pulsanti/campi) — skill
-  // memento-ui, ramo sperimentale. Stessa logica di applyWallpaper: solo
-  // dispositivo, niente sync. 'windows-95' e' il default e non serve un
-  // attributo (nessun file themes.css da caricare per quel caso).
-  // themeColor qui sotto = --accent di ciascuno skin in themes.css (il
-  // colore che lo rappresenta meglio), usato per la barra del browser/PWA
-  // quando il wallpaper e' "classico" (vedi updateThemeColorMeta).
-  const THEMES = {
-    'windows-95': { label: 'Windows 95 (predefinito)', themeColor: '#008080' },
-    neumorphism: { label: 'Neumorphism', themeColor: '#5b7fdb' },
-    glassmorphism: { label: 'Glassmorphism', themeColor: '#4338ca' },
-    'macos-modern': { label: 'macOS moderno', themeColor: '#0a6cff' },
-    'windows-11-fluent': { label: 'Windows 11 Fluent', themeColor: '#0067c0' },
-    'material-3': { label: 'Material 3', themeColor: '#65558f' },
-    neubrutalism: { label: 'Neubrutalismo', themeColor: '#111111' },
-    cyberpunk: { label: 'Cyberpunk', themeColor: '#00f6ff' },
-    'minimal-flat': { label: 'Minimal flat', themeColor: '#3b6e5e' },
-    'aero-glass': { label: 'Aero glass', themeColor: '#1c5ba8' },
-  };
-
-  function currentTheme() {
-    return localStorage.getItem('memento-theme') || 'windows-95';
-  }
-
-  function applyTheme(name) {
-    if (name && name !== 'windows-95' && THEMES[name]) {
-      document.documentElement.setAttribute('data-theme', name);
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-      name = 'windows-95';
-    }
-    localStorage.setItem('memento-theme', name);
-    updateThemeColorMeta();
-  }
-
-  // Applicati subito al caricamento dello script (le schermate di login/lingua
-  // sono gia' nel DOM a questo punto, lo script e' in fondo al body) cosi' anche
-  // chi non ha ancora sbloccato il vault vede sfondo e skin scelti in precedenza,
-  // non solo chi e' gia' arrivato al desktop (data-theme su <html> si eredita
-  // ovunque via CSS, incluso .auth-screen: vedi themes.css).
-  applyGlobalTheme(currentWallpaper());
-  applyTheme(currentTheme());
-
-  const POSTIT_CLASSES = ['postit-y', 'postit-p', 'postit-b'];
-
-  // Le note sul desktop mostrano solo il titolo per restare compatte; al tocco
-  // si allargano sul posto per mostrare corpo/checklist/tag (stesso comportamento
-  // su desktop e mobile, cosi' non serve aprire la finestra Note solo per leggere).
-  // Si richiudono al tocco di un qualsiasi punto (anche se stesso) o non appena
-  // parte una nuova operazione, perche' quel tocco arriva comunque al listener
-  // globale sotto.
-  let expandedPostit = null;
-
-  function collapsePostit() {
-    if (!expandedPostit) return;
-    const { el: noteEl, original } = expandedPostit;
-    noteEl.classList.remove('postit-expanded');
-    noteEl.innerHTML = '';
-    noteEl.appendChild(original);
-    expandedPostit = null;
-  }
-
-  function expandPostit(noteEl, idea) {
-    collapsePostit();
-    const original = document.createDocumentFragment();
-    while (noteEl.firstChild) original.appendChild(noteEl.firstChild);
-    noteEl.classList.add('postit-expanded');
-    const { done, total } = checklistProgress(idea.checklist);
-    noteEl.innerHTML = `
-      <p class="postit-expanded-title">${esc(idea.title)}</p>
-      ${idea.body ? `<p class="postit-expanded-body">${esc(idea.body)}</p>` : ''}
-      ${total ? `<p class="postit-expanded-sub">${esc(tr('label_completed_count', { done, total }))}</p>` : ''}
-      ${(idea.tags || []).length ? `<div class="tag-row">${idea.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
-    `;
-    expandedPostit = { el: noteEl, original };
-  }
-
-  document.addEventListener('click', (e) => {
-    if (!expandedPostit || expandedPostit.el.contains(e.target)) return;
-    collapsePostit();
-  });
-
-  async function buildDesktop() {
-    applyWallpaper(currentWallpaper());
-    applyTheme(currentTheme());
-    expandedPostit = null;
-    desktopIconsEl.innerHTML = '';
-    try {
-      const [dossiers, ideas] = await Promise.all([api('/dossiers'), api('/ideas')]);
-      dossiers.slice(0, 8).forEach((d) => {
-        const icon = el(`<button type="button" class="desktop-icon">${appIcon('dossiers', 40)}<span class="label"></span></button>`);
-        icon.querySelector('.label').textContent = d.title;
-        icon.addEventListener('click', () => render('dossiers', { highlight: d.id }));
-        desktopIconsEl.appendChild(icon);
-      });
-      ideas.slice(0, 4).forEach((idea, i) => {
-        const note = el(`<button type="button" class="postit ${POSTIT_CLASSES[i % POSTIT_CLASSES.length]}"></button>`);
-        const title = idea.title || idea.body || '';
-        note.textContent = title.length > 90 ? title.slice(0, 90) + '…' : title;
-        note.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (note.classList.contains('postit-expanded')) collapsePostit();
-          else expandPostit(note, idea);
-        });
-        desktopIconsEl.appendChild(note);
-      });
-    } catch (err) {
-      // desktop non critico: se le API falliscono restano solo lo sfondo e le finestre gia' aperte
-    }
-  }
 
   // ---------------- Cattura veloce ("Nuovo" in barra) ----------------
   // Prende il posto del vecchio composer di Flusso: sempre a un tocco,
@@ -872,7 +738,7 @@
   }
 
   // Trascinamento libero del riquadro tramite la barretta in cima — stessa
-  // tecnica pointer-capture di attachDrag() in wm.js, ma indipendente: la
+  // tecnica pointer-capture del vecchio gestore finestre, ma indipendente: la
   // cattura veloce non e' una finestra vera (niente focus/z-index/taskbar).
   function attachQcDrag(handle) {
     handle.addEventListener('pointerdown', (e) => {
@@ -901,7 +767,7 @@
   }
 
   async function openQuickCapture(presetDossier) {
-    closeStartMenu();
+    closeSectionsSheet();
     quickCaptureEl.innerHTML = '';
     const dossiers = await api('/dossiers').catch(() => []);
     const dragHandle = el(`<div class="qc-drag-handle" title="${esc(tr('qc_drag_title'))}">⋮⋮⋮</div>`);
@@ -1069,11 +935,11 @@
         const idea = await api('/ideas', { method: 'POST', body: JSON.stringify({ title, body: text, tags }) });
         if (qcSelectedDossier) {
           await api(`/dossiers/${qcSelectedDossier.id}/links`, { method: 'POST', body: JSON.stringify({ item_type: 'idea', item_id: idea.id }) });
-          if (MementoWM.getWindow(windowId('dossiers'))) render('dossiers', { highlight: qcSelectedDossier.id });
+          if (currentView === 'dossiers') render('dossiers', { highlight: qcSelectedDossier.id, fromHash: true });
         }
         toast(tr('toast_idea_saved'));
         closeQuickCapture();
-        buildDesktop();
+        if (currentView === 'today' || currentView === 'ideas') render(currentView, { fromHash: true });
       } finally {
         qcSaving = false;
       }
@@ -1094,26 +960,26 @@
 
   const views = {}; // popolate piu' sotto
 
-  const WINDOW_SIZES = { vault: { w: 1040, h: 640 }, dossiers: { w: 760, h: 560 }, calendar: { w: 820, h: 620 } };
-
-  function windowId(view) { return 'win-' + view; }
-
   async function render(view, opts = {}) {
-    const win = MementoWM.openWindow({
-      id: windowId(view),
-      title: VIEW_LABELS[view] || view,
-      icon: appIcon(view, 14),
-      defaultSize: WINDOW_SIZES[view] || { w: 760, h: 560 },
-    });
-    const contentEl = win.contentEl;
-    contentEl.innerHTML = '';
+    if (!views[view]) view = 'today';
+    // Indirizzo della sezione: un passo nuovo nella cronologia, tranne quando
+    // ci si arriva proprio dalla cronologia (indietro/avanti) o all'avvio.
+    const hash = `#/${view}`;
+    if (!opts.fromHash && location.hash !== hash) {
+      if (opts.replace) history.replaceState(null, '', hash); else history.pushState(null, '', hash);
+    }
+    currentView = view;
+    closeSectionsSheet();
+    markActiveNav(view);
+    viewTitle.textContent = VIEW_LABELS[view] || view;
+    document.title = view === 'today' ? 'Memento' : `${VIEW_LABELS[view] || view} — Memento`;
+    const contentEl = el(`<div class="view view-${view}"></div>`);
+    viewHost.innerHTML = '';
+    viewHost.appendChild(contentEl);
+    viewHost.scrollTop = 0;
     contentEl.appendChild(el(`<div class="empty-state">${esc(tr('loading_label'))}</div>`));
     try {
       await views[view](contentEl, opts);
-      // Cartelle e Note compaiono anche come icone sul desktop: ogni volta che
-      // la loro finestra si aggiorna (creazione/modifica/eliminazione), le
-      // icone devono riflettere subito lo stesso stato, senza dover ricaricare.
-      if (view === 'ideas' || view === 'dossiers') buildDesktop();
     } catch (err) {
       contentEl.innerHTML = '';
       contentEl.appendChild(el(`<div class="empty-state">${esc(tr('err_view_prefix'))}: ${esc(err.message)}</div>`));
@@ -1174,6 +1040,219 @@
     }
     return form;
   }
+
+  // ---------------- Oggi ----------------
+  // La schermata d'ingresso: tutto quello che conta adesso, senza aprire
+  // nessuna sezione. Le scadenze arrivano da quattro fonti diverse
+  // (promemoria, progetti, rinnovi degli abbonamenti, documenti in scadenza)
+  // ma per chi le guarda sono la stessa cosa: "cosa devo fare e quando".
+  const TODAY_WINDOW_DAYS = 30;
+  const TODAY_MAX_DEADLINES = 8;
+
+  // Giorni di calendario tra oggi e la data (negativo = gia' passata).
+  // "2026-10-07" va letta come data locale, non come mezzanotte UTC.
+  function calendarDaysFromToday(value) {
+    const d = value instanceof Date ? new Date(value) : new Date(String(value).slice(0, 10) + 'T00:00:00');
+    if (isNaN(d)) return null;
+    d.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return Math.round((d - today) / 86400000);
+  }
+
+  // Tempo concreto e mai punitivo: una scadenza passata e' "3 giorni fa",
+  // non "SCADUTO", e ha accanto il modo di rimediare (Sposta / Fatto).
+  function relativeDayLabel(days) {
+    if (days === 0) return tr('rel_today');
+    if (days === 1) return tr('rel_tomorrow');
+    if (days === -1) return tr('rel_yesterday');
+    if (days < 0) return tr('rel_days_ago', { n: -days });
+    return tr('rel_in_days', { n: days });
+  }
+  function urgencyClass(days) {
+    if (days < 0) return 'due-past';
+    if (days <= 3) return 'due-soon';
+    if (days <= 14) return 'due-near';
+    return 'due-far';
+  }
+
+  views.today = async (root) => {
+    const [reminders, projects, accounts, docs, ideas, dossiers] = await Promise.all([
+      api('/reminders'), api('/projects'), api('/accounts'), api('/drive'), api('/ideas'), api('/dossiers'),
+    ]);
+    root.innerHTML = '';
+
+    const capture = el(`
+      <button type="button" class="capture-bar">
+        <span class="capture-bar-plus" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span class="capture-bar-text"></span>
+      </button>
+    `);
+    capture.querySelector('.capture-bar-text').textContent = tr('today_capture_placeholder');
+    capture.addEventListener('click', () => openQuickCapture());
+    root.appendChild(capture);
+
+    const grid = el('<div class="today-grid"></div>');
+    root.appendChild(grid);
+
+    // --- Scade presto ---
+    const deadlines = [];
+    reminders.forEach((r) => {
+      const days = calendarDaysFromToday(r.date);
+      if (days !== null) deadlines.push({ kind: 'reminder', item: r, days, title: r.label, sub: r.time ? r.time.slice(0, 5) : '' });
+    });
+    projects.filter((p) => p.deadline && p.status !== 'fatto').forEach((p) => {
+      const days = calendarDaysFromToday(p.deadline);
+      if (days !== null) deadlines.push({ kind: 'project', item: p, days, title: p.title, sub: tr('type_project') });
+    });
+    accounts.forEach((a) => {
+      const next = nextRenewalDate(a.renewal_day, a.renewal_month, a.billing_frequency) || (a.renewal_date ? a.renewal_date : null);
+      if (!next) return;
+      const days = calendarDaysFromToday(next);
+      if (days === null) return;
+      const amount = a.amount ? ` · ${a.amount} €` : '';
+      deadlines.push({ kind: 'account', item: a, days, title: tr('today_renewal_of', { name: a.service }), sub: tr('type_account') + amount });
+    });
+    docs.filter((d) => d.expiry_date).forEach((d) => {
+      const days = calendarDaysFromToday(d.expiry_date);
+      if (days !== null) deadlines.push({ kind: 'document', item: d, days, title: d.display_name || d.original_name, sub: tr('type_document') });
+    });
+    const upcoming = deadlines
+      .filter((x) => x.days <= TODAY_WINDOW_DAYS && (x.days >= 0 || x.kind === 'reminder' || x.kind === 'project'))
+      .sort((a, b) => a.days - b.days);
+
+    const duePanel = el(`<section class="panel"><div class="panel-head"><h2></h2><a href="#/calendar"></a></div><div class="due-list"></div></section>`);
+    duePanel.querySelector('h2').textContent = tr('today_due_title');
+    duePanel.querySelector('.panel-head a').textContent = tr('nav_calendar');
+    const dueList = duePanel.querySelector('.due-list');
+    if (!upcoming.length) {
+      dueList.appendChild(el(`<p class="panel-empty">${esc(tr('today_due_empty'))}</p>`));
+    }
+    upcoming.slice(0, TODAY_MAX_DEADLINES).forEach((x) => {
+      const row = el(`
+        <div class="due-row ${urgencyClass(x.days)}">
+          <button type="button" class="due-main">
+            <span class="due-title"></span>
+            <span class="due-sub"></span>
+          </button>
+          <span class="due-when"></span>
+          <span class="due-actions"></span>
+        </div>
+      `);
+      row.querySelector('.due-title').textContent = x.title;
+      row.querySelector('.due-sub').textContent = x.sub;
+      row.querySelector('.due-when').textContent = relativeDayLabel(x.days);
+      const view = { reminder: 'reminders', project: 'projects', account: 'accounts', document: 'drive' }[x.kind];
+      row.querySelector('.due-main').addEventListener('click', () => render(view, { highlight: x.item.id }));
+      if (x.kind === 'reminder') {
+        const actions = row.querySelector('.due-actions');
+        if (x.days < 0) {
+          const move = el(`<button type="button" class="btn btn-sm">${esc(tr('btn_move'))}</button>`);
+          move.addEventListener('click', () => {
+            const r = x.item;
+            const form = reminderModal(r);
+            form.addEventListener('submit', async (e) => {
+              e.preventDefault();
+              await api(`/reminders/${r.id}`, { method: 'PUT', body: JSON.stringify({ label: form.label.value, date: form.date.value, time: form.time.value, notes: form.notes.value }) });
+              closeModal(); toast(tr('toast_reminder_updated')); render('today', { fromHash: true });
+            });
+            form.querySelector('[data-cancel]').addEventListener('click', closeModal);
+            openModal(tr('modal_edit_reminder'), form);
+          });
+          actions.appendChild(move);
+        }
+        const done = el(`<button type="button" class="btn btn-sm btn-done">${esc(tr('btn_done'))}</button>`);
+        done.addEventListener('click', async () => {
+          await api(`/reminders/${x.item.id}`, { method: 'DELETE' });
+          toast(tr('toast_done_nice'));
+          render('today', { fromHash: true });
+        });
+        actions.appendChild(done);
+      }
+      dueList.appendChild(row);
+    });
+    if (upcoming.length > TODAY_MAX_DEADLINES) {
+      dueList.appendChild(el(`<a class="panel-more" href="#/calendar">${esc(tr('today_more', { n: upcoming.length - TODAY_MAX_DEADLINES }))}</a>`));
+    }
+    grid.appendChild(duePanel);
+
+    // --- Progetti in corso: le spunte si toccano qui, senza aprire nulla ---
+    const active = projects.filter((p) => p.status === 'in_corso')
+      .sort((a, b) => (a.deadline || '9999').localeCompare(b.deadline || '9999'));
+    const projPanel = el(`<section class="panel"><div class="panel-head"><h2></h2><a href="#/projects"></a></div><div class="proj-list"></div></section>`);
+    projPanel.querySelector('h2').textContent = tr('today_projects_title');
+    projPanel.querySelector('.panel-head a').textContent = tr('today_all_n', { n: projects.filter((p) => p.status !== 'fatto').length });
+    const projList = projPanel.querySelector('.proj-list');
+    if (!active.length) projList.appendChild(el(`<p class="panel-empty">${esc(tr('today_projects_empty'))}</p>`));
+    active.slice(0, 4).forEach((p) => {
+      const card = el(`
+        <div class="proj-card">
+          <button type="button" class="proj-head"><span class="proj-title"></span><span class="proj-when"></span></button>
+          <div class="progress"><div class="progress-fill"></div></div>
+          <div class="proj-meta"></div>
+          <div class="proj-checks"></div>
+        </div>
+      `);
+      card.querySelector('.proj-title').textContent = p.title;
+      card.querySelector('.proj-head').addEventListener('click', () => render('projects', { highlight: p.id }));
+      const renderCard = (proj) => {
+        const { done, total } = checklistProgress(proj.checklist);
+        card.querySelector('.progress-fill').style.width = total ? `${Math.round((done / total) * 100)}%` : '0%';
+        card.querySelector('.proj-meta').textContent = total ? tr('label_completed_count', { done, total }) : tr('today_no_checklist');
+        const when = card.querySelector('.proj-when');
+        if (proj.deadline) {
+          const days = calendarDaysFromToday(proj.deadline);
+          when.textContent = relativeDayLabel(days);
+          when.className = `proj-when ${urgencyClass(days)}`;
+        }
+        const checks = card.querySelector('.proj-checks');
+        checks.innerHTML = '';
+        (proj.checklist || []).map((c, i) => ({ c, i })).filter(({ c }) => !c.done).slice(0, 3).forEach(({ c, i }) => {
+          const label = el('<label class="check-row"><input type="checkbox" /><span></span></label>');
+          label.querySelector('span').textContent = c.text;
+          label.querySelector('input').addEventListener('change', async (e) => {
+            e.target.disabled = true;
+            const checklist = proj.checklist.map((item, j) => (j === i ? { ...item, done: true } : item));
+            const updated = await api(`/projects/${proj.id}`, { method: 'PUT', body: JSON.stringify({ checklist }) });
+            toast(tr('toast_done_nice'));
+            renderCard(updated);
+          });
+          checks.appendChild(label);
+        });
+      };
+      renderCard(p);
+      projList.appendChild(card);
+    });
+    grid.appendChild(projPanel);
+
+    // --- Note recenti e cartelle ---
+    const side = el(`<section class="panel"><div class="panel-head"><h2></h2><a href="#/ideas"></a></div><div class="note-grid"></div><div class="panel-head panel-head-sub"><h2></h2><a href="#/dossiers"></a></div><div class="chip-row"></div></section>`);
+    const heads = side.querySelectorAll('.panel-head');
+    heads[0].querySelector('h2').textContent = tr('today_notes_title');
+    heads[0].querySelector('a').textContent = tr('today_all_n', { n: ideas.length });
+    heads[1].querySelector('h2').textContent = tr('nav_dossiers');
+    heads[1].querySelector('a').textContent = tr('today_all_n', { n: dossiers.length });
+    const noteGrid = side.querySelector('.note-grid');
+    if (!ideas.length) noteGrid.appendChild(el(`<p class="panel-empty">${esc(tr('today_notes_empty'))}</p>`));
+    const NOTE_TINTS = ['note-yellow', 'note-teal', 'note-blue', 'note-peach'];
+    ideas.slice(0, 4).forEach((idea, i) => {
+      const n = el(`<button type="button" class="note-tile ${NOTE_TINTS[i % NOTE_TINTS.length]}"><span class="note-text"></span><span class="note-tags"></span></button>`);
+      const text = idea.title || idea.body || '';
+      n.querySelector('.note-text').textContent = text.length > 90 ? text.slice(0, 90) + '…' : text;
+      n.querySelector('.note-tags').textContent = (idea.tags || []).map((t) => '#' + t).join(' ');
+      n.addEventListener('click', () => render('ideas', { highlight: idea.id }));
+      noteGrid.appendChild(n);
+    });
+    const chips = side.querySelector('.chip-row');
+    if (!dossiers.length) chips.appendChild(el(`<p class="panel-empty">${esc(tr('today_dossiers_empty'))}</p>`));
+    dossiers.slice(0, 10).forEach((d) => {
+      const c = el(`<a class="chip" href="#/dossiers/${d.id}"><span></span><span class="chip-count"></span></a>`);
+      c.querySelector('span').textContent = d.title;
+      c.querySelector('.chip-count').textContent = String((d.items || []).length);
+      chips.appendChild(c);
+    });
+    grid.appendChild(side);
+  };
 
   views.reminders = async (root, opts = {}) => {
     const highlightId = opts.highlight ? String(opts.highlight) : null;
@@ -1576,7 +1655,7 @@
         const icon = el(`
           <button type="button" class="explorer-icon">
             <span class="unlink-badge" data-del title="${esc(tr('btn_delete'))}">✕</span>
-            ${appIcon('projects', 34)}
+            ${appIcon('projects', 52)}
             <span class="label">${esc(p.title)}</span>
             <span class="chip-status chip-status-${p.status}">${esc(statusInfo.label)}</span>
             ${total ? `<span class="count">${done}/${total}</span>` : ''}
@@ -2574,7 +2653,7 @@
         const icon = el(`
           <button type="button" class="explorer-icon">
             <span class="unlink-badge" data-del title="${esc(tr('title_delete_dossier'))}">✕</span>
-            ${appIcon('dossiers', 34)}
+            ${appIcon('dossiers', 52)}
             <span class="label">${esc(d.title)}</span>
             <span class="count">${esc(tr(n === 1 ? 'count_items_one' : 'count_items_other', { n }))}</span>
           </button>
@@ -2933,28 +3012,6 @@
     }
     root.appendChild(notifyBlock);
 
-    const wallpaperBlock = el(`<div class="section-block"><h3>${esc(tr('section_wallpaper'))}</h3><p class="card-sub">${esc(tr('wallpaper_device_only'))}</p></div>`);
-    const wallpaperRow = el('<div class="card-actions" style="padding-top:10px"></div>');
-    Object.entries(WALLPAPERS).forEach(([key, wp]) => {
-      const btn = el(`<button class="btn btn-sm${key === currentWallpaper() ? ' btn-primary' : ''}" data-wp="${key}"></button>`);
-      btn.textContent = wp.label;
-      btn.addEventListener('click', () => { applyWallpaper(key); render('security'); });
-      wallpaperRow.appendChild(btn);
-    });
-    wallpaperBlock.appendChild(wallpaperRow);
-    root.appendChild(wallpaperBlock);
-
-    const themeBlock = el('<div class="section-block"><h3>Aspetto</h3><p class="card-sub">Stile di finestre, taskbar e pulsanti — solo su questo dispositivo. Sperimentale (skill memento-ui).</p></div>');
-    const themeRow = el('<div class="card-actions" style="padding-top:10px"></div>');
-    Object.entries(THEMES).forEach(([key, th]) => {
-      const btn = el(`<button class="btn btn-sm${key === currentTheme() ? ' btn-primary' : ''}" data-theme-key="${key}"></button>`);
-      btn.textContent = th.label;
-      btn.addEventListener('click', () => { applyTheme(key); render('security'); });
-      themeRow.appendChild(btn);
-    });
-    themeBlock.appendChild(themeRow);
-    root.appendChild(themeBlock);
-
     const langBlock = el(`<div class="section-block"><h3>${esc(tr('settings_language'))}</h3><p class="card-sub">${esc(tr('settings_language_hint'))}</p></div>`);
     const langRow = el('<div class="card-actions" style="padding-top:10px"></div>');
     [['it', 'Italiano'], ['en', 'English']].forEach(([code, label]) => {
@@ -2977,24 +3034,7 @@
   // ---------------- Global search ----------------
   const searchInput = document.getElementById('global-search');
   const searchResults = document.getElementById('search-results');
-  const topbar = document.getElementById('topbar');
-  const searchToggle = document.getElementById('search-toggle');
   let searchTimer = null;
-
-  // La ricerca sta sempre dietro l'icona lente in taskbar (desktop e mobile
-  // allo stesso modo): al tocco apre la barra in cima, libera lo spazio
-  // quando non serve.
-  searchToggle.addEventListener('click', () => {
-    const aperta = topbar.classList.toggle('search-open');
-    searchToggle.setAttribute('aria-expanded', String(aperta));
-    searchToggle.innerHTML = iconaLinea(aperta ? 'chiudi' : 'cerca');
-    if (aperta) {
-      searchInput.focus();
-    } else {
-      searchInput.value = '';
-      searchResults.classList.add('hidden');
-    }
-  });
 
   searchInput.addEventListener('input', () => {
     clearTimeout(searchTimer);
@@ -3040,8 +3080,17 @@
     if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'k') return;
     if (appRoot.classList.contains('hidden')) return; // non ancora autenticati
     e.preventDefault();
-    if (!topbar.classList.contains('search-open') && searchToggle.offsetParent) searchToggle.click();
-    else searchInput.focus();
+    searchInput.focus();
+  });
+
+  // "/" porta alla ricerca da qualunque punto, tranne mentre si scrive.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (appRoot.classList.contains('hidden')) return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+    e.preventDefault();
+    searchInput.focus();
   });
 
   // Molti handler fanno "await api(...)" senza try/catch: senza questa rete di
