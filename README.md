@@ -4,6 +4,30 @@ Spazio personale self-hosted per idee, progetti, password, abbonamenti e documen
 
 Gratuito e open source (licenza MIT). Pagina del progetto: **[phloppy.it/memento](https://www.phloppy.it/memento)**.
 
+## Come si presenta
+
+**Oggi** — cosa scade, i progetti in corso con le spunte toccabili sul posto, le note recenti e le cartelle:
+
+![La schermata Oggi su computer](docs/screenshots/desktop-oggi.png)
+
+**Una cartella** — tutto quello che riguarda un tema, diviso per tipo, con le sue scadenze in cima:
+
+![La pagina di una cartella](docs/screenshots/desktop-cartella.png)
+
+**Progetti** — stato, scadenza e avanzamento visibili senza aprirli:
+
+![L'elenco dei progetti](docs/screenshots/desktop-progetti.png)
+
+**Sul telefono** — la schermata Oggi, "Annota al volo" che si apre dove lo tocchi (con i suggerimenti per `#tag` e `@cartella`), tutte le sezioni a un tocco:
+
+<p>
+  <img src="docs/screenshots/telefono-oggi.png" alt="Oggi sul telefono" width="260">
+  <img src="docs/screenshots/telefono-annota.png" alt="Annota al volo sul telefono" width="260">
+  <img src="docs/screenshots/telefono-sezioni.png" alt="Tutte le sezioni sul telefono" width="260">
+</p>
+
+<sub>Dati di esempio.</sub>
+
 ## Cosa contiene
 
 - **Oggi** — la schermata d'ingresso: tutto quello che scade (promemoria, progetti, rinnovi, documenti) scritto come "domani", "tra 12 giorni", i progetti in corso con le spunte toccabili sul posto, le note recenti e le cartelle

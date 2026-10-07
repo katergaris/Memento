@@ -1133,7 +1133,7 @@
       if (!next) return;
       const days = calendarDaysFromToday(next);
       if (days === null) return;
-      const amount = a.amount ? ` · ${a.amount} €` : '';
+      const amount = a.amount ? ` · ${fmtMoney(a.amount)}` : '';
       deadlines.push({ kind: 'account', item: a, days, title: tr('today_renewal_of', { name: a.service }), sub: tr('type_account') + amount });
     });
     docs.filter((d) => d.expiry_date).forEach((d) => {
@@ -2818,7 +2818,7 @@
       }
       if (mine.account.length) {
         const body = section('account', 'nav_accounts', mine.account.length);
-        mine.account.forEach((a) => body.appendChild(row('account', a, a.service, a.amount ? `${a.amount} €` : (a.plan || ''), () => render('accounts', { only: a.id, fromDossier: d.id }))));
+        mine.account.forEach((a) => body.appendChild(row('account', a, a.service, a.amount ? fmtMoney(a.amount) : (a.plan || ''), () => render('accounts', { only: a.id, fromDossier: d.id }))));
       }
       if (mine.idea.length) {
         const body = section('idea', 'nav_ideas', mine.idea.length);
