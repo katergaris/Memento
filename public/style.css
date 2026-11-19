@@ -1018,7 +1018,7 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 }
 
 /* ---------- Vault a schede (direzione B) ---------- */
-.seg { display: flex; gap: 4px; background: #E8E3F6; border-radius: 16px; padding: 4px; margin-bottom: 14px; overflow-x: auto; scrollbar-width: none; }
+.seg { display: flex; gap: 4px; background: #E8E3F6; border-radius: 16px; padding: 4px; margin-bottom: 14px; max-width: 560px; overflow-x: auto; scrollbar-width: none; }
 .seg::-webkit-scrollbar { display: none; }
 .seg button {
   flex: 1 0 auto; border: none; background: none; padding: 9px 14px; border-radius: 12px; cursor: pointer;
