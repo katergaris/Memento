@@ -81,6 +81,28 @@
     return subtle.importKey('raw', fromB64(b64), { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']);
   }
 
+  // ---------------- Condivisione: chiavi ECDH P-256 ----------------
+  // Ogni telefono ha un'identita' (coppia di chiavi). Per condividere una
+  // voce si cifra la sua chiave per la chiave pubblica di chi la riceve:
+  // chiave effimera ECDH + AES-GCM (schema ECIES).
+  async function generateIdentity() {
+    const pair = await subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveKey']);
+    return { publicJwk: await subtle.exportKey('jwk', pair.publicKey), privateJwk: await subtle.exportKey('jwk', pair.privateKey) };
+  }
+  const ecdhAes = (priv, pub) => subtle.deriveKey({ name: 'ECDH', public: pub }, priv, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  async function wrapFor(publicJwk, rawBytes) {
+    const recipient = await subtle.importKey('jwk', publicJwk, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+    const eph = await subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveKey']);
+    const key = await ecdhAes(eph.privateKey, recipient);
+    const { iv, ct } = await encryptBytes(key, rawBytes);
+    return { epk: await subtle.exportKey('jwk', eph.publicKey), iv, ct };
+  }
+  async function unwrapWith(privateJwk, wrapped) {
+    const priv = await subtle.importKey('jwk', privateJwk, { name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveKey']);
+    const epk = await subtle.importKey('jwk', wrapped.epk, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+    return decryptBytes(await ecdhAes(priv, epk), wrapped.iv, wrapped.ct);
+  }
+
   async function sha256Hex(text) {
     const h = new Uint8Array(await subtle.digest('SHA-256', enc.encode(text)));
     return [...h].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -89,5 +111,6 @@
   return {
     ITERATIONS, toB64, fromB64, randomBytes, deriveKey, encryptBytes, decryptBytes,
     sealWithPassword, openWithPassword, sealWithKey, exportKey, importKey, sha256Hex,
+    generateIdentity, wrapFor, unwrapWith,
   };
 });

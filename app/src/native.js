@@ -125,9 +125,12 @@
       if (!interactive) return null;
       const SL = plugin('SocialLogin');
       if (!initialized) { await SL.initialize({ google: { webClientId: Sync.clientId() } }); initialized = true; }
-      const res = await SL.login({ provider: 'google', options: { scopes: ['https://www.googleapis.com/auth/drive.appdata'] } });
+      // drive.appdata: copia privata; drive: voci condivise con altre persone.
+      const res = await SL.login({ provider: 'google', options: { scopes: ['https://www.googleapis.com/auth/drive.appdata', 'https://www.googleapis.com/auth/drive'] } });
       const t = res && res.result && res.result.accessToken && res.result.accessToken.token;
       if (!t) throw new Error(tr('sync_no_token'));
+      const email = res.result.profile && res.result.profile.email;
+      if (email) setPref(SYNC_KEY, { ...Sync.settings(), email: email.toLowerCase() });
       token = t; tokenUntil = Date.now() + 50 * 60 * 1000;
       return token;
     },
@@ -156,11 +159,24 @@
       return out;
     },
     async download(id) { return (await Sync.api('GET', `${DRIVE}/files/${id}?alt=media`)).json(); },
-    async upload(name, value, id) {
+    async query(q, fields = 'files(id,name)') {
+      const out = [];
+      let page = '';
+      do {
+        const res = await Sync.api('GET', `${DRIVE}/files?q=${encodeURIComponent(q)}&pageSize=1000&fields=nextPageToken,${encodeURIComponent(fields)}${page ? `&pageToken=${page}` : ''}`);
+        const data = await res.json();
+        out.push(...(data.files || []));
+        page = data.nextPageToken || '';
+      } while (page);
+      return out;
+    },
+    // inAppData=false: file nel Drive normale (servono per condividere).
+    async upload(name, value, id, inAppData = true) {
       const content = JSON.stringify(value);
       if (id) { await Sync.api('PATCH', `${UPLOAD}/files/${id}?uploadType=media`, { body: content, type: 'application/json' }); return id; }
       const boundary = 'memento' + Math.random().toString(36).slice(2);
-      const body = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name, parents: ['appDataFolder'] })}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${content}\r\n--${boundary}--`;
+      const meta = inAppData ? { name, parents: ['appDataFolder'] } : { name, mimeType: 'application/json' };
+      const body = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${content}\r\n--${boundary}--`;
       const res = await Sync.api('POST', `${UPLOAD}/files?uploadType=multipart&fields=id`, { body, type: `multipart/related; boundary=${boundary}` });
       return (await res.json()).id;
     },
@@ -192,6 +208,7 @@
           if (enc) await Sync.upload(`file-${d.stored_name}.json`, enc);
         }
         await Sync.upload(MAIN_FILE, envelope, mainId);
+        await Sync.runShares(engine);
         setPref(SYNC_KEY, { ...Sync.settings(), on: true, last: new Date().toISOString(), error: '' });
       })();
       try { return await running; } catch (e) {
@@ -199,6 +216,55 @@
         throw e;
       } finally { running = null; }
     },
+    // Voci del vault condivise: chiave pubblica di ciascuno in un file
+    // memento-identity.json, ogni voce in un file memento-share-<id>.json
+    // condiviso su Drive con le persone (lettura o modifica).
+    async grant(fileId, email, role, notify) {
+      const perms = (await (await Sync.api('GET', `${DRIVE}/files/${fileId}/permissions?fields=permissions(id,emailAddress,role)`)).json()).permissions || [];
+      const has = perms.find((p) => (p.emailAddress || '').toLowerCase() === email);
+      if (has) {
+        if (has.role !== role && has.role !== 'owner') await Sync.api('PATCH', `${DRIVE}/files/${fileId}/permissions/${has.id}`, { body: JSON.stringify({ role }), type: 'application/json' });
+        return;
+      }
+      const qs = notify ? `sendNotificationEmail=true&emailMessage=${encodeURIComponent(tr('share_email_message'))}` : 'sendNotificationEmail=false';
+      await Sync.api('POST', `${DRIVE}/files/${fileId}/permissions?${qs}`, { body: JSON.stringify({ type: 'user', role, emailAddress: email }), type: 'application/json' });
+    },
+    async revoke(fileId, email) {
+      const perms = (await (await Sync.api('GET', `${DRIVE}/files/${fileId}/permissions?fields=permissions(id,emailAddress,role)`)).json()).permissions || [];
+      const has = perms.find((p) => (p.emailAddress || '').toLowerCase() === email && p.role !== 'owner');
+      if (has) await Sync.api('DELETE', `${DRIVE}/files/${fileId}/permissions/${has.id}`);
+    },
+    async runShares(engine) {
+      const email = Sync.settings().email;
+      if (!email) return;
+      const ident = await engine.ensureIdentity(email);
+      const mine = await Sync.query("name = 'memento-identity.json' and 'me' in owners and trashed = false");
+      const identityId = await Sync.upload('memento-identity.json', { email, publicJwk: ident.publicJwk }, mine[0] && mine[0].id, false);
+      for (const f of await Sync.query("name = 'memento-identity.json' and not 'me' in owners and trashed = false", 'files(id,owners(emailAddress))')) {
+        const owner = ((f.owners || [])[0] || {}).emailAddress;
+        const c = await Sync.download(f.id);
+        if (owner && c && String(c.email).toLowerCase() === owner.toLowerCase()) await engine.learnContact(owner, c.publicJwk);
+      }
+      const ids = [];
+      for (const f of await Sync.query("name contains 'memento-share-' and trashed = false")) {
+        const c = await Sync.download(f.id);
+        if (!c || !c.id) continue;
+        ids.push(c.id);
+        const res = await engine.applyShareFile(c, f.id);
+        // In attesa della nostra chiave: la si rende leggibile a chi condivide.
+        if (res.status === 'pending' && res.owner) await Sync.grant(identityId, res.owner.toLowerCase(), 'reader', false);
+      }
+      await engine.dropMissingShares(ids);
+      for (const o of await engine.shareOutbox()) {
+        const fileId = await Sync.upload(`memento-share-${o.file.id}.json`, o.file, o.fileId, false);
+        if (o.isOwner) {
+          for (const m of o.members) await Sync.grant(fileId, m.email, m.role === 'writer' ? 'writer' : 'reader', true);
+          for (const gone of o.removed) await Sync.revoke(fileId, gone);
+        }
+        await engine.markShared(o.entryId, fileId, o.pending);
+      }
+    },
+
     // Sincronizzazione automatica: solo se gia' collegata e con un accesso
     // Google ancora valido (niente finestre inattese mentre si lavora).
     async auto(engine) {

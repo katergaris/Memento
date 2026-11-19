@@ -1164,3 +1164,11 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 .card-brand { border-radius: 16px; overflow: hidden; aspect-ratio: 3.2; display: flex; align-items: center; justify-content: center; }
 .card-brand img { width: 100%; height: 100%; object-fit: contain; }
 .brands-note { margin: 4px 0 20px; font-size: 12px; color: var(--text-faint); }
+
+/* ---------- Vault: voci condivise ---------- */
+.share-badge { align-self: flex-start; margin-top: 3px; font-size: 11.5px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--accent-bg); color: var(--accent); }
+.share-line { margin: 0 0 6px; font-size: 13.5px; font-weight: 600; color: var(--accent); }
+.share-people .vd-value { display: flex; flex-direction: column; }
+.share-people small { color: var(--text-muted); font-weight: 500; font-size: 13px; }
+.share-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.share-add input { flex: 1 1 200px; min-width: 0; }

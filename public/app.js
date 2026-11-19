@@ -2359,17 +2359,30 @@
       if (entry.url) wrap.appendChild(field('URL', entry.url));
       if (entry.notes) wrap.appendChild(field(tr('field_notes'), entry.notes));
 
-      const actions = el(`<div class="form-actions"><span class="form-actions-side"><button type="button" class="btn btn-ghost" data-link></button><button type="button" class="btn btn-ghost btn-danger" data-del></button></span><button type="button" class="btn btn-primary" data-edit></button></div>`);
-      actions.querySelector('[data-link]').textContent = tr('btn_link_folder');
-      actions.querySelector('[data-del]').textContent = tr('btn_delete');
-      actions.querySelector('[data-edit]').textContent = tr('btn_edit');
-      actions.querySelector('[data-link]').addEventListener('click', () => { closeModal(); openLinkToDossierModal('vault', entry.id, entry.site); });
+      const sh = entry.share;
+      const received = !!(sh && sh.role !== 'owner');
+      if (sh) {
+        const line = received
+          ? tr(sh.role === 'reader' ? 'share_from_read' : 'share_from_write', { who: sh.owner })
+          : tr('share_with', { who: sh.members.map((m) => m.email).join(', ') });
+        wrap.prepend(el(`<p class="share-line">${esc(line)}</p>`));
+      }
+      const canShare = window.MementoBackend && window.MementoBackend.canShare && !received;
+      const actions = el(`<div class="form-actions"><span class="form-actions-side">${received ? '' : '<button type="button" class="btn btn-ghost" data-link></button>'}<button type="button" class="btn btn-ghost btn-danger" data-del></button>${canShare ? '<button type="button" class="btn btn-ghost" data-share></button>' : ''}</span>${sh && sh.role === 'reader' ? '' : '<button type="button" class="btn btn-primary" data-edit></button>'}</div>`);
+      if (actions.querySelector('[data-link]')) actions.querySelector('[data-link]').textContent = tr('btn_link_folder');
+      actions.querySelector('[data-del]').textContent = received ? tr('share_leave') : tr('btn_delete');
+      if (actions.querySelector('[data-edit]')) actions.querySelector('[data-edit]').textContent = tr('btn_edit');
+      if (canShare) {
+        actions.querySelector('[data-share]').textContent = tr('btn_share');
+        actions.querySelector('[data-share]').addEventListener('click', () => { closeModal(); openShare(entry); });
+      }
+      if (actions.querySelector('[data-link]')) actions.querySelector('[data-link]').addEventListener('click', () => { closeModal(); openLinkToDossierModal('vault', entry.id, entry.site); });
       actions.querySelector('[data-del]').addEventListener('click', async () => {
-        if (!confirm(tr('confirm_delete_vault_entry'))) return;
+        if (!confirm(received ? tr('share_leave_confirm') : tr('confirm_delete_vault_entry'))) return;
         await api(`/vault/${entry.id}`, { method: 'DELETE' });
         closeModal(); toast(tr('toast_vault_deleted')); render('vault');
       });
-      actions.querySelector('[data-edit]').addEventListener('click', () => {
+      if (actions.querySelector('[data-edit]')) actions.querySelector('[data-edit]').addEventListener('click', () => {
         closeModal();
         const form = vaultModal(entry);
         form.addEventListener('submit', async (e) => {
@@ -2382,6 +2395,45 @@
       });
       wrap.appendChild(actions);
       openModal(entry.site, wrap);
+    }
+
+    // Condivisione: persone e permessi; il file arriva alla prossima
+    // sincronizzazione con Google Drive.
+    function openShare(entry) {
+      const wrap = el(`<div class="share-box"><div class="share-people"></div>
+        <form class="share-add"><input type="email" name="email" required placeholder="${esc(tr('share_email_placeholder'))}" autocomplete="email" />
+        <select name="role"><option value="reader">${esc(tr('share_role_reader'))}</option><option value="writer">${esc(tr('share_role_writer'))}</option></select>
+        <button type="submit" class="btn btn-primary">${esc(tr('share_add'))}</button></form></div>`);
+      const people = wrap.querySelector('.share-people');
+      const paintPeople = (e) => {
+        people.innerHTML = '';
+        ((e.share && e.share.members) || []).forEach((m) => {
+          const waiting = (e.share.pending || []).includes(m.email);
+          const row = el(`<div class="vd-row"><span class="vd-value"><b></b><small></small></span><span class="vd-acts"><button type="button" class="btn btn-sm btn-ghost btn-danger"></button></span></div>`);
+          row.querySelector('b').textContent = m.email;
+          row.querySelector('small').textContent = (m.role === 'writer' ? tr('share_role_writer') : tr('share_role_reader')) + (waiting ? ' · ' + tr('share_waiting') : '');
+          const rm = row.querySelector('button');
+          rm.textContent = tr('share_remove');
+          rm.addEventListener('click', async () => {
+            const updated = await api(`/vault/${e.id}/share/${encodeURIComponent(m.email)}`, { method: 'DELETE' });
+            paintPeople(updated);
+            if (window.MementoBackend.syncNow) window.MementoBackend.syncNow();
+          });
+          people.appendChild(row);
+        });
+      };
+      paintPeople(entry);
+      const form = wrap.querySelector('form');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const updated = await api(`/vault/${entry.id}/share`, { method: 'POST', body: JSON.stringify({ email: form.email.value, role: form.role.value }) });
+        form.email.value = '';
+        form.querySelector('button[type="submit"]').disabled = false;
+        paintPeople(updated);
+        toast(tr('share_added'));
+        if (window.MementoBackend.syncNow) window.MementoBackend.syncNow();
+      });
+      openModal(tr('share_title', { what: entry.site }), wrap);
     }
 
     function paint() {
@@ -2408,6 +2460,11 @@
         logo.style.background = bg; logo.style.color = fg;
         card.querySelector('b').textContent = entry.site;
         card.querySelector('small').textContent = entry.username || TYPE_LABEL[entry.type] || '';
+        if (entry.share) {
+          const badge = el(`<span class="share-badge"></span>`);
+          badge.textContent = entry.share.role === 'owner' ? tr('share_badge_out') : tr('share_badge_in', { who: entry.share.owner.split('@')[0] });
+          card.querySelector('.vtext').appendChild(badge);
+        }
         const right = card.querySelector('.vright');
         if (entry.hasTotp && (tab === 'codes' || entry.type === 'code')) {
           const box = el('<span class="otp-box"><span class="otp-code">…</span><span class="otp-timer"><i></i></span></span>');

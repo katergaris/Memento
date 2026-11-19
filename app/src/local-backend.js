@@ -94,6 +94,8 @@
     const out = emptyState();
     out.user = (a.user && a.user.username) ? a.user : (b.user || out.user);
     out.settings = { ...(b.settings || {}), ...(a.settings || {}) };
+    out.settings.contacts = { ...((b.settings || {}).contacts || {}), ...((a.settings || {}).contacts || {}) };
+    out.settings.leftShares = [...new Set([...((b.settings || {}).leftShares || []), ...((a.settings || {}).leftShares || [])])];
     const purgedKey = (p) => `${p.table}:${p.id}`;
     const purged = new Map();
     [...(a.purged || []), ...(b.purged || [])].forEach((p) => { if (!purged.has(purgedKey(p))) purged.set(purgedKey(p), p); });
@@ -523,7 +525,7 @@
         }
         case 'cards': return this.cards(method, id, sub, body, { mutate, softDelete, restore, created });
         case 'accounts': return this.accounts(method, id, sub, body, { mutate, softDelete, restore, created });
-        case 'vault': return this.vault(method, id, sub, body, { mutate, softDelete, restore, created });
+        case 'vault': return this.vault(method, id, sub, body, { mutate, softDelete, restore, created, a3 });
         case 'drive': return this.drive(method, id, sub, body, { mutate, softDelete, restore, created });
         case 'dossiers': {
           if (!id && method === 'GET') return this.sorted('dossiers').map((d) => this.serDossier(d));
@@ -713,8 +715,11 @@
     async vault(method, id, sub, body, h) {
       const VALID = ['password', 'note', 'card', 'code'];
       const ser = (r, reveal = false) => {
-        const { password, totp_secret, card_cvv, ...rest } = r;
+        const { password, totp_secret, card_cvv, share, ...rest } = r;
         const out = { ...rest, hasTotp: !!totp_secret };
+        if (share) {
+          out.share = { owner: share.owner, role: share.role, members: share.members.map(({ email, role }) => ({ email, role })), pending: (share.pending || []).slice() };
+        }
         if (reveal) { out.password = password; if (card_cvv) out.cvv = card_cvv; }
         return out;
       };
@@ -757,9 +762,12 @@
           type: VALID.includes(body.type) ? body.type : 'password', totp_secret: totp, card_cvv: body.card_cvv || null, card_expiry: body.card_expiry || null,
         }))));
       }
+      if (id && sub === 'share') return this.vaultShare(method, id, h.a3, body, ser);
       if (id && sub === 'restore') return h.restore('vault');
       if (id && method === 'PUT') return h.mutate(() => {
         const r = this.find('vault', id) || fail(404, 'Voce non trovata');
+        if (r.share && r.share.role === 'reader') fail(403, 'Voce condivisa in sola visualizzazione');
+        if (r.share) r.share.dirty = true;
         const f = {};
         ['site', 'username', 'url', 'notes', 'tags'].forEach((k) => { if (body[k] !== undefined && body[k] !== null) f[k] = body[k]; });
         if (body.type && VALID.includes(body.type)) f.type = body.type;
@@ -770,8 +778,180 @@
         if (body.card_expiry !== undefined) f.card_expiry = body.card_expiry || null;
         return ser(this.touch(r, f));
       });
-      if (id && method === 'DELETE') return h.softDelete('vault');
+      if (id && method === 'DELETE') {
+        const r = this.find('vault', id);
+        // Voce ricevuta: si toglie solo dal proprio vault e non torna piu'.
+        if (r && r.share && r.share.owner !== this.myEmail()) {
+          this.state.settings.leftShares = [...(this.state.settings.leftShares || []), r.share.id];
+          this.state.tables.vault = this.rows('vault').filter((x) => x !== r);
+          await this.save();
+          return undefined;
+        }
+        if (r && r.share) r.share.dirty = true;
+        return h.softDelete('vault');
+      }
       fail(404, 'Endpoint non trovato');
+    }
+
+    // ---------------- Condivisione di voci del vault ----------------
+    // La voce condivisa e' un file cifrato con una chiave sua (share.key),
+    // a sua volta cifrata per la chiave pubblica di ogni persona (owner
+    // compreso, per i suoi altri telefoni). Il trasporto (Google Drive) sta in
+    // native.js: qui solo dati e cifratura, cosi' si prova tutto nei test.
+    myEmail() { return ((this.state.settings.identity || {}).email || '').toLowerCase(); }
+    async ensureIdentity(email) {
+      let ident = this.state.settings.identity;
+      const clean = String(email || '').trim().toLowerCase();
+      if (!ident) {
+        ident = { email: clean, ...(await MC.generateIdentity()) };
+        this.state.settings.identity = ident;
+        await this.save();
+      } else if (clean && ident.email !== clean) {
+        ident.email = clean;
+        await this.save();
+      }
+      return { email: ident.email, publicJwk: ident.publicJwk };
+    }
+    async learnContact(email, publicJwk) {
+      const clean = String(email || '').trim().toLowerCase();
+      if (!clean || !publicJwk) return;
+      const contacts = this.state.settings.contacts || {};
+      if (JSON.stringify(contacts[clean]) === JSON.stringify(publicJwk)) return;
+      contacts[clean] = publicJwk;
+      this.state.settings.contacts = contacts;
+      // Le voci in attesa di questa persona vanno riscritte con la sua chiave.
+      this.rows('vault').forEach((r) => { if (r.share && (r.share.pending || []).includes(clean)) r.share.dirty = true; });
+      await this.save();
+    }
+    async vaultShare(method, id, email, body, ser) {
+      const r = this.find('vault', id) || fail(404, 'Voce non trovata');
+      const me = this.myEmail();
+      if (!me) fail(400, 'Collega Google Drive in Sicurezza per condividere');
+      if (r.share && r.share.role !== 'owner') fail(403, 'Solo chi ha creato la voce puo\' condividerla');
+      if (method === 'POST') {
+        const who = String(body.email || '').trim().toLowerCase();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(who)) fail(400, 'Indirizzo email non valido');
+        if (who === me) fail(400, 'E\' il tuo indirizzo');
+        const role = body.role === 'writer' ? 'writer' : 'reader';
+        if (!r.share) r.share = { id: [...MC.randomBytes(16)].map((b) => b.toString(16).padStart(2, '0')).join(''), owner: me, role: 'owner', members: [], key: MC.toB64(MC.randomBytes(32)), fileId: null, removed: [], pending: [] };
+        const existing = r.share.members.find((m) => m.email === who);
+        if (existing) existing.role = role; else r.share.members.push({ email: who, role });
+        r.share.removed = (r.share.removed || []).filter((x) => x !== who);
+        r.share.dirty = true;
+        this.touch(r);
+        await this.save();
+        return ser(r);
+      }
+      if (method === 'DELETE') {
+        const who = String(email || '').toLowerCase();
+        if (!r.share) fail(404, 'Voce non condivisa');
+        r.share.members = r.share.members.filter((m) => m.email !== who);
+        r.share.removed = [...new Set([...(r.share.removed || []), who])];
+        // Chiave nuova: chi e' stato tolto non legge le versioni successive.
+        r.share.key = MC.toB64(MC.randomBytes(32));
+        r.share.dirty = true;
+        this.touch(r);
+        await this.save();
+        return ser(r);
+      }
+      fail(404, 'Endpoint non trovato');
+    }
+    // File da scrivere su Drive: voci condivise modificate (o in attesa).
+    async shareOutbox() {
+      const me = this.myEmail();
+      const ident = this.state.settings.identity;
+      const contacts = this.state.settings.contacts || {};
+      const out = [];
+      for (const r of this.rows('vault')) {
+        const sh = r.share;
+        if (!sh || !sh.dirty || sh.role === 'reader') continue;
+        const key = await MC.importKey(sh.key);
+        const fields = {};
+        ['site', 'username', 'password', 'url', 'notes', 'tags', 'type', 'totp_secret', 'card_cvv', 'card_expiry', 'deleted_at'].forEach((k) => { fields[k] = r[k] === undefined ? null : r[k]; });
+        const { iv, ct } = await MC.encryptBytes(key, new TextEncoder().encode(JSON.stringify(fields)));
+        let members = [];
+        const pending = [];
+        if (sh.owner !== me) {
+          // Chi modifica senza esserne il proprietario non ha le chiavi
+          // pubbliche degli altri: riusa quelle gia' cifrate nel file.
+          members = sh.wraps || [];
+        } else for (const m of [{ email: sh.owner, role: 'owner' }, ...sh.members]) {
+          const pub = m.email === me ? ident.publicJwk : contacts[m.email];
+          if (!pub) pending.push(m.email);
+          members.push({ email: m.email, role: m.role, wrapped: pub ? await MC.wrapFor(pub, MC.fromB64(sh.key)) : null });
+        }
+        out.push({
+          entryId: r.id, fileId: sh.fileId || null, owner: sh.owner, isOwner: sh.owner === me,
+          members: sh.members.slice(), removed: (sh.removed || []).slice(), pending,
+          file: { format: 'memento-share', v: 1, id: sh.id, owner: sh.owner, rev: r._rev || Date.now(), members, iv, ct },
+        });
+      }
+      return out;
+    }
+    async markShared(entryId, fileId, pending) {
+      const r = this.rows('vault').find((x) => String(x.id) === String(entryId));
+      if (!r || !r.share) return;
+      r.share.fileId = fileId;
+      r.share.removed = [];
+      r.share.pending = pending || [];
+      r.share.dirty = (pending || []).length > 0;
+      await this.save();
+    }
+    // File letto da Drive: crea o aggiorna la voce. 'pending' = la nostra
+    // chiave pubblica non e' ancora arrivata a chi condivide.
+    async applyShareFile(file, fileId) {
+      const me = this.myEmail();
+      if (!me) return { status: 'no-identity' };
+      if (!file || file.format !== 'memento-share') return { status: 'invalid' };
+      if ((this.state.settings.leftShares || []).includes(file.id)) return { status: 'left' };
+      const mine = (file.members || []).find((m) => m.email === me);
+      if (!mine) return { status: 'not-member' };
+      if (!mine.wrapped) return { status: 'pending', owner: file.owner };
+      const raw = await MC.unwrapWith(this.state.settings.identity.privateJwk, mine.wrapped);
+      const key = await MC.importKey(MC.toB64(raw));
+      const fields = JSON.parse(new TextDecoder().decode(await MC.decryptBytes(key, file.iv, file.ct)));
+      let rec = this.rows('vault').find((x) => x.share && x.share.id === file.id);
+      const shareMeta = (old) => ({
+        id: file.id, owner: file.owner, role: mine.role, key: MC.toB64(raw), fileId,
+        members: file.members.filter((m) => m.email !== file.owner).map(({ email, role }) => ({ email, role })),
+        removed: [], dirty: old ? old.dirty : false,
+        pending: file.members.filter((m) => !m.wrapped).map((m) => m.email),
+        wraps: file.members,
+      });
+      if (rec && (rec._rev || 0) >= file.rev) {
+        // Il proprietario tiene la sua condivisione (puo' aver appena cambiato
+        // persone o chiave); agli altri si aggiornano persone e permessi.
+        if (mine.role === 'owner' && rec.share) rec.share.fileId = rec.share.fileId || fileId;
+        else rec.share = { ...shareMeta(rec.share), dirty: rec.share ? rec.share.dirty : false };
+        await this.save();
+        return { status: 'current' };
+      }
+      if (rec && mine.role === 'owner' && rec.share && rec.share.dirty) {
+        // Versione del file piu' recente ma modifiche locali non ancora
+        // caricate: si prende il contenuto, la condivisione resta quella locale.
+        Object.assign(rec, fields);
+        rec._rev = file.rev;
+        await this.save();
+        return { status: 'ok' };
+      }
+      if (!rec) {
+        rec = this.insert('vault', { ...fields });
+      } else {
+        Object.assign(rec, fields);
+      }
+      rec._rev = file.rev;
+      rec.updated_at = sqlNow();
+      rec.share = shareMeta(null);
+      await this.save();
+      return { status: 'ok' };
+    }
+    // Voci ricevute che non sono piu' accessibili (condivisione tolta).
+    async dropMissingShares(accessibleIds) {
+      const me = this.myEmail();
+      const keep = new Set(accessibleIds);
+      const before = this.rows('vault').length;
+      this.state.tables.vault = this.rows('vault').filter((r) => !(r.share && r.share.owner !== me && !keep.has(r.share.id)));
+      if (this.rows('vault').length !== before) await this.save();
     }
 
     async drive(method, id, sub, body, h) {

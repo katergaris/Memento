@@ -272,3 +272,70 @@ test('copia sul cloud: due telefoni con la stessa password principale', async ()
   await a.mergeRemote(back.state);
   assert.equal((await call(a, '/ideas')).data.length, 2);
 });
+
+// Simula Google Drive: file per id, come li vede ciascuno.
+async function syncShares(drive, be, email) {
+  await be.ensureIdentity(email);
+  drive.identities[email] = (await be.ensureIdentity(email)).publicJwk;
+  for (const [who, jwk] of Object.entries(drive.identities)) if (who !== email) await be.learnContact(who, jwk);
+  const ids = [];
+  for (const [fid, f] of Object.entries(drive.files)) {
+    if (!f.access.includes(email)) continue;
+    ids.push(f.content.id);
+    await be.applyShareFile(f.content, fid);
+  }
+  await be.dropMissingShares(ids);
+  for (const o of await be.shareOutbox()) {
+    const fid = o.fileId || 'f' + Object.keys(drive.files).length;
+    const access = o.isOwner ? [o.owner, ...o.members.map((m) => m.email)] : drive.files[fid].access;
+    drive.files[fid] = { content: o.file, access };
+    await be.markShared(o.entryId, fid, o.pending);
+  }
+}
+
+test('condivisione di una voce: invito, visualizzazione, modifica, revoca', async () => {
+  const drive = { files: {}, identities: {} };
+  const io = (await fresh()).be;
+  const lei = (await fresh()).be;
+  assert.equal((await call(io, '/vault', 'POST', { site: 'x', password: 'y' })).status, 201);
+  const v = (await call(io, '/vault', 'POST', { site: 'Netflix', username: 'famiglia', password: 'segreta-1' })).data;
+  assert.equal((await call(io, `/vault/${v.id}/share`, 'POST', { email: 'lei@example.com' })).status, 400); // Drive non collegato
+  await syncShares(drive, io, 'io@example.com');
+  assert.equal((await call(io, `/vault/${v.id}/share`, 'POST', { email: 'non-valida' })).status, 400);
+  const shared = (await call(io, `/vault/${v.id}/share`, 'POST', { email: 'Lei@Example.com', role: 'reader' })).data;
+  assert.deepEqual(shared.share.members, [{ email: 'lei@example.com', role: 'reader' }]);
+
+  // primo giro: lei non ha ancora pubblicato la chiave -> in attesa
+  await syncShares(drive, io, 'io@example.com');
+  assert.ok(!JSON.stringify(drive.files).includes('segreta-1'));
+  await syncShares(drive, lei, 'lei@example.com');
+  assert.equal((await call(lei, '/vault')).data.length, 0);
+  // io imparo la sua chiave e riscrivo il file, lei ora la vede
+  await syncShares(drive, io, 'io@example.com');
+  await syncShares(drive, lei, 'lei@example.com');
+  const [got] = (await call(lei, '/vault')).data;
+  assert.equal(got.site, 'Netflix');
+  assert.equal(got.share.role, 'reader');
+  assert.equal(got.share.owner, 'io@example.com');
+  assert.equal((await call(lei, `/vault/${got.id}/reveal`)).data.password, 'segreta-1');
+  assert.equal((await call(lei, `/vault/${got.id}`, 'PUT', { password: 'cambiata' })).status, 403);
+  assert.equal((await call(lei, `/vault/${got.id}/share`, 'POST', { email: 'altro@example.com' })).status, 403);
+
+  // permesso di modifica: lei cambia, io ricevo
+  await call(io, `/vault/${v.id}/share`, 'POST', { email: 'lei@example.com', role: 'writer' });
+  await syncShares(drive, io, 'io@example.com');
+  await syncShares(drive, lei, 'lei@example.com');
+  assert.equal((await call(lei, '/vault')).data[0].share.role, 'writer');
+  await new Promise((r) => setTimeout(r, 5));
+  assert.equal((await call(lei, `/vault/${got.id}`, 'PUT', { password: 'cambiata-da-lei' })).status, 200);
+  await syncShares(drive, lei, 'lei@example.com');
+  await syncShares(drive, io, 'io@example.com');
+  assert.equal((await call(io, `/vault/${v.id}/reveal`)).data.password, 'cambiata-da-lei');
+
+  // revoca: Drive le toglie il file, la voce sparisce dal suo vault
+  await call(io, `/vault/${v.id}/share/lei@example.com`, 'DELETE');
+  await syncShares(drive, io, 'io@example.com');
+  assert.ok(!drive.files[Object.keys(drive.files)[0]].access.includes('lei@example.com'));
+  await syncShares(drive, lei, 'lei@example.com');
+  assert.equal((await call(lei, '/vault')).data.length, 0);
+});

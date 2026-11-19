@@ -148,6 +148,13 @@
       mode: 'local',
       engine: be,
       request: (path, opts) => be.request(path, opts),
+      // Condivisione di voci del vault (passa da Google Drive).
+      canShare: true,
+      syncNow() {
+        const N = window.MementoNative;
+        if (!N || !N.Sync.settings().on) { window.MementoUI.toast(tr('share_need_drive')); return; }
+        N.Sync.run(be).catch((e) => window.MementoUI.toast(e.message));
+      },
       // Schermata di sblocco: tasto impronta (e primo tentativo automatico).
       async offerBiometric(onUnlocked) {
         const N = window.MementoNative;
