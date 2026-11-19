@@ -315,7 +315,7 @@ input:focus, textarea:focus, select:focus {
 }
 .btn.btn-capture:hover { background: #B5E61F; }
 
-.view-host { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 32px 40px; }
+.view-host { flex: 1; min-height: 0; overflow-y: auto; overflow-x: clip; padding: 4px 32px 40px; }
 .view { max-width: 1280px; }
 /* Il titolo della sezione e' gia' nell'intestazione: quello interno alle
    viste (ereditato dalle finestre) resterebbe un doppione. */
@@ -1028,7 +1028,10 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
   font: inherit; font-weight: 700; font-size: 14px; color: var(--text-muted); white-space: nowrap;
 }
 .seg button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(18, 19, 24, .08); }
-.vault-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+.vault-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: 10px; }
+/* Un elemento di griglia non scende sotto la larghezza del suo testo piu'
+   lungo: senza min-width 0 un'email lunga allargava tutta la colonna. */
+.vcard { min-width: 0; }
 .vcard {
   background: var(--surface); border-radius: 20px; padding: 12px 12px 12px 14px; display: flex; align-items: center; gap: 12px;
   cursor: pointer; min-height: 68px;
@@ -1053,7 +1056,7 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 .vd-acts { display: flex; gap: 6px; flex: none; align-items: center; }
 .vault-detail .form-actions { margin-top: 16px; }
 @media (max-width: 760px) {
-  .vault-list { grid-template-columns: 1fr; }
+  .vault-list { grid-template-columns: minmax(0, 1fr); }
   .vd-label { width: 72px; }
 }
 .form-actions:has(.form-actions-side) [data-cancel] { display: none; }
