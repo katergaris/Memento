@@ -32,7 +32,7 @@ const addFont = (pkg, file, family, weight) => {
   fs.copyFileSync(src, path.join(fontsDir, file));
   fontCss.push(`@font-face{font-family:'${family}';font-style:normal;font-display:swap;font-weight:${weight};src:url(/fonts/${file}) format('woff2');}`);
 };
-addFont('@fontsource-variable/bricolage-grotesque', 'bricolage-grotesque-latin-wght-normal.woff2', 'Bricolage Grotesque', '200 800');
+addFont('@fontsource-variable/plus-jakarta-sans', 'plus-jakarta-sans-latin-wght-normal.woff2', 'Plus Jakarta Sans', '200 800');
 addFont('@fontsource/jetbrains-mono', 'jetbrains-mono-latin-400-normal.woff2', 'JetBrains Mono', 400);
 addFont('@fontsource/jetbrains-mono', 'jetbrains-mono-latin-700-normal.woff2', 'JetBrains Mono', 700);
 fs.writeFileSync(path.join(fontsDir, 'fonts.css'), fontCss.join('\n') + '\n');
