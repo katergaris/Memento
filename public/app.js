@@ -516,18 +516,18 @@
   // griglie di Progetti/Cartelle, cosi' una sezione si riconosce dal colore
   // prima ancora di leggerne il nome (icone piene e colorate, mai grigio minimal).
   const APP_TILES = {
-    today: { color: '#0B7A72', path: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>' },
-    projects: { color: '#1C5BA8', path: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7.5 9h9M7.5 13h6"/>' },
-    ideas: { color: '#C98F00', path: '<path d="M5 3h10l4 4v14H5z"/><path d="M9 12h6M9 16h4"/>' },
-    vault: { color: '#0B7A72', path: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>' },
-    accounts: { color: '#6D4BC2', path: '<path d="M4 12a8 8 0 0 1 14-5l2 2M20 12a8 8 0 0 1-14 5l-2-2"/><path d="M20 4v5h-5M4 20v-5h5"/>' },
-    drive: { color: '#D2691E', path: '<path d="M12 15V4M7 9l5-5 5 5"/><path d="M4 15v5h16v-5"/>' },
-    dossiers: { color: '#2E8B57', path: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>' },
-    reminders: { color: '#C2410C', path: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2.5h6"/>' },
-    calendar: { color: '#1C5BA8', path: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>' },
-    trash: { color: '#5D7182', path: '<path d="M4.5 7h15M9.5 7V4.5h5V7M7 7l1 12.5h8L17 7"/>' },
-    security: { color: '#5D7182', path: '<path d="M12 2.5l7 2.6v5.8c0 4.6-3 8-7 9.6-4-1.6-7-5-7-9.6V5.1z"/><path d="M9 12l2 2 4-4.5"/>' },
-    esci: { color: '#5D7182', path: '<path d="M10 4H5v16h5M14 8l4 4-4 4M9 12h9"/>' },
+    today: { color: '#6D4AFF', path: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>' },
+    projects: { color: '#3B5BDB', path: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7.5 9h9M7.5 13h6"/>' },
+    ideas: { color: '#E0A100', path: '<path d="M5 3h10l4 4v14H5z"/><path d="M9 12h6M9 16h4"/>' },
+    vault: { color: '#1E1736', path: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>' },
+    accounts: { color: '#B43FD1', path: '<path d="M4 12a8 8 0 0 1 14-5l2 2M20 12a8 8 0 0 1-14 5l-2-2"/><path d="M20 4v5h-5M4 20v-5h5"/>' },
+    drive: { color: '#F06A2A', path: '<path d="M12 15V4M7 9l5-5 5 5"/><path d="M4 15v5h16v-5"/>' },
+    dossiers: { color: '#2F9E44', path: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>' },
+    reminders: { color: '#E8436B', path: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2.5h6"/>' },
+    calendar: { color: '#3B5BDB', path: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>' },
+    trash: { color: '#6E6690', path: '<path d="M4.5 7h15M9.5 7V4.5h5V7M7 7l1 12.5h8L17 7"/>' },
+    security: { color: '#6E6690', path: '<path d="M12 2.5l7 2.6v5.8c0 4.6-3 8-7 9.6-4-1.6-7-5-7-9.6V5.1z"/><path d="M9 12l2 2 4-4.5"/>' },
+    esci: { color: '#6E6690', path: '<path d="M10 4H5v16h5M14 8l4 4-4 4M9 12h9"/>' },
   };
 
   function appIcon(nome, size = 18) {
@@ -631,7 +631,8 @@
     esci.addEventListener('click', logout);
     sidebarSecondary.appendChild(esci);
 
-    // Telefono: Oggi, Cerca, + (cattura), Cartelle, Sezioni (tutto il resto).
+    // Telefono: Oggi, Note, + (cattura), Vault, Altro (tutto il resto).
+    // La ricerca sta nell'intestazione (lente), non occupa un posto qui.
     tabbar.innerHTML = '';
     const tab = (view, label, path) => {
       const a = el(`<a class="tab" href="#/${view}" data-view="${view}">${strokeIcon(path)}<span></span></a>`);
@@ -644,16 +645,13 @@
       b.addEventListener('click', onClick);
       return b;
     };
-    tabbar.appendChild(tab('today', tr('nav_today'), APP_TILES.today.path));
-    tabbar.appendChild(button('tab', tr('tab_search'), '<circle cx="11" cy="11" r="7"/><path d="M16 16l5 5"/>', () => {
-      closeSectionsSheet();
-      searchInput.focus();
-    }));
+    tabbar.appendChild(tab('today', tr('nav_today'), '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="5" rx="2"/><rect x="13" y="10" width="8" height="11" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/>'));
+    tabbar.appendChild(tab('ideas', tr('nav_ideas'), APP_TILES.ideas.path));
     const capture = button('tab-capture', '', '<path d="M12 5v14M5 12h14"/>', () => { closeSectionsSheet(); openQuickCapture(); });
     capture.setAttribute('aria-label', tr('title_quick_capture'));
     tabbar.appendChild(capture);
-    tabbar.appendChild(tab('dossiers', tr('nav_dossiers'), APP_TILES.dossiers.path));
-    const more = button('tab', tr('tab_sections'), '<rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/>', () => {
+    tabbar.appendChild(tab('vault', tr('nav_vault'), APP_TILES.vault.path));
+    const more = button('tab', tr('tab_sections'), '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>', () => {
       if (sectionsSheet.classList.contains('hidden')) openSectionsSheet(); else closeSectionsSheet();
     });
     more.setAttribute('aria-haspopup', 'dialog');
@@ -688,6 +686,9 @@
       n.classList.toggle('active', on);
       if (on) n.setAttribute('aria-current', 'page'); else n.removeAttribute('aria-current');
     });
+    // Una sezione che non ha un posto nella barra in basso accende "Altro".
+    const more = tabbar.querySelector('button.tab');
+    if (more) more.classList.toggle('active', !tabbar.querySelector(`.tab[data-view="${view}"]`));
   }
 
   function updateHeaderDate() {
@@ -796,9 +797,6 @@
         <div class="composer-row">
           <button type="button" class="btn btn-sm" id="qc-type" title="${esc(tr('qc_change_type'))}">…</button>
           <button type="button" class="btn btn-primary" id="qc-save">${esc(tr('btn_save'))}</button>
-        </div>
-        <div class="composer-hint">
-          <span>${esc(tr('qc_hint'))}</span>
         </div>
       </div>
     `);
@@ -990,6 +988,9 @@
     }
     currentView = view;
     closeSectionsSheet();
+    // Una finestra rimasta aperta apparterrebbe alla sezione di prima
+    // (succedeva con "indietro" o toccando la barra in basso).
+    closeModal();
     // Il riquadro aperto sul posto vive dentro la vista: va rimesso al suo
     // posto prima di svuotarla.
     if (qcAnchor) closeQuickCapture();
@@ -1099,34 +1100,35 @@
     return 'due-far';
   }
 
+  // Mese abbreviato per la colonna data dell'elenco ("28 / nov").
+  function shortMonth(value) {
+    const d = new Date(String(value).slice(0, 10) + 'T00:00:00');
+    return d.toLocaleDateString(I18N.getLang() === 'en' ? 'en-GB' : 'it-IT', { month: 'short' }).replace('.', '');
+  }
+  const ICON_CHECK = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>';
+  const ICON_SNOOZE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/></svg>';
+  const ICON_COPY = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/></svg>';
+  const ICON_ARROW = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+
+  // Bacheca a blocchi: in cima quello che va fatto oggi e domani (blocco
+  // scuro, con il numero in grande), poi i prossimi 30 giorni, i progetti col
+  // prossimo passo da spuntare, le note e le cartelle. Ogni promemoria ha le
+  // stesse due azioni (Sposta a domani, Fatto), sempre nello stesso posto.
   views.today = async (root) => {
     const [reminders, projects, accounts, docs, ideas, dossiers] = await Promise.all([
       api('/reminders'), api('/projects'), api('/accounts'), api('/drive'), api('/ideas'), api('/dossiers'),
     ]);
     root.innerHTML = '';
+    const refresh = () => render('today', { fromHash: true });
 
-    const capture = el(`
-      <button type="button" class="capture-bar">
-        <span class="capture-bar-plus" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
-        <span class="capture-bar-text"></span>
-      </button>
-    `);
-    capture.querySelector('.capture-bar-text').textContent = tr('today_capture_placeholder');
-    capture.addEventListener('click', () => openQuickCapture(null, capture));
-    root.appendChild(capture);
-
-    const grid = el('<div class="today-grid"></div>');
-    root.appendChild(grid);
-
-    // --- Scade presto ---
     const deadlines = [];
     reminders.forEach((r) => {
       const days = calendarDaysFromToday(r.date);
-      if (days !== null) deadlines.push({ kind: 'reminder', item: r, days, title: r.label, sub: r.time ? r.time.slice(0, 5) : '' });
+      if (days !== null) deadlines.push({ kind: 'reminder', item: r, days, date: r.date, title: r.label, sub: r.time ? r.time.slice(0, 5) : '' });
     });
     projects.filter((p) => p.deadline && p.status !== 'fatto').forEach((p) => {
       const days = calendarDaysFromToday(p.deadline);
-      if (days !== null) deadlines.push({ kind: 'project', item: p, days, title: p.title, sub: tr('type_project') });
+      if (days !== null) deadlines.push({ kind: 'project', item: p, days, date: p.deadline, title: p.title, sub: tr('type_project') });
     });
     accounts.forEach((a) => {
       const next = nextRenewalDate(a.renewal_day, a.renewal_month, a.billing_frequency) || (a.renewal_date ? a.renewal_date : null);
@@ -1134,147 +1136,179 @@
       const days = calendarDaysFromToday(next);
       if (days === null) return;
       const amount = a.amount ? ` · ${fmtMoney(a.amount)}` : '';
-      deadlines.push({ kind: 'account', item: a, days, title: tr('today_renewal_of', { name: a.service }), sub: tr('type_account') + amount });
+      const iso = next instanceof Date ? `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}` : String(next);
+      deadlines.push({ kind: 'account', item: a, days, date: iso, title: tr('today_renewal_of', { name: a.service }), sub: tr('type_account') + amount });
     });
     docs.filter((d) => d.expiry_date).forEach((d) => {
       const days = calendarDaysFromToday(d.expiry_date);
-      if (days !== null) deadlines.push({ kind: 'document', item: d, days, title: d.display_name || d.original_name, sub: tr('type_document') });
+      if (days !== null) deadlines.push({ kind: 'document', item: d, days, date: d.expiry_date, title: d.display_name || d.original_name, sub: tr('type_document') });
     });
-    const upcoming = deadlines
+    const relevant = deadlines
       .filter((x) => x.days <= TODAY_WINDOW_DAYS && (x.days >= 0 || x.kind === 'reminder' || x.kind === 'project'))
-      .sort((a, b) => a.days - b.days);
+      .sort((a, b) => a.days - b.days || String(a.sub).localeCompare(String(b.sub)));
+    const focus = relevant.filter((x) => x.days <= 1);
+    const later = relevant.filter((x) => x.days > 1);
+    const KIND_VIEW = { reminder: 'reminders', project: 'projects', account: 'accounts', document: 'drive' };
+    const open = (x) => render(KIND_VIEW[x.kind], { highlight: x.item.id });
 
-    const duePanel = el(`<section class="panel"><div class="panel-head"><h2></h2><a href="#/calendar"></a></div><div class="due-list"></div></section>`);
-    duePanel.querySelector('h2').textContent = tr('today_due_title');
-    duePanel.querySelector('.panel-head a').textContent = tr('nav_calendar');
-    const dueList = duePanel.querySelector('.due-list');
-    if (!upcoming.length) {
-      dueList.appendChild(el(`<p class="panel-empty">${esc(tr('today_due_empty'))}</p>`));
+    async function snooze(r) {
+      const t = new Date(); t.setDate(t.getDate() + 1);
+      const date = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+      await api(`/reminders/${r.id}`, { method: 'PUT', body: JSON.stringify({ label: r.label, date, time: r.time || '', notes: r.notes || '' }) });
+      toast(tr('toast_snoozed'));
+      refresh();
     }
-    upcoming.slice(0, TODAY_MAX_DEADLINES).forEach((x) => {
-      const row = el(`
-        <div class="due-row ${urgencyClass(x.days)}">
-          <button type="button" class="due-main">
-            <span class="due-title"></span>
-            <span class="due-sub"></span>
-          </button>
-          <span class="due-when"></span>
-          <span class="due-actions"></span>
-        </div>
-      `);
-      row.querySelector('.due-title').textContent = x.title;
-      row.querySelector('.due-sub').textContent = x.sub;
-      row.querySelector('.due-when').textContent = relativeDayLabel(x.days);
-      const view = { reminder: 'reminders', project: 'projects', account: 'accounts', document: 'drive' }[x.kind];
-      row.querySelector('.due-main').addEventListener('click', () => render(view, { highlight: x.item.id }));
+    async function done(r) {
+      await api(`/reminders/${r.id}`, { method: 'DELETE' });
+      toast(tr('toast_done_nice'));
+      refresh();
+    }
+    // Azioni a destra della riga: promemoria = Sposta a domani + Fatto,
+    // il resto (rinnovi, progetti, documenti) si apre e basta.
+    function rowActions(x) {
+      const wrap = el('<span class="row-acts"></span>');
       if (x.kind === 'reminder') {
-        const actions = row.querySelector('.due-actions');
-        if (x.days < 0) {
-          const move = el(`<button type="button" class="btn btn-sm">${esc(tr('btn_move'))}</button>`);
-          move.addEventListener('click', () => {
-            const r = x.item;
-            const form = reminderModal(r);
-            form.addEventListener('submit', async (e) => {
-              e.preventDefault();
-              await api(`/reminders/${r.id}`, { method: 'PUT', body: JSON.stringify({ label: form.label.value, date: form.date.value, time: form.time.value, notes: form.notes.value }) });
-              closeModal(); toast(tr('toast_reminder_updated')); render('today', { fromHash: true });
-            });
-            form.querySelector('[data-cancel]').addEventListener('click', closeModal);
-            openModal(tr('modal_edit_reminder'), form);
-          });
-          actions.appendChild(move);
-        }
-        const done = el(`<button type="button" class="btn btn-sm btn-done">${esc(tr('btn_done'))}</button>`);
-        done.addEventListener('click', async () => {
-          await api(`/reminders/${x.item.id}`, { method: 'DELETE' });
-          toast(tr('toast_done_nice'));
-          render('today', { fromHash: true });
-        });
-        actions.appendChild(done);
+        const s = el(`<button type="button" class="sq-btn sq-snooze" title="${esc(tr('btn_snooze_tomorrow'))}" aria-label="${esc(tr('btn_snooze_tomorrow'))}">${ICON_SNOOZE}</button>`);
+        const d = el(`<button type="button" class="sq-btn sq-done" title="${esc(tr('btn_done'))}" aria-label="${esc(tr('btn_done'))}">${ICON_CHECK}</button>`);
+        s.addEventListener('click', (e) => { e.stopPropagation(); s.disabled = true; snooze(x.item); });
+        d.addEventListener('click', (e) => { e.stopPropagation(); d.disabled = true; done(x.item); });
+        if (x.days < 1) wrap.appendChild(s);
+        wrap.appendChild(d);
+      } else {
+        wrap.appendChild(el(`<span class="sq-btn sq-open" aria-hidden="true">${ICON_ARROW}</span>`));
       }
-      dueList.appendChild(row);
-    });
-    if (upcoming.length > TODAY_MAX_DEADLINES) {
-      dueList.appendChild(el(`<a class="panel-more" href="#/calendar">${esc(tr('today_more', { n: upcoming.length - TODAY_MAX_DEADLINES }))}</a>`));
+      return wrap;
     }
-    grid.appendChild(duePanel);
 
-    // --- Progetti in corso: le spunte si toccano qui, senza aprire nulla ---
+    const board = el('<div class="board"></div>');
+    root.appendChild(board);
+
+    // --- Blocco scuro: oggi e domani ---
+    const focusTile = el(`
+      <section class="tile tile-focus">
+        <div class="focus-head"><span class="focus-num"></span><span class="focus-label"></span></div>
+        <ul class="focus-list"></ul>
+      </section>
+    `);
+    focusTile.querySelector('.focus-num').textContent = String(focus.length);
+    focusTile.querySelector('.focus-label').textContent = tr('today_focus_label');
+    const focusList = focusTile.querySelector('.focus-list');
+    if (!focus.length) focusList.appendChild(el(`<li class="focus-empty">${esc(tr('today_focus_empty'))}</li>`));
+    focus.forEach((x) => {
+      const li = el(`<li class="focus-row" tabindex="0" role="button"><span class="focus-text"><b></b><small></small><em class="pill"></em></span></li>`);
+      li.querySelector('b').textContent = x.title;
+      li.querySelector('small').textContent = x.sub;
+      const pill = li.querySelector('.pill');
+      pill.textContent = x.days === 0 && x.sub && /^\d\d:\d\d$/.test(x.sub) ? x.sub : relativeDayLabel(x.days);
+      pill.classList.add(x.days < 0 ? 'pill-late' : 'pill-today');
+      if (pill.textContent === x.sub) li.querySelector('small').textContent = '';
+      li.appendChild(rowActions(x));
+      li.addEventListener('click', () => open(x));
+      li.addEventListener('keydown', (e) => { if (e.key === 'Enter') open(x); });
+      focusList.appendChild(li);
+    });
+    board.appendChild(focusTile);
+
+    // --- Prossimi 30 giorni ---
+    const upTile = el(`<section class="tile tile-list"><div class="tile-head"><h2></h2><a href="#/calendar"></a></div><div class="date-list"></div></section>`);
+    upTile.querySelector('h2').textContent = tr('today_upcoming_title');
+    upTile.querySelector('.tile-head a').textContent = tr('nav_calendar');
+    const dateList = upTile.querySelector('.date-list');
+    if (!later.length) dateList.appendChild(el(`<p class="panel-empty">${esc(tr('today_due_empty'))}</p>`));
+    later.slice(0, TODAY_MAX_DEADLINES).forEach((x) => {
+      const row = el(`<div class="date-row" tabindex="0" role="button"><span class="date-cell"><b></b><small></small></span><span class="date-text"><b></b><small></small></span></div>`);
+      const day = String(x.date).slice(8, 10);
+      row.querySelector('.date-cell b').textContent = day;
+      row.querySelector('.date-cell small').textContent = shortMonth(x.date);
+      row.querySelector('.date-text b').textContent = x.title;
+      row.querySelector('.date-text small').textContent = [x.sub, relativeDayLabel(x.days)].filter(Boolean).join(' · ');
+      if (x.days <= 3) row.classList.add('date-soon');
+      row.appendChild(rowActions(x));
+      row.addEventListener('click', () => open(x));
+      row.addEventListener('keydown', (e) => { if (e.key === 'Enter') open(x); });
+      dateList.appendChild(row);
+    });
+    if (later.length > TODAY_MAX_DEADLINES) {
+      dateList.appendChild(el(`<a class="panel-more" href="#/calendar">${esc(tr('today_more', { n: later.length - TODAY_MAX_DEADLINES }))}</a>`));
+    }
+    board.appendChild(upTile);
+
+    // --- Progetti: avanzamento a tacche e prossimo passo spuntabile ---
     const active = projects.filter((p) => p.status === 'in_corso')
       .sort((a, b) => (a.deadline || '9999').localeCompare(b.deadline || '9999'));
-    const projPanel = el(`<section class="panel"><div class="panel-head"><h2></h2><a href="#/projects"></a></div><div class="proj-list"></div></section>`);
-    projPanel.querySelector('h2').textContent = tr('today_projects_title');
-    projPanel.querySelector('.panel-head a').textContent = tr('today_all_n', { n: projects.filter((p) => p.status !== 'fatto').length });
-    const projList = projPanel.querySelector('.proj-list');
-    if (!active.length) projList.appendChild(el(`<p class="panel-empty">${esc(tr('today_projects_empty'))}</p>`));
     active.slice(0, 4).forEach((p) => {
       const card = el(`
-        <div class="proj-card">
-          <button type="button" class="proj-head"><span class="proj-title"></span><span class="proj-when"></span></button>
-          <div class="progress"><div class="progress-fill"></div></div>
-          <div class="proj-meta"></div>
-          <div class="proj-checks"></div>
-        </div>
+        <section class="tile tile-project">
+          <button type="button" class="tile-kicker"></button>
+          <button type="button" class="tile-title"></button>
+          <div class="ticks"></div>
+          <small class="tile-sub"></small>
+          <div class="next-step"></div>
+        </section>
       `);
-      card.querySelector('.proj-title').textContent = p.title;
-      card.querySelector('.proj-head').addEventListener('click', () => render('projects', { highlight: p.id }));
-      const renderCard = (proj) => {
-        const { done, total } = checklistProgress(proj.checklist);
-        card.querySelector('.progress-fill').style.width = total ? `${Math.round((done / total) * 100)}%` : '0%';
-        card.querySelector('.proj-meta').textContent = total ? tr('label_completed_count', { done, total }) : tr('today_no_checklist');
-        const when = card.querySelector('.proj-when');
-        if (proj.deadline) {
-          const days = calendarDaysFromToday(proj.deadline);
-          when.textContent = relativeDayLabel(days);
-          when.className = `proj-when ${urgencyClass(days)}`;
+      card.querySelector('.tile-kicker').textContent = tr('type_project');
+      card.querySelector('.tile-title').textContent = p.title;
+      card.querySelectorAll('.tile-kicker, .tile-title').forEach((b) => b.addEventListener('click', () => render('projects', { highlight: p.id })));
+      const paint = (proj) => {
+        const { done: nDone, total } = checklistProgress(proj.checklist);
+        const ticks = card.querySelector('.ticks');
+        ticks.innerHTML = '';
+        if (total && total <= 12) {
+          for (let i = 0; i < total; i++) ticks.appendChild(el(`<i class="${i < nDone ? 'on' : ''}"></i>`));
+        } else {
+          const bar = el('<span class="ticks-bar"><span></span></span>');
+          bar.firstChild.style.width = total ? `${Math.round((nDone / total) * 100)}%` : '0%';
+          ticks.appendChild(bar);
         }
-        const checks = card.querySelector('.proj-checks');
-        checks.innerHTML = '';
-        (proj.checklist || []).map((c, i) => ({ c, i })).filter(({ c }) => !c.done).slice(0, 3).forEach(({ c, i }) => {
-          const label = el('<label class="check-row"><input type="checkbox" /><span></span></label>');
-          label.querySelector('span').textContent = c.text;
-          label.querySelector('input').addEventListener('change', async (e) => {
-            e.target.disabled = true;
-            const checklist = proj.checklist.map((item, j) => (j === i ? { ...item, done: true } : item));
-            const updated = await api(`/projects/${proj.id}`, { method: 'PUT', body: JSON.stringify({ checklist }) });
-            toast(tr('toast_done_nice'));
-            renderCard(updated);
-          });
-          checks.appendChild(label);
+        const bits = [];
+        if (total) bits.push(tr('label_completed_count', { done: nDone, total }));
+        if (proj.deadline) bits.push(relativeDayLabel(calendarDaysFromToday(proj.deadline)));
+        card.querySelector('.tile-sub').textContent = bits.join(' · ') || tr('today_no_checklist');
+        const nextWrap = card.querySelector('.next-step');
+        nextWrap.innerHTML = '';
+        const idx = (proj.checklist || []).findIndex((c) => !c.done);
+        if (idx < 0) return;
+        const label = el('<label class="check-row"><input type="checkbox" /><span></span></label>');
+        label.querySelector('span').textContent = proj.checklist[idx].text;
+        label.querySelector('input').addEventListener('change', async (e) => {
+          e.target.disabled = true;
+          const checklist = proj.checklist.map((item, j) => (j === idx ? { ...item, done: true } : item));
+          const updated = await api(`/projects/${proj.id}`, { method: 'PUT', body: JSON.stringify({ checklist }) });
+          toast(tr('toast_done_nice'));
+          paint(updated);
         });
+        nextWrap.appendChild(label);
       };
-      renderCard(p);
-      projList.appendChild(card);
+      paint(p);
+      board.appendChild(card);
     });
-    grid.appendChild(projPanel);
 
-    // --- Note recenti e cartelle ---
-    const side = el(`<section class="panel"><div class="panel-head"><h2></h2><a href="#/ideas"></a></div><div class="note-grid"></div><div class="panel-head panel-head-sub"><h2></h2><a href="#/dossiers"></a></div><div class="chip-row"></div></section>`);
-    const heads = side.querySelectorAll('.panel-head');
-    heads[0].querySelector('h2').textContent = tr('today_notes_title');
-    heads[0].querySelector('a').textContent = tr('today_all_n', { n: ideas.length });
-    heads[1].querySelector('h2').textContent = tr('nav_dossiers');
-    heads[1].querySelector('a').textContent = tr('today_all_n', { n: dossiers.length });
-    const noteGrid = side.querySelector('.note-grid');
-    if (!ideas.length) noteGrid.appendChild(el(`<p class="panel-empty">${esc(tr('today_notes_empty'))}</p>`));
-    const NOTE_TINTS = ['note-yellow', 'note-teal', 'note-blue', 'note-peach'];
+    // --- Note come foglietti ---
+    const NOTE_TINTS = ['note-yellow', 'note-lilac', 'note-pink', 'note-sky'];
     ideas.slice(0, 4).forEach((idea, i) => {
-      const n = el(`<button type="button" class="note-tile ${NOTE_TINTS[i % NOTE_TINTS.length]}"><span class="note-text"></span><span class="note-tags"></span></button>`);
+      const n = el(`<button type="button" class="tile tile-note ${NOTE_TINTS[i % NOTE_TINTS.length]}"><span class="tile-kicker"></span><span class="note-text"></span><span class="note-tags"></span></button>`);
+      n.querySelector('.tile-kicker').textContent = tr('type_idea');
       const text = idea.title || idea.body || '';
       n.querySelector('.note-text').textContent = text.length > 90 ? text.slice(0, 90) + '…' : text;
       n.querySelector('.note-tags').textContent = (idea.tags || []).map((t) => '#' + t).join(' ');
       n.addEventListener('click', () => render('ideas', { highlight: idea.id }));
-      noteGrid.appendChild(n);
+      board.appendChild(n);
     });
-    const chips = side.querySelector('.chip-row');
-    if (!dossiers.length) chips.appendChild(el(`<p class="panel-empty">${esc(tr('today_dossiers_empty'))}</p>`));
-    dossiers.slice(0, 10).forEach((d) => {
-      const c = el(`<a class="chip" href="#/dossiers/${d.id}"><span></span><span class="chip-count"></span></a>`);
-      c.querySelector('span').textContent = d.title;
-      c.querySelector('.chip-count').textContent = String((d.items || []).length);
-      chips.appendChild(c);
-    });
-    grid.appendChild(side);
+
+    // --- Cartelle ---
+    if (dossiers.length) {
+      const dt = el(`<section class="tile tile-list tile-wide"><div class="tile-head"><h2></h2><a href="#/dossiers"></a></div><div class="chip-row"></div></section>`);
+      dt.querySelector('h2').textContent = tr('nav_dossiers');
+      dt.querySelector('.tile-head a').textContent = tr('today_all_n', { n: dossiers.length });
+      const chips = dt.querySelector('.chip-row');
+      dossiers.slice(0, 10).forEach((d) => {
+        const c = el(`<a class="chip" href="#/dossiers/${d.id}"><span></span><span class="chip-count"></span></a>`);
+        c.querySelector('span').textContent = d.title;
+        c.querySelector('.chip-count').textContent = String((d.items || []).length);
+        chips.appendChild(c);
+      });
+      board.appendChild(dt);
+    }
   };
 
   views.reminders = async (root, opts = {}) => {
@@ -1503,65 +1537,69 @@
       return;
     }
 
-    const grid = el('<div class="grid"></div>');
-    ideas.forEach((idea) => {
+    // Foglietti colorati in colonne: si tocca la nota per aprirla; le spunte
+    // della checklist si mettono direttamente sul foglietto.
+    const NOTE_TINTS = ['note-yellow', 'note-lilac', 'note-pink', 'note-sky'];
+    const board = el('<div class="note-board"></div>');
+    const openEdit = (idea) => {
+      const form = ideaModal(idea);
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const tags = parseTags(form);
+        const checklist = collectChecklist(form, idea.checklist);
+        await api(`/ideas/${idea.id}`, { method: 'PUT', body: JSON.stringify({ title: form.title.value, body: form.body.value, tags, checklist }) });
+        closeModal(); toast(tr('toast_idea_updated')); render('ideas');
+      });
+      form.querySelector('[data-cancel]').addEventListener('click', closeModal);
+      const actions = form.querySelector('.form-actions');
+      const side = el(`<span class="form-actions-side"><button type="button" class="btn btn-ghost" data-link>${esc(tr('btn_link_folder'))}</button><button type="button" class="btn btn-ghost btn-danger" data-del>${esc(tr('btn_delete'))}</button></span>`);
+      side.querySelector('[data-link]').addEventListener('click', () => { closeModal(); openLinkToDossierModal('idea', idea.id, idea.title); });
+      side.querySelector('[data-del]').addEventListener('click', async () => {
+        if (!confirm(tr('confirm_delete_idea'))) return;
+        await api(`/ideas/${idea.id}`, { method: 'DELETE' });
+        closeModal(); toast(tr('toast_idea_deleted')); render('ideas');
+      });
+      actions.prepend(side);
+      openModal(tr('modal_edit_idea'), form);
+    };
+    ideas.forEach((idea, n) => {
       const { done, total } = checklistProgress(idea.checklist);
       const card = el(`
-        <div class="card">
-          <p class="card-title">${esc(idea.title)}</p>
-          <p class="card-body">${escTrim(idea.body, 220)}</p>
-          <div class="tag-row">${(idea.tags || []).map((tg) => `<span class="tag">${esc(tg)}</span>`).join('')}</div>
-          <div class="card-actions">
-            <button class="btn btn-sm" data-edit>${esc(tr('btn_edit'))}</button>
-            <button class="btn btn-sm" data-link>${esc(tr('btn_link_folder'))}</button>
-            <button class="btn btn-sm btn-danger" data-del>${esc(tr('btn_delete'))}</button>
-          </div>
-        </div>
+        <article class="tile tile-note note-card ${NOTE_TINTS[n % NOTE_TINTS.length]}" tabindex="0">
+          <p class="note-title"></p>
+          <p class="note-body"></p>
+          <div class="note-checks"></div>
+          <span class="note-tags"></span>
+        </article>
       `);
+      card.querySelector('.note-title').textContent = idea.title;
+      const body = (idea.body || '').trim();
+      card.querySelector('.note-body').textContent = body && body !== idea.title ? (body.length > 220 ? body.slice(0, 220) + '…' : body) : '';
+      card.querySelector('.note-tags').textContent = (idea.tags || []).map((t) => '#' + t).join(' ');
+      const checks = card.querySelector('.note-checks');
       if (total) {
-        const checklistEl = el('<div class="idea-checklist"></div>');
-        checklistEl.appendChild(el(`<p class="card-sub">${esc(tr('label_completed_count', { done, total }))}</p>`));
+        checks.appendChild(el(`<span class="note-progress">${esc(tr('label_completed_count', { done, total }))}</span>`));
         (idea.checklist || []).forEach((item, i) => {
-          const row = el(`
-            <label class="idea-checklist-item">
-              <input type="checkbox" ${item.done ? 'checked' : ''} />
-              <span>${esc(item.text)}</span>
-              ${item.done ? `<span class="idea-checklist-badge" title="${esc(tr('label_completed_title'))}">✓</span>` : ''}
-            </label>
-          `);
+          const row = el(`<label class="check-row"><input type="checkbox" ${item.done ? 'checked' : ''} /><span></span></label>`);
+          row.querySelector('span').textContent = item.text;
+          row.addEventListener('click', (e) => e.stopPropagation());
           row.querySelector('input').addEventListener('change', async (e) => {
             const updated = idea.checklist.map((c, j) => (j === i ? { ...c, done: e.target.checked } : c));
             await api(`/ideas/${idea.id}`, { method: 'PUT', body: JSON.stringify({ checklist: updated }) });
-            render('ideas');
+            if (e.target.checked) toast(tr('toast_done_nice'));
+            render('ideas', { fromHash: true });
           });
-          checklistEl.appendChild(row);
+          checks.appendChild(row);
         });
-        card.querySelector('.card-body').insertAdjacentElement('afterend', checklistEl);
       }
-      card.querySelector('[data-edit]').addEventListener('click', () => {
-        const form = ideaModal(idea);
-        form.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const tags = parseTags(form);
-          const checklist = collectChecklist(form, idea.checklist);
-          await api(`/ideas/${idea.id}`, { method: 'PUT', body: JSON.stringify({ title: form.title.value, body: form.body.value, tags, checklist }) });
-          closeModal(); toast(tr('toast_idea_updated')); render('ideas');
-        });
-        form.querySelector('[data-cancel]').addEventListener('click', closeModal);
-        openModal(tr('modal_edit_idea'), form);
-      });
-      card.querySelector('[data-link]').addEventListener('click', () => openLinkToDossierModal('idea', idea.id, idea.title));
-      card.querySelector('[data-del]').addEventListener('click', async () => {
-        if (!confirm(tr('confirm_delete_idea'))) return;
-        await api(`/ideas/${idea.id}`, { method: 'DELETE' });
-        toast(tr('toast_idea_deleted')); render('ideas');
-      });
+      card.addEventListener('click', () => openEdit(idea));
+      card.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === card) openEdit(idea); });
       if (highlightId && String(idea.id) === highlightId) card.classList.add('card-highlight');
-      grid.appendChild(card);
+      board.appendChild(card);
     });
-    root.appendChild(grid);
+    root.appendChild(board);
     if (highlightId) {
-      const target = grid.querySelector('.card-highlight');
+      const target = board.querySelector('.card-highlight');
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
@@ -1962,15 +2000,10 @@
     root.appendChild(el(`
       <div class="view-header">
         <h2>${esc(tr('nav_vault_title'))}</h2>
-        <div class="view-header-actions">${backToDossierButtonHtml(opts)}</div>
-      </div>
-      <p class="card-sub">${esc(tr('vault_csv_hint'))}</p>
-      <div class="vault-toolbar">
-        <label class="btn btn-ghost" style="cursor:pointer">
-          ${esc(tr('btn_import_csv'))}
-          <input type="file" id="csv-input" accept=".csv" class="hidden" />
-        </label>
-        <button class="btn btn-primary" id="new-vault">${esc(tr('btn_new_vault_entry'))}</button>
+        <div class="view-header-actions">${backToDossierButtonHtml(opts)}
+          <label class="btn btn-ghost" style="cursor:pointer">${esc(tr('btn_import_csv'))}<input type="file" id="csv-input" accept=".csv" class="hidden" /></label>
+          <button class="btn btn-primary" id="new-vault">${esc(tr('btn_new_vault_entry'))}</button>
+        </div>
       </div>
     `));
     wireBackToDossier(root, opts);
@@ -2008,99 +2041,130 @@
     }
 
     const TYPE_LABEL = { password: tr('vault_type_password'), note: tr('vault_type_note'), card: tr('vault_type_card') };
-    const sheet = el(`
-      <div class="vault-sheet">
-        <div class="vault-sheet-head">
-          <span class="vsh-cell">${esc(tr('col_num'))}</span>
-          <span class="vsh-cell">${esc(tr('col_type'))}</span>
-          <span class="vsh-cell">${esc(tr('col_site'))}</span>
-          <span class="vsh-cell">${esc(tr('col_username'))}</span>
-          <span class="vsh-cell">${esc(tr('col_password'))}</span>
-          <span class="vsh-cell"></span>
-        </div>
-        <div class="vault-sheet-body"></div>
-      </div>
-    `);
-    const body = sheet.querySelector('.vault-sheet-body');
-    root.appendChild(sheet);
+    // Schede in alto: Codici mostra i codici 2FA gia' in chiaro (si sceglie
+    // la scheda apposta), le altre filtrano per tipo.
+    const TABS = [
+      { key: 'all', label: tr('vault_tab_all'), test: () => true },
+      { key: 'codes', label: tr('vault_tab_codes'), test: (x) => x.hasTotp },
+      { key: 'password', label: tr('vault_tab_passwords'), test: (x) => x.type === 'password' },
+      { key: 'note', label: tr('vault_tab_notes'), test: (x) => x.type === 'note' },
+      { key: 'card', label: tr('vault_tab_cards'), test: (x) => x.type === 'card' },
+    ].filter((t) => t.key === 'all' || entries.some(t.test));
+    let tab = sessionStorage.getItem('memento-vault-tab') || 'all';
+    if (!TABS.some((t) => t.key === tab)) tab = 'all';
 
-    entries.forEach((entry, idx) => {
-      const row = el(`
-        <div class="vault-sheet-row">
-          <span class="vs-cell vs-num">${idx + 1}</span>
-          <span class="vs-cell vs-type" data-label="${esc(tr('col_type'))}"><span class="vs-type-dot vs-type-${esc(entry.type)}"></span>${esc(TYPE_LABEL[entry.type] || entry.type)}</span>
-          <span class="vs-cell" data-label="${esc(tr('col_site'))}">${esc(entry.site)}</span>
-          <span class="vs-cell" data-label="${esc(tr('col_username'))}">${esc(entry.username) || '—'}</span>
-          <span class="vs-cell vs-pwd" data-label="${esc(tr('col_password'))}" data-pwd>${entry.type === 'note' ? esc(tr('vault_secure_note')) : '••••••••'}</span>
-          <span class="vs-cell vs-actions">
-            ${entry.hasTotp ? `<button class="btn btn-sm btn-icon" data-totp title="${esc(tr('title_totp_code'))}">${iconaLinea('codice')}</button>` : ''}
-            <button class="btn btn-sm btn-icon" data-reveal title="${esc(tr('title_show'))}">${iconaLinea('occhio')}</button>
-            <button class="btn btn-sm btn-icon" data-edit title="${esc(tr('btn_edit'))}">${iconaLinea('matita')}</button>
-            <button class="btn btn-sm btn-icon" data-link title="${esc(tr('btn_link_folder'))}">${iconaLinea('cartellaLinea')}</button>
-            <button class="btn btn-sm btn-icon btn-danger" data-del title="${esc(tr('btn_delete'))}">${iconaLinea('cestino')}</button>
-          </span>
-        </div>
-      `);
-      let revealed = false;
-      const revealBtn = row.querySelector('[data-reveal]');
-      revealBtn.addEventListener('click', async () => {
-        const pwdEl = row.querySelector('[data-pwd]');
-        if (!revealed) {
-          let full;
-          try {
-            try {
-              full = await api(`/vault/${entry.id}/reveal`);
-            } catch (err) {
-              if (!(err.data && err.data.webauthnRequired)) throw err;
-              full = await revealWithFingerprint(entry.id);
-            }
-          } catch (err) {
-            toast(err.message);
-            return;
-          }
-          pwdEl.textContent = entry.type === 'card'
-            ? tr('vault_card_cvv_inline', { password: full.password || tr('vault_empty_value'), cvv: full.cvv || '—' })
-            : (full.password || tr('vault_empty_value'));
-          revealed = true;
-          revealBtn.innerHTML = iconaLinea('occhio-off');
-          revealBtn.title = tr('title_hide');
-        } else {
-          pwdEl.textContent = entry.type === 'note' ? tr('vault_secure_note') : '••••••••';
-          revealed = false;
-          revealBtn.innerHTML = iconaLinea('occhio');
-          revealBtn.title = tr('title_show');
-        }
-      });
-      if (entry.hasTotp) {
-        let totpTimer = null;
-        const totpBtn = row.querySelector('[data-totp]');
-        totpBtn.addEventListener('click', async () => {
-          if (totpTimer) {
-            clearInterval(totpTimer);
-            totpTimer = null;
-            row.querySelector('[data-pwd]').textContent = entry.type === 'note' ? tr('vault_secure_note') : (revealed ? row.querySelector('[data-pwd]').textContent : '••••••••');
-            totpBtn.innerHTML = iconaLinea('codice');
-            totpBtn.title = tr('title_totp_code');
-            return;
-          }
-          const pwdEl = row.querySelector('[data-pwd]');
-          const showCode = async () => {
-            // La riga potrebbe non esistere piu' (navigazione altrove): si ferma da sola.
-            if (!document.body.contains(row)) { clearInterval(totpTimer); return; }
-            try {
-              const { code, secondsRemaining } = await api(`/vault/${entry.id}/totp`);
-              pwdEl.textContent = `${code} (${secondsRemaining}s)`;
-            } catch (e) {
-              pwdEl.textContent = tr('vault_code_unavailable');
-            }
-          };
-          await showCode();
-          totpTimer = setInterval(showCode, 1000);
-          totpBtn.innerHTML = iconaLinea('occhio-off');
-          totpBtn.title = tr('title_hide_code');
-        });
+    const seg = el('<div class="seg" role="tablist"></div>');
+    const list = el('<div class="vault-list"></div>');
+    root.appendChild(seg);
+    root.appendChild(list);
+
+    const LOGO_TINTS = [['#EDE7FF', '#5233E0'], ['#FFE1E7', '#B4123A'], ['#FFF1BF', '#7A5A00'], ['#DCE6FF', '#2B44B8'], ['#E3F5E1', '#2B7A3D'], ['#F3E3FA', '#8A2BA8']];
+    const tintFor = (name) => LOGO_TINTS[[...String(name)].reduce((a, c) => a + c.charCodeAt(0), 0) % LOGO_TINTS.length];
+
+    async function revealFull(entry) {
+      try {
+        return await api(`/vault/${entry.id}/reveal`);
+      } catch (err) {
+        if (!(err.data && err.data.webauthnRequired)) throw err;
+        return revealWithFingerprint(entry.id);
       }
-      row.querySelector('[data-edit]').addEventListener('click', () => {
+    }
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        toast(tr('toast_copied'));
+      } catch (_) {
+        toast(tr('err_copy_failed'));
+      }
+    }
+
+    // Codice 2FA che si aggiorna da solo: una richiesta al server quando il
+    // codice cambia, il conto alla rovescia lo fa il telefono.
+    function liveCode(entry, codeEl, barEl) {
+      let remaining = 0, timer = null;
+      const tick = async () => {
+        if (!document.body.contains(codeEl)) { clearInterval(timer); return; }
+        if (remaining <= 0) {
+          try {
+            const r = await api(`/vault/${entry.id}/totp`);
+            codeEl.textContent = `${r.code.slice(0, 3)} ${r.code.slice(3)}`;
+            remaining = r.secondsRemaining;
+          } catch (_) {
+            codeEl.textContent = tr('vault_code_unavailable');
+            clearInterval(timer);
+            return;
+          }
+        }
+        if (barEl) barEl.style.width = `${Math.round((remaining / 30) * 100)}%`;
+        remaining -= 1;
+      };
+      tick();
+      timer = setInterval(tick, 1000);
+    }
+
+    // Dettaglio della voce: tutto quello che serve copiare, piu' le azioni.
+    function openDetail(entry) {
+      const wrap = el(`<div class="vault-detail"></div>`);
+      const field = (label, value, { secret = false, mono = false } = {}) => {
+        const row = el(`<div class="vd-row"><span class="vd-label"></span><span class="vd-value ${mono ? 'mono' : ''}"></span><span class="vd-acts"></span></div>`);
+        row.querySelector('.vd-label').textContent = label;
+        const valueEl = row.querySelector('.vd-value');
+        const acts = row.querySelector('.vd-acts');
+        if (secret) {
+          let shown = null;
+          valueEl.textContent = '••••••••';
+          const eye = el(`<button type="button" class="sq-btn" title="${esc(tr('title_show'))}">${iconaLinea('occhio')}</button>`);
+          const copy = el(`<button type="button" class="sq-btn" title="${esc(tr('btn_copy'))}">${ICON_COPY}</button>`);
+          const load = async () => { if (shown === null) shown = await value(); return shown; };
+          eye.addEventListener('click', async () => {
+            if (valueEl.dataset.open) { valueEl.textContent = '••••••••'; delete valueEl.dataset.open; eye.innerHTML = iconaLinea('occhio'); return; }
+            try { valueEl.textContent = (await load()) || tr('vault_empty_value'); } catch (err) { toast(err.message); return; }
+            valueEl.dataset.open = '1'; eye.innerHTML = iconaLinea('occhio-off');
+          });
+          copy.addEventListener('click', async () => { try { copyText(await load()); } catch (err) { toast(err.message); } });
+          acts.append(eye, copy);
+        } else {
+          valueEl.textContent = value || '—';
+          if (value) {
+            const copy = el(`<button type="button" class="sq-btn" title="${esc(tr('btn_copy'))}">${ICON_COPY}</button>`);
+            copy.addEventListener('click', () => copyText(value));
+            acts.append(copy);
+          }
+        }
+        return row;
+      };
+      let fullPromise = null;
+      const full = () => (fullPromise = fullPromise || revealFull(entry));
+      if (entry.username) wrap.appendChild(field(tr('col_username'), entry.username));
+      if (entry.type === 'note') {
+        wrap.appendChild(field(tr('vault_type_note'), async () => (await full()).password, { secret: true }));
+      } else {
+        wrap.appendChild(field(entry.type === 'card' ? tr('vault_card_number') : tr('col_password'), async () => (await full()).password, { secret: true, mono: true }));
+      }
+      if (entry.type === 'card') wrap.appendChild(field('CVV', async () => (await full()).cvv, { secret: true, mono: true }));
+      if (entry.hasTotp) {
+        const row = el(`<div class="vd-row"><span class="vd-label"></span><span class="vd-value mono vd-code">…</span><span class="vd-acts"><span class="otp-timer"><i></i></span></span></div>`);
+        row.querySelector('.vd-label').textContent = tr('title_totp_code');
+        const codeEl = row.querySelector('.vd-code');
+        codeEl.addEventListener('click', () => copyText(codeEl.textContent.replace(/\s/g, '')));
+        wrap.appendChild(row);
+        liveCode(entry, codeEl, row.querySelector('.otp-timer i'));
+      }
+      if (entry.url) wrap.appendChild(field('URL', entry.url));
+      if (entry.notes) wrap.appendChild(field(tr('field_notes'), entry.notes));
+
+      const actions = el(`<div class="form-actions"><span class="form-actions-side"><button type="button" class="btn btn-ghost" data-link></button><button type="button" class="btn btn-ghost btn-danger" data-del></button></span><button type="button" class="btn btn-primary" data-edit></button></div>`);
+      actions.querySelector('[data-link]').textContent = tr('btn_link_folder');
+      actions.querySelector('[data-del]').textContent = tr('btn_delete');
+      actions.querySelector('[data-edit]').textContent = tr('btn_edit');
+      actions.querySelector('[data-link]').addEventListener('click', () => { closeModal(); openLinkToDossierModal('vault', entry.id, entry.site); });
+      actions.querySelector('[data-del]').addEventListener('click', async () => {
+        if (!confirm(tr('confirm_delete_vault_entry'))) return;
+        await api(`/vault/${entry.id}`, { method: 'DELETE' });
+        closeModal(); toast(tr('toast_vault_deleted')); render('vault');
+      });
+      actions.querySelector('[data-edit]').addEventListener('click', () => {
+        closeModal();
         const form = vaultModal(entry);
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
@@ -2110,17 +2174,57 @@
         form.querySelector('[data-cancel]').addEventListener('click', closeModal);
         openModal(tr('modal_edit_vault_entry'), form);
       });
-      row.querySelector('[data-link]').addEventListener('click', () => openLinkToDossierModal('vault', entry.id, entry.site));
-      row.querySelector('[data-del]').addEventListener('click', async () => {
-        if (!confirm(tr('confirm_delete_vault_entry'))) return;
-        await api(`/vault/${entry.id}`, { method: 'DELETE' });
-        toast(tr('toast_vault_deleted')); render('vault');
+      wrap.appendChild(actions);
+      openModal(entry.site, wrap);
+    }
+
+    function paint() {
+      seg.innerHTML = '';
+      TABS.forEach((t) => {
+        const b = el(`<button type="button" role="tab" class="${t.key === tab ? 'on' : ''}" aria-selected="${t.key === tab}"></button>`);
+        b.textContent = t.label;
+        b.addEventListener('click', () => { tab = t.key; sessionStorage.setItem('memento-vault-tab', tab); paint(); });
+        seg.appendChild(b);
       });
-      if (highlightId && String(entry.id) === highlightId) row.classList.add('card-highlight');
-      body.appendChild(row);
-    });
+      list.innerHTML = '';
+      const test = TABS.find((t) => t.key === tab).test;
+      entries.filter(test).forEach((entry) => {
+        const [bg, fg] = tintFor(entry.site);
+        const card = el(`
+          <div class="vcard" tabindex="0" role="button">
+            <span class="vlogo"></span>
+            <span class="vtext"><b></b><small></small></span>
+            <span class="vright"></span>
+          </div>
+        `);
+        const logo = card.querySelector('.vlogo');
+        logo.textContent = (entry.site || '?').trim().charAt(0).toUpperCase();
+        logo.style.background = bg; logo.style.color = fg;
+        card.querySelector('b').textContent = entry.site;
+        card.querySelector('small').textContent = entry.username || TYPE_LABEL[entry.type] || '';
+        const right = card.querySelector('.vright');
+        if (entry.hasTotp && tab === 'codes') {
+          const box = el('<span class="otp-box"><span class="otp-code">…</span><span class="otp-timer"><i></i></span></span>');
+          right.appendChild(box);
+          box.addEventListener('click', (e) => { e.stopPropagation(); copyText(box.querySelector('.otp-code').textContent.replace(/\s/g, '')); });
+          liveCode(entry, box.querySelector('.otp-code'), box.querySelector('.otp-timer i'));
+        } else if (entry.type !== 'note') {
+          const copy = el(`<button type="button" class="sq-btn" title="${esc(tr('btn_copy'))}" aria-label="${esc(tr('btn_copy'))}">${ICON_COPY}</button>`);
+          copy.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            try { copyText((await revealFull(entry)).password || ''); } catch (err) { toast(err.message); }
+          });
+          right.appendChild(copy);
+        }
+        card.addEventListener('click', () => openDetail(entry));
+        card.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === card) openDetail(entry); });
+        if (highlightId && String(entry.id) === highlightId) card.classList.add('card-highlight');
+        list.appendChild(card);
+      });
+    }
+    paint();
     if (highlightId) {
-      const target = root.querySelector('.card-highlight');
+      const target = list.querySelector('.card-highlight');
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
@@ -2823,7 +2927,7 @@
       if (mine.idea.length) {
         const body = section('idea', 'nav_ideas', mine.idea.length);
         const notes = el('<div class="note-grid"></div>');
-        const NOTE_TINTS = ['note-yellow', 'note-teal', 'note-blue', 'note-peach'];
+        const NOTE_TINTS = ['note-yellow', 'note-lilac', 'note-pink', 'note-sky'];
         mine.idea.forEach((idea, i) => {
           const wrap = el(`<div class="note-tile-wrap"><button type="button" class="note-tile ${NOTE_TINTS[i % NOTE_TINTS.length]}"><span class="note-text"></span></button></div>`);
           const text = idea.title || idea.body || '';
@@ -3192,6 +3296,7 @@
           const activate = () => {
             searchResults.classList.add('hidden');
             searchInput.value = '';
+            appHeader.classList.remove('search-open');
             render(TYPE_TO_VIEW[r.type] || 'ideas', { highlight: r.id });
           };
           item.addEventListener('click', activate);
@@ -3205,6 +3310,27 @@
 
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.search-wrap')) searchResults.classList.add('hidden');
+  });
+
+  // Telefono: la casella di ricerca resta nascosta finche' non si tocca la
+  // lente, cosi' la parte alta dello schermo resta al contenuto.
+  const appHeader = document.querySelector('.app-header');
+  const searchToggle = document.getElementById('btn-search-toggle');
+  function openPhoneSearch() {
+    appHeader.classList.add('search-open');
+    searchInput.focus();
+  }
+  function closePhoneSearch() {
+    if (searchInput.value.trim()) return;
+    appHeader.classList.remove('search-open');
+    searchResults.classList.add('hidden');
+  }
+  searchToggle.addEventListener('click', () => {
+    if (appHeader.classList.contains('search-open') && !searchInput.value.trim()) closePhoneSearch(); else openPhoneSearch();
+  });
+  searchInput.addEventListener('blur', () => setTimeout(closePhoneSearch, 150));
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { searchInput.value = ''; searchInput.blur(); closePhoneSearch(); }
   });
 
   document.addEventListener('keydown', (e) => {

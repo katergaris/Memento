@@ -11,3 +11,6 @@ uploads/*
 
 # Bozze del logo (concept, varianti, anteprima): i file definitivi sono in brand/
 logos/
+
+# Studio dell interfaccia e bozze (documenti di lavoro, non pubblici)
+docs/studio-interfaccia/
