@@ -61,7 +61,7 @@ for (const f of ['ic_launcher.xml', 'ic_launcher_round.xml']) {
   // gia' dimensionato per la zona sicura, quindi niente margine in piu'.
   x = x.replace(/<foreground>[\s\S]*?<\/foreground>/, '<foreground android:drawable="@mipmap/ic_launcher_foreground" />');
   x = x.replace(/<background>[\s\S]*?<\/background>/, '<background android:drawable="@mipmap/ic_launcher_background" />');
-  if (!x.includes('<monochrome')) x = x.replace('</adaptive-icon>', '    <monochrome android:drawable="@mipmap/ic_launcher_foreground" />\n</adaptive-icon>');
+  if (!x.includes('<monochrome')) x = x.replace('</adaptive-icon>', '    <monochrome android:drawable="@drawable/ic_launcher_monochrome" />\n</adaptive-icon>');
   fs.writeFileSync(p, x);
 }
 console.log('progetto Android aggiornato');
