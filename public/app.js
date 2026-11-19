@@ -679,7 +679,9 @@
   ];
   // Sezioni che si possono spegnere (Sicurezza -> Sezioni visibili): spariscono
   // da menu, Oggi e ricerca, i dati restano. Preferenza del dispositivo.
-  const HIDEABLE_VIEWS = ['projects', 'cards', 'accounts', 'drive', 'dossiers', 'calendar'];
+  const HIDEABLE_VIEWS = ['projects', 'cards', 'accounts', 'drive', 'dossiers'];
+  // Il Calendario si apre dalle schede di Scadenze, non dal menu.
+  const NAV_SKIP = new Set(['calendar']);
   const HIDDEN_KEY = 'memento-hidden-sections';
   function hiddenViews() {
     try { return new Set(JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]')); } catch (_) { return new Set(); }
@@ -787,7 +789,7 @@
   function buildNavigation() {
     sidebarNav.innerHTML = '';
     sidebarSecondary.innerHTML = '';
-    visibleSections().forEach((s) => {
+    visibleSections().filter((s) => !NAV_SKIP.has(s.view)).forEach((s) => {
       const quiet = SETTINGS_VIEWS.has(s.view);
       (quiet ? sidebarSecondary : sidebarNav).appendChild(navLink(s, quiet ? 'nav-link-quiet' : ''));
     });
@@ -825,7 +827,7 @@
     // Foglio "Sezioni" del telefono: tutte le sezioni come tessere grandi.
     sectionsSheet.innerHTML = '';
     const grid = el('<div class="sheet-grid"></div>');
-    visibleSections().forEach((s) => {
+    visibleSections().filter((s) => !NAV_SKIP.has(s.view)).forEach((s) => {
       const a = el(`<a class="sheet-tile" href="#/${s.view}" data-view="${s.view}">${appIcon(s.view, 52)}<span></span></a>`);
       a.querySelector('span').textContent = s.label;
       grid.appendChild(a);
@@ -1548,6 +1550,16 @@
     }
   };
 
+  // Schede in cima a Scadenze e Calendario: sono la stessa cosa vista in due modi.
+  function remindersSwitch(active) {
+    const seg = el(`<div class="seg seg-switch"><button type="button" data-v="reminders">${esc(tr('reminders_list'))}</button><button type="button" data-v="calendar">${esc(tr('nav_calendar'))}</button></div>`);
+    seg.querySelectorAll('button').forEach((b) => {
+      b.classList.toggle('on', b.dataset.v === active);
+      b.addEventListener('click', () => { if (b.dataset.v !== active) render(b.dataset.v); });
+    });
+    return seg;
+  }
+
   views.reminders = async (root, opts = {}) => {
     const highlightId = opts.highlight ? String(opts.highlight) : null;
     const reminders = (await api('/reminders')).filter(onlyFilter(opts));
@@ -1559,62 +1571,81 @@
       </div>
     `));
     wireBackToDossier(root, opts);
+    if (!opts.fromDossier && !isHidden('calendar')) root.appendChild(remindersSwitch('reminders'));
 
+    const saveForm = (form, existing) => async (e) => {
+      e.preventDefault();
+      const body = JSON.stringify({ label: form.label.value, date: form.date.value, time: form.time.value, notes: form.notes.value });
+      if (existing) await api(`/reminders/${existing.id}`, { method: 'PUT', body });
+      else await api('/reminders', { method: 'POST', body });
+      closeModal(); toast(existing ? tr('toast_reminder_updated') : tr('toast_reminder_saved')); render('reminders', { fromHash: true });
+    };
     root.querySelector('#new-reminder').addEventListener('click', () => {
       const form = reminderModal();
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await api('/reminders', { method: 'POST', body: JSON.stringify({ label: form.label.value, date: form.date.value, time: form.time.value, notes: form.notes.value }) });
-        closeModal(); toast(tr('toast_reminder_saved')); render('reminders');
-      });
+      form.addEventListener('submit', saveForm(form, null));
       form.querySelector('[data-cancel]').addEventListener('click', closeModal);
       openModal(tr('modal_new_reminder'), form);
     });
+    const edit = (r) => {
+      const form = reminderModal(r);
+      form.addEventListener('submit', saveForm(form, r));
+      form.querySelector('[data-cancel]').addEventListener('click', closeModal);
+      const side = el(`<span class="form-actions-side"><button type="button" class="btn btn-ghost" data-link>${esc(tr('btn_link_folder'))}</button><button type="button" class="btn btn-ghost btn-danger" data-del>${esc(tr('btn_delete'))}</button></span>`);
+      side.querySelector('[data-link]').addEventListener('click', () => { closeModal(); openLinkToDossierModal('reminder', r.id, r.label); });
+      side.querySelector('[data-del]').addEventListener('click', async () => { closeModal(); await done(r, tr('toast_moved_trash')); });
+      form.querySelector('.form-actions').prepend(side);
+      openModal(tr('modal_edit_reminder'), form);
+    };
+    // Fatto / eliminata: va nel cestino, si annulla dall'avviso.
+    const done = async (r, msg) => {
+      await api(`/reminders/${r.id}`, { method: 'DELETE' });
+      haptic('success');
+      undoToast(msg || tr('toast_done_nice'), async () => { await api(`/reminders/${r.id}/restore`, { method: 'POST' }); render('reminders', { fromHash: true }); });
+      render('reminders', { fromHash: true });
+    };
+    const tomorrow = async (r) => {
+      const t = new Date(); t.setDate(t.getDate() + 1);
+      const date = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+      await api(`/reminders/${r.id}`, { method: 'PUT', body: JSON.stringify({ label: r.label, date, time: r.time || '', notes: r.notes || '' }) });
+      toast(tr('toast_snoozed')); render('reminders', { fromHash: true });
+    };
 
     if (!reminders.length) {
       root.appendChild(el(`<div class="empty-state">${esc(tr('empty_reminders'))}</div>`));
       return;
     }
-
-    reminders
-      .slice()
-      .sort((a, b) => new Date(`${a.date}T${a.time || '00:00'}`) - new Date(`${b.date}T${b.time || '00:00'}`))
-      .forEach((r) => {
-        const days = daysUntil(r.date);
-        const unit = tr(Math.abs(days) === 1 ? 'day_one' : 'day_other');
-        const dayLabel = days === 0 ? tr('today_lc') : days > 0 ? tr('due_in_n', { n: days, unit }) : tr('overdue_by_passed', { n: -days, unit });
-        const row = el(`
-          <div class="trash-row row-card">
-            <span>
-              <strong>${esc(r.label)}</strong>
-              <span class="card-sub" style="display:block">${fmtDate(r.date)}${r.time ? ' · ' + esc(r.time) : ''} · ${esc(dayLabel)}${r.notes ? ' · ' + escTrim(r.notes, 80) : ''}</span>
-            </span>
-            <span class="card-actions" style="padding:0">
-              <button class="btn btn-sm" data-edit>${esc(tr('btn_edit'))}</button>
-              <button class="btn btn-sm" data-link>${esc(tr('btn_link_folder'))}</button>
-              <button class="btn btn-sm btn-danger" data-del>${esc(tr('btn_delete'))}</button>
-            </span>
-          </div>
-        `);
-        row.querySelector('[data-edit]').addEventListener('click', () => {
-          const form = reminderModal(r);
-          form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await api(`/reminders/${r.id}`, { method: 'PUT', body: JSON.stringify({ label: form.label.value, date: form.date.value, time: form.time.value, notes: form.notes.value }) });
-            closeModal(); toast(tr('toast_reminder_updated')); render('reminders');
-          });
-          form.querySelector('[data-cancel]').addEventListener('click', closeModal);
-          openModal(tr('modal_edit_reminder'), form);
-        });
-        row.querySelector('[data-link]').addEventListener('click', () => openLinkToDossierModal('reminder', r.id, r.label));
-        row.querySelector('[data-del]').addEventListener('click', async () => {
-          if (!(await askConfirm(tr('confirm_delete_reminder')))) return;
-          await api(`/reminders/${r.id}`, { method: 'DELETE' });
-          toast(tr('toast_reminder_deleted')); render('reminders');
-        });
+    const sorted = reminders.slice().sort((a, b) => `${a.date}T${a.time || '00:00'}`.localeCompare(`${b.date}T${b.time || '00:00'}`));
+    const groups = [
+      [tr('group_late'), (d) => d < 0], [tr('group_today_tomorrow'), (d) => d >= 0 && d <= 1],
+      [tr('group_week'), (d) => d > 1 && d <= 7], [tr('group_later'), (d) => d > 7],
+    ];
+    groups.forEach(([title, test]) => {
+      const list = sorted.filter((r) => test(calendarDaysFromToday(r.date)));
+      if (!list.length) return;
+      const tile = el(`<section class="tile tile-list rem-group"><div class="tile-head"><h2></h2><small class="rem-count"></small></div><div class="date-list"></div></section>`);
+      tile.querySelector('h2').textContent = title;
+      tile.querySelector('.rem-count').textContent = String(list.length);
+      const box = tile.querySelector('.date-list');
+      list.forEach((r) => {
+        const days = calendarDaysFromToday(r.date);
+        const row = el(`<div class="date-row" tabindex="0" role="button"><span class="date-cell"><b></b><small></small></span><span class="date-text"><b></b><small></small></span></div>`);
+        row.querySelector('.date-cell b').textContent = String(r.date).slice(8, 10);
+        row.querySelector('.date-cell small').textContent = shortMonth(r.date);
+        row.querySelector('.date-text b').textContent = r.label;
+        row.querySelector('.date-text small').textContent = [r.time ? r.time.slice(0, 5) : '', relativeDayLabel(days), r.notes ? r.notes.slice(0, 60) : ''].filter(Boolean).join(' · ');
+        if (days < 0) row.classList.add('date-late'); else if (days <= 1) row.classList.add('date-soon');
+        const ok = el(`<button type="button" class="sq-btn sq-done" aria-label="${esc(tr('btn_done'))}">${ICON_CHECK}</button>`);
+        ok.addEventListener('click', (e) => { e.stopPropagation(); ok.disabled = true; done(r); });
+        row.appendChild(ok);
+        attachSwipe(row, { right: () => done(r), left: () => tomorrow(r) });
+        row.addEventListener('click', () => edit(r));
+        row.addEventListener('keydown', (e) => { if (e.key === 'Enter') edit(r); });
         if (highlightId && String(r.id) === highlightId) row.classList.add('card-highlight');
-        root.appendChild(row);
+        box.appendChild(row);
       });
+      root.appendChild(tile);
+    });
+    if (highlightId) { const t = root.querySelector('.card-highlight'); if (t) t.scrollIntoView({ block: 'center' }); }
   };
 
   // Calendario: griglia mensile, riusa l'API e il modulo delle Scadenze —
@@ -1625,6 +1656,7 @@
   const WEEKDAY_LABELS_FULL = ['weekday_1', 'weekday_2', 'weekday_3', 'weekday_4', 'weekday_5', 'weekday_6', 'weekday_7'].map(tr);
 
   views.calendar = async (root, opts = {}) => {
+    const switchBar = remindersSwitch('calendar');
     const reminders = await api('/reminders');
     root.innerHTML = '';
     root.appendChild(el(`
@@ -1633,6 +1665,8 @@
         <div class="view-header-actions"><button class="btn btn-primary" id="new-reminder-cal">${esc(tr('btn_new_reminder'))}</button></div>
       </div>
     `));
+    root.appendChild(switchBar);
+    viewTitle.textContent = VIEW_LABELS.reminders;
 
     function saveNew(dateStr) {
       const form = reminderModal();
@@ -3431,89 +3465,77 @@
       return;
     }
 
-    // Prossimo rinnovo in assoluto tra tutti gli abbonamenti, per la vista
-    // riassuntiva in cima. L'ordine della griglia sotto segue lo stesso
-    // criterio: chi rinnova prima compare prima. Non ha senso quando si sta
-    // gia' guardando un solo abbonamento arrivando da una cartella.
+    // In cima quanto si spende al mese (cadenze riportate a un mese) e il
+    // prossimo rinnovo; sotto le righe, dalla scadenza piu' vicina.
+    const MONTHLY = { settimanale: 52 / 12, mensile: 1, trimestrale: 1 / 3, semestrale: 1 / 6, annuale: 1 / 12 };
+    const withNext = accounts.map((a) => ({ a, next: nextRenewalDate(a.renewal_day, a.renewal_month, a.billing_frequency) }));
+    withNext.sort((x, y) => (x.next ? x.next.getTime() : Infinity) - (y.next ? y.next.getTime() : Infinity));
     if (!opts.only) {
-      const withRenewal = accounts
-        .map((a) => ({ a, next: nextRenewalDate(a.renewal_day, a.renewal_month, a.billing_frequency) }))
-        .filter((x) => x.next);
-      withRenewal.sort((x, y) => x.next - y.next);
-      if (withRenewal.length) {
-        const soonest = withRenewal[0];
-        const days = daysUntil(soonest.next.toISOString().slice(0, 10));
-        const dayLabel = days === 0 ? tr('today_lc') : days === 1 ? tr('due_tomorrow') : tr('due_in_n', { n: days, unit: tr('day_other') });
-        root.appendChild(el(`
-          <div class="section-block" style="margin-bottom:14px">
-            <p class="card-sub" style="margin-bottom:4px">${esc(tr('next_renewal_title'))}</p>
-            <p class="card-title" style="font-size:1rem">${tr('next_renewal_line', { service: esc(soonest.a.service), day: soonest.next.getDate(), month: esc(MONTH_LABELS[soonest.next.getMonth()]), when: esc(dayLabel) })}</p>
-          </div>
-        `));
-      }
-      const renewalOrder = new Map(withRenewal.map((x, i) => [x.a.id, i]));
-      accounts.sort((a, b) => {
-        const ra = renewalOrder.has(a.id) ? renewalOrder.get(a.id) : Infinity;
-        const rb = renewalOrder.has(b.id) ? renewalOrder.get(b.id) : Infinity;
-        return ra - rb;
-      });
+      const monthly = accounts.reduce((sum, a) => sum + (a.amount != null && MONTHLY[a.billing_frequency] ? Number(a.amount) * MONTHLY[a.billing_frequency] : 0), 0);
+      const soon = withNext.find((x) => x.next);
+      const head = el(`<section class="tile tile-focus acc-summary"><div class="focus-head"><span class="focus-num"></span><span class="focus-label"></span></div><p class="acc-next"></p></section>`);
+      head.querySelector('.focus-num').textContent = fmtMoney(monthly);
+      head.querySelector('.focus-label').textContent = tr('accounts_per_month');
+      head.querySelector('.acc-next').textContent = soon ? tr('accounts_next', { name: soon.a.service, when: relativeDayLabel(calendarDaysFromToday(soon.next)) }) : '';
+      root.appendChild(head);
     }
 
-    const grid = el('<div class="grid"></div>');
-    accounts.forEach((a) => {
-      const isCartaceo = a.type === 'cartaceo';
-      const next = nextRenewalDate(a.renewal_day, a.renewal_month, a.billing_frequency);
-      // "renewal_day"/"renewal_month" hanno un significato diverso a seconda
-      // della frequenza (vedi nextRenewalDate): per mostrarli si usa sempre
-      // la prossima data vera e propria gia' calcolata, mai i campi grezzi.
-      const renewalLabel = next
-        ? tr('field_renewal_label', { day: next.getDate(), month: esc(MONTH_LABELS[next.getMonth()]), when: tr('due_in_n', { n: daysUntil(next.toISOString().slice(0, 10)), unit: tr('day_other') }) })
-        : '';
-      const card = el(`
-        <div class="card">
-          <span class="tag tag-neutral" style="width:fit-content">${isCartaceo ? esc(tr('account_type_paper')) : esc(tr('account_type_digital'))}</span>
-          <p class="card-title">${esc(a.service)}</p>
-          ${isCartaceo
-            ? `<p class="card-sub">${esc(a.location) || '—'}${a.payment_method ? ' · ' + esc(a.payment_method) : ''}</p>`
-            : `<p class="card-sub">${esc(a.email) || '—'} ${a.plan ? '· ' + esc(a.plan) : ''}</p>`}
-          ${a.billing_frequency || a.amount != null
-            ? `<p class="card-sub">${a.billing_frequency ? esc(BILLING_LABELS[a.billing_frequency] || a.billing_frequency) : ''}${a.billing_frequency && a.amount != null ? ' · ' : ''}${a.amount != null ? fmtMoney(a.amount) : ''}</p>`
-            : ''}
-          ${a.start_date ? `<p class="card-sub">${tr('field_start_date_label', { date: fmtDate(a.start_date) })}</p>` : ''}
-          ${renewalLabel ? `<p class="card-sub">${renewalLabel}</p>` : ''}
-          ${a.vaultEntry ? `<p class="card-sub">${tr('credentials_prefix', { label: esc(a.vaultEntry.site) + (a.vaultEntry.username ? ' · ' + esc(a.vaultEntry.username) : '') })}</p>` : ''}
-          <div class="tag-row">${(a.tags || []).map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
-          <div class="card-actions">
-            <button class="btn btn-sm" data-edit>${esc(tr('btn_edit'))}</button>
-            <button class="btn btn-sm" data-link>${esc(tr('btn_link_folder'))}</button>
-            <button class="btn btn-sm" data-vault>${a.vaultEntry ? esc(tr('btn_change_credentials')) : esc(tr('btn_link_credentials'))}</button>
-            <button class="btn btn-sm btn-danger" data-del>${esc(tr('btn_delete'))}</button>
-          </div>
-        </div>
-      `);
-      card.querySelector('[data-edit]').addEventListener('click', () => {
+    const openDetail = (a, next) => {
+      const wrap = el('<div class="vault-detail"></div>');
+      const fact = (label, value) => { if (!value) return; const r = el('<div class="vd-row"><span class="vd-label"></span><span class="vd-value"></span></div>'); r.querySelector('.vd-label').textContent = label; r.querySelector('.vd-value').textContent = value; wrap.appendChild(r); };
+      fact(tr('field_amount'), [a.amount != null ? fmtMoney(a.amount) : '', a.billing_frequency ? (BILLING_LABELS[a.billing_frequency] || a.billing_frequency) : ''].filter(Boolean).join(' · '));
+      fact(tr('accounts_renewal'), next ? `${next.getDate()} ${MONTH_LABELS[next.getMonth()]} · ${relativeDayLabel(calendarDaysFromToday(next))}` : '');
+      if (a.type === 'cartaceo') { fact(tr('field_location'), a.location); fact(tr('field_payment_method'), a.payment_method); }
+      else { fact(tr('field_email'), a.email); fact(tr('field_plan'), a.plan); }
+      fact(tr('accounts_since'), a.start_date ? fmtDate(a.start_date) : '');
+      if (a.vaultEntry) fact(tr('accounts_credentials'), a.vaultEntry.site + (a.vaultEntry.username ? ' · ' + a.vaultEntry.username : ''));
+      fact(tr('field_notes'), a.notes);
+      const actions = el(`<div class="form-actions"><span class="form-actions-side"><button type="button" class="btn btn-ghost" data-link></button><button type="button" class="btn btn-ghost" data-vault></button><button type="button" class="btn btn-ghost btn-danger" data-del></button></span><button type="button" class="btn btn-primary" data-edit></button></div>`);
+      actions.querySelector('[data-link]').textContent = tr('btn_link_folder');
+      actions.querySelector('[data-vault]').textContent = a.vaultEntry ? tr('btn_change_credentials') : tr('btn_link_credentials');
+      actions.querySelector('[data-del]').textContent = tr('btn_delete');
+      actions.querySelector('[data-edit]').textContent = tr('btn_edit');
+      actions.querySelector('[data-link]').addEventListener('click', () => { closeModal(); openLinkToDossierModal('account', a.id, a.service); });
+      actions.querySelector('[data-vault]').addEventListener('click', () => { closeModal(); openLinkVaultModal(a); });
+      actions.querySelector('[data-del]').addEventListener('click', async () => {
+        closeModal();
+        await api(`/accounts/${a.id}`, { method: 'DELETE' });
+        undoToast(tr('toast_moved_trash'), async () => { await api(`/accounts/${a.id}/restore`, { method: 'POST' }); render('accounts', { fromHash: true }); });
+        render('accounts', { fromHash: true });
+      });
+      actions.querySelector('[data-edit]').addEventListener('click', () => {
+        closeModal();
         const form = accountModal(a);
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
           await api(`/accounts/${a.id}`, { method: 'PUT', body: JSON.stringify(accountPayload(form)) });
-          closeModal(); toast(tr('toast_account_updated')); render('accounts');
+          closeModal(); toast(tr('toast_account_updated')); render('accounts', { fromHash: true });
         });
         form.querySelector('[data-cancel]').addEventListener('click', closeModal);
         openModal(tr('modal_edit_account'), form);
       });
-      card.querySelector('[data-link]').addEventListener('click', () => openLinkToDossierModal('account', a.id, a.service));
-      card.querySelector('[data-vault]').addEventListener('click', () => openLinkVaultModal(a));
-      card.querySelector('[data-del]').addEventListener('click', async () => {
-        if (!(await askConfirm(tr('confirm_delete_account')))) return;
-        await api(`/accounts/${a.id}`, { method: 'DELETE' });
-        toast(tr('toast_account_deleted')); render('accounts');
-      });
-      if (highlightId && String(a.id) === highlightId) card.classList.add('card-highlight');
-      grid.appendChild(card);
+      wrap.appendChild(actions);
+      openModal(a.service, wrap);
+    };
+
+    const list = el('<div class="vault-list acc-list"></div>');
+    withNext.forEach(({ a, next }) => {
+      const [bg, fg] = [['#E3E9FF', '#2448E0'], ['#F3E8FF', '#7048E8'], ['#FCE4EE', '#B0285A'], ['#FFF0D6', '#A85A00'], ['#EEFBC6', '#4B5E00']][[...a.service].reduce((x, c) => x + c.charCodeAt(0), 0) % 5];
+      const row = el(`<div class="vcard" tabindex="0" role="button"><span class="vlogo"></span><span class="vtext"><b></b><small></small></span><span class="date-cell"><b></b><small></small></span></div>`);
+      const logo = row.querySelector('.vlogo'); logo.textContent = a.service.trim().charAt(0).toUpperCase(); logo.style.background = bg; logo.style.color = fg;
+      row.querySelector('.vtext b').textContent = a.service;
+      row.querySelector('.vtext small').textContent = [a.amount != null ? fmtMoney(a.amount) : '', a.billing_frequency ? (BILLING_LABELS[a.billing_frequency] || '') : ''].filter(Boolean).join(' · ') || (a.type === 'cartaceo' ? tr('account_type_paper') : tr('account_type_digital'));
+      const cell = row.querySelector('.date-cell');
+      if (next) { cell.querySelector('b').textContent = next.getDate(); cell.querySelector('small').textContent = MONTH_LABELS[next.getMonth()].slice(0, 3); if (calendarDaysFromToday(next) <= 3) row.classList.add('date-soon'); }
+      else cell.classList.add('hidden');
+      row.addEventListener('click', () => openDetail(a, next));
+      row.addEventListener('keydown', (e) => { if (e.key === 'Enter') openDetail(a, next); });
+      if (highlightId && String(a.id) === highlightId) row.classList.add('card-highlight');
+      list.appendChild(row);
     });
-    root.appendChild(grid);
+    root.appendChild(list);
     if (highlightId) {
-      const target = grid.querySelector('.card-highlight');
+      const target = list.querySelector('.card-highlight');
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
