@@ -49,4 +49,19 @@ router.get('/', async (req, res, next) => {
   archive.finalize();
 });
 
+// Esportazione per l'app Android: file .memento cifrato con la password
+// scelta (formato in server/memento-export.js), importabile da Sicurezza ->
+// Dati -> Importa file nella modalita' "Sul telefono".
+router.post('/app', (req, res) => {
+  const { password, includeFiles = true } = req.body || {};
+  if (!password || String(password).length < 8) {
+    return res.status(400).json({ error: 'La password del file deve avere almeno 8 caratteri' });
+  }
+  const { buildPayload, seal } = require('../memento-export');
+  const envelope = seal(password, buildPayload(db, UPLOAD_DIR, { includeFiles: includeFiles !== false }));
+  const stamp = new Date().toISOString().slice(0, 10);
+  res.attachment(`memento-${stamp}.memento`);
+  res.type('application/json').send(JSON.stringify(envelope));
+});
+
 module.exports = router;
