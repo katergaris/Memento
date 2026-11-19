@@ -1044,7 +1044,7 @@
     // ci si arriva proprio dalla cronologia (indietro/avanti) o all'avvio.
     // Una cartella aperta ha il suo indirizzo (#/dossiers/12): "indietro"
     // riporta all'elenco delle cartelle.
-    const hash = view === 'dossiers' && opts.highlight ? `#/dossiers/${opts.highlight}` : `#/${view}`;
+    const hash = (view === 'dossiers' || view === 'cards') && opts.highlight ? `#/${view}/${opts.highlight}` : `#/${view}`;
     if (!opts.fromHash && location.hash !== hash) {
       if (opts.replace) history.replaceState(null, '', hash); else history.pushState(null, '', hash);
     }
@@ -2712,27 +2712,99 @@
           ? await api(`/cards/${existing.id}`, { method: 'PUT', body: JSON.stringify(body) })
           : await api('/cards', { method: 'POST', body: JSON.stringify(body) });
         closeModal(); toast(tr('toast_card_saved'));
-        render('cards', { highlight: saved.id, fromHash: true });
+        render('cards', { highlight: saved.id, replace: !!existing });
       });
       form.querySelector('[data-cancel]').addEventListener('click', closeModal);
       openModal(existing ? tr('modal_edit_card') : tr('modal_new_card'), form);
     };
     root.querySelector('#new-card').addEventListener('click', () => edit(null));
 
-    // Carta aperta: codice grande su bianco, numero leggibile, azioni.
-    async function openCard(card) {
-      const wrap = el(`
-        <div class="card-open">
-          ${card.brand ? `<div class="card-brand" style="background:${esc(cardColor(card))}"><img src="${brandSrc(card.brand)}" alt="${esc(card.name)}" /></div>` : ''}
-          <div class="card-code-box"><div class="card-code"></div><p class="card-number"></p></div>
+    // Pagina della carta (#/cards/ID): tessera con logo e codice grande,
+    // azioni Note / Foto della tessera / Condividi, dati delle carte regalo.
+    const ICON_NOTES = '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>';
+    const ICON_CAMERA = '<path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.8l1.4-2h4.6l1.4 2h1.8A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.5" r="3.3"/>';
+    const ICON_SHARE = '<circle cx="18" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18.5" r="2.5"/><path d="m8.2 10.8 7.6-4.1M8.2 13.2l7.6 4.1"/>';
+    const groupNumber = (n) => {
+      const v = String(n || '').trim();
+      return /^\d{6,}$/.test(v) ? v.replace(/(\d{4})(?=\d)/g, '$1 ') : v;
+    };
+    // Foto ridimensionata (lato lungo 1200 px, JPEG): resta leggera.
+    const shrinkPhoto = (file) => new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const k = Math.min(1, 1200 / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(img.src);
+        resolve(c.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = () => reject(new Error(tr('err_unexpected')));
+      img.src = URL.createObjectURL(file);
+    });
+    const pickImage = () => new Promise((resolve) => {
+      const input = el('<input type="file" accept="image/*" capture="environment" class="hidden" />');
+      input.addEventListener('change', () => { resolve(input.files[0] || null); input.remove(); });
+      document.body.appendChild(input);
+      input.click();
+    });
+    async function shareCard(card) {
+      const text = `${card.name}\n${card.number || ''}`.trim();
+      const Share = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share;
+      try {
+        if (Share) await Share.share({ title: card.name, text });
+        else if (navigator.share) await navigator.share({ title: card.name, text });
+        else { await navigator.clipboard.writeText(text); toast(tr('toast_copied')); }
+      } catch (_) { /* condivisione annullata */ }
+    }
+
+    async function renderCardPage(id) {
+      const card = await api(`/cards/${id}`);
+      if (!card.brand) {
+        const strip = (t) => normName(String(t).replace(/\b(cinemas?|supermercati|farmacia|profumerie|store|italia)\b/gi, ''));
+        const b = (await loadBrands()).find((x) => normName(x.name) === normName(card.name) || strip(x.name) === normName(card.name));
+        if (b) { card.brand = b.id; if (!card.color) card.color = b.color; }
+      }
+      viewTitle.textContent = card.name;
+      root.innerHTML = '';
+      const page = el(`
+        <div class="card-page">
+          <div class="card-page-bar">
+            <a class="btn btn-ghost btn-sm" href="#/cards">← ${esc(tr('nav_cards'))}</a>
+            <button type="button" class="btn btn-ghost btn-sm" data-edit>${esc(tr('btn_edit'))}</button>
+          </div>
+          <div class="card-visual">
+            <div class="cv-top"></div>
+            <div class="cv-bottom"><div class="card-code"></div><p class="cv-number"></p></div>
+          </div>
+          <div class="cv-actions">
+            <button type="button" data-notes>${strokeIcon(ICON_NOTES)}<span>${esc(tr('card_notes'))}</span></button>
+            <button type="button" data-photos>${strokeIcon(ICON_CAMERA)}<span>${esc(tr('card_photos'))}</span></button>
+            <button type="button" data-share>${strokeIcon(ICON_SHARE)}<span>${esc(tr('card_share'))}</span></button>
+          </div>
           <div class="card-facts"></div>
-          <div class="form-actions"><span class="form-actions-side"><button type="button" class="btn btn-ghost btn-danger" data-del>${esc(tr('btn_delete'))}</button></span><button type="button" class="btn" data-edit>${esc(tr('btn_edit'))}</button></div>
+          <p class="card-notes-text"></p>
+          <div class="card-page-foot"><button type="button" class="btn btn-ghost btn-danger btn-sm" data-del>${esc(tr('card_delete'))}</button>${card.brand ? `<p class="brands-note">${esc(tr('cards_brands_note'))}</p>` : ''}</div>
         </div>
       `);
-      const num = wrap.querySelector('.card-number');
-      num.textContent = card.number || '—';
+      root.appendChild(page);
+      const top = page.querySelector('.cv-top');
+      top.style.background = cardColor(card);
+      if (card.brand) {
+        const img = el(`<img alt="" />`);
+        img.src = brandSrc(card.brand); img.alt = card.name;
+        img.addEventListener('error', () => { top.innerHTML = `<span class="cv-name">${esc(card.name)}</span>`; });
+        top.appendChild(img);
+      } else {
+        top.appendChild(el(`<span class="cv-name">${esc(card.name)}</span>`));
+      }
+      const num = page.querySelector('.cv-number');
+      num.textContent = groupNumber(card.number) || '—';
       num.addEventListener('click', async () => { try { await navigator.clipboard.writeText(card.number); toast(tr('toast_copied')); } catch (_) { /* niente appunti */ } });
-      const facts = wrap.querySelector('.card-facts');
+      const drawn = await renderCardCode(page.querySelector('.card-code'), card).catch(() => false);
+      if (!drawn) page.querySelector('.card-code').classList.add('hidden');
+
+      const facts = page.querySelector('.card-facts');
       const fact = (label, value, cls = '') => { const r = el(`<div class="vd-row"><span class="vd-label"></span><span class="vd-value ${cls}"></span><span class="vd-acts"></span></div>`); r.querySelector('.vd-label').textContent = label; r.querySelector('.vd-value').textContent = value; facts.appendChild(r); return r; };
       if (card.kind === 'regalo') {
         const bal = fact(tr('card_field_balance'), fmtBalance(card) || '—', 'card-balance');
@@ -2741,15 +2813,11 @@
           const raw = prompt(tr('card_spend_prompt'));
           if (!raw) return;
           const updated = await api(`/cards/${card.id}/spend`, { method: 'POST', body: JSON.stringify({ amount: raw }) });
-          card.balance = updated.balance;
           bal.querySelector('.vd-value').textContent = fmtBalance(updated);
           toast(tr('toast_card_spent'));
         });
         bal.querySelector('.vd-acts').appendChild(spend);
-        if (card.expiry_date) {
-          const days = calendarDaysFromToday(card.expiry_date);
-          fact(tr('card_field_expiry'), `${card.expiry_date.slice(0, 10).split('-').reverse().join('/')} · ${relativeDayLabel(days)}`);
-        }
+        if (card.expiry_date) fact(tr('card_field_expiry'), `${card.expiry_date.slice(0, 10).split('-').reverse().join('/')} · ${relativeDayLabel(calendarDaysFromToday(card.expiry_date))}`);
         if (card.hasPin) {
           const pinRow = fact(tr('card_field_pin'), '••••', 'mono');
           const eye = el(`<button type="button" class="sq-btn" title="${esc(tr('title_show'))}">${iconaLinea('occhio')}</button>`);
@@ -2757,17 +2825,69 @@
           pinRow.querySelector('.vd-acts').appendChild(eye);
         }
       }
-      if (card.notes) fact(tr('field_notes'), card.notes);
-      wrap.querySelector('[data-edit]').addEventListener('click', () => { closeModal(); edit(card); });
-      wrap.querySelector('[data-del]').addEventListener('click', async () => {
+      const notesText = page.querySelector('.card-notes-text');
+      notesText.textContent = card.notes || '';
+
+      page.querySelector('[data-edit]').addEventListener('click', () => edit(card));
+      page.querySelector('[data-share]').addEventListener('click', () => shareCard(card));
+      page.querySelector('[data-notes]').addEventListener('click', () => {
+        const form = el(`<form class="modal-body" style="padding:0"><div class="form-row"><textarea name="notes" rows="5"></textarea></div>
+          <div class="form-actions"><button type="button" class="btn btn-ghost" data-cancel>${esc(tr('btn_cancel'))}</button><button type="submit" class="btn btn-primary">${esc(tr('btn_save'))}</button></div></form>`);
+        form.notes.value = card.notes || '';
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          await api(`/cards/${card.id}`, { method: 'PUT', body: JSON.stringify({ notes: form.notes.value }) });
+          card.notes = form.notes.value; notesText.textContent = card.notes; closeModal();
+        });
+        form.querySelector('[data-cancel]').addEventListener('click', closeModal);
+        openModal(tr('card_notes'), form);
+      });
+      // Foto della tessera: fronte e retro, si aggiungono, si ingrandiscono, si tolgono.
+      const openPhotos = () => {
+        const photos = (card.photos || []).slice();
+        const wrap = el('<div class="card-photos"></div>');
+        const save = async () => {
+          const updated = await api(`/cards/${card.id}`, { method: 'PUT', body: JSON.stringify({ photos }) });
+          card.photos = photos.slice(); card.photoCount = updated.photoCount;
+          paint();
+        };
+        const paint = () => {
+          wrap.innerHTML = '';
+          [tr('card_photo_front'), tr('card_photo_back')].forEach((label, i) => {
+            const slot = el(`<div class="photo-slot"><span class="photo-label"></span></div>`);
+            slot.querySelector('.photo-label').textContent = label;
+            if (photos[i]) {
+              const img = el('<img alt="" />'); img.src = photos[i];
+              img.addEventListener('click', () => { const w = window.open(); if (w) { w.document.write(`<img src="${photos[i]}" style="width:100%">`); } });
+              const rm = el(`<button type="button" class="btn btn-sm btn-ghost btn-danger">${esc(tr('share_remove'))}</button>`);
+              rm.addEventListener('click', () => { photos.splice(i, 1); save(); });
+              slot.append(img, rm);
+            } else if (i === photos.length) {
+              const add = el(`<button type="button" class="photo-add">${strokeIcon(ICON_CAMERA)}<span>${esc(tr('card_photo_add'))}</span></button>`);
+              add.addEventListener('click', async () => {
+                const file = await pickImage();
+                if (!file) return;
+                photos.push(await shrinkPhoto(file));
+                save();
+              });
+              slot.appendChild(add);
+            }
+            wrap.appendChild(slot);
+          });
+        };
+        paint();
+        openModal(tr('card_photos'), wrap);
+      };
+      page.querySelector('[data-photos]').addEventListener('click', openPhotos);
+      page.querySelector('[data-del]').addEventListener('click', async () => {
         if (!confirm(tr('confirm_delete_card'))) return;
         await api(`/cards/${card.id}`, { method: 'DELETE' });
-        closeModal(); toast(tr('toast_card_deleted')); render('cards', { fromHash: true });
+        toast(tr('toast_card_deleted')); render('cards');
       });
-      openModal(card.name, wrap);
-      const drawn = await renderCardCode(wrap.querySelector('.card-code'), card).catch(() => false);
-      if (!drawn) wrap.querySelector('.card-code').classList.add('hidden');
     }
+    const openCard = (c) => render('cards', { highlight: c.id });
+
+    if (highlightId) { await renderCardPage(highlightId); return; }
 
     if (!cards.length) {
       root.appendChild(el(`<div class="empty-state">${esc(tr('cards_empty'))}</div>`));
@@ -2776,6 +2896,8 @@
     // Carte create senza scegliere il suggerimento: logo dal nome, se coincide.
     const brands = await loadBrands();
     const byName = new Map(brands.map((b) => [normName(b.name), b]));
+    // "UCI" trova anche "UCI Cinemas": nome del marchio senza parole generiche.
+    brands.forEach((b) => { const short = normName(b.name.replace(/\b(cinemas?|supermercati|farmacia|profumerie|store|italia)\b/gi, '')); if (short && !byName.has(short)) byName.set(short, b); });
     cards.forEach((c) => {
       if (c.brand) return;
       const b = byName.get(normName(c.name));
@@ -2815,10 +2937,6 @@
       root.appendChild(grid);
     });
     if (cards.some((c) => c.brand)) root.appendChild(el(`<p class="brands-note">${esc(tr('cards_brands_note'))}</p>`));
-    if (highlightId && opts.fromHash === undefined) {
-      const c = cards.find((x) => String(x.id) === highlightId);
-      if (c) openCard(c);
-    }
   };
 
   // ==================================================================

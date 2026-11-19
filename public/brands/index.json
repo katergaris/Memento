@@ -1740,6 +1740,12 @@
 "color": "#010101"
 },
 {
+"id": "the-space-cinema",
+"name": "The Space Cinema",
+"category": "cinema",
+"color": "#000000"
+},
+{
 "id": "thun",
 "name": "Thun",
 "category": "casa",
@@ -1828,6 +1834,12 @@
 "name": "U.S. Polo Assn.",
 "category": "abbigliamento",
 "color": "#E5D4B4"
+},
+{
+"id": "uci-cinemas",
+"name": "UCI Cinemas",
+"category": "cinema",
+"color": "#FFEE00"
 },
 {
 "id": "under-armour",

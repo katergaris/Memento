@@ -45,7 +45,8 @@ function sessionMaxAge() {
 
 const SESSION_MAX_AGE = sessionMaxAge();
 
-app.use(express.json({ limit: '2mb' }));
+// 4 MB: le foto delle tessere (due immagini ridimensionate) viaggiano in JSON.
+app.use(express.json({ limit: '4mb' }));
 app.use(
   session({
     secret: process.env.SESSION_SECRET,

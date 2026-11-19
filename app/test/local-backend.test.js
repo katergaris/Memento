@@ -361,3 +361,13 @@ test('passaggio di una voce con QR tra due telefoni, senza server', async () => 
   assert.equal((await call(b, `/vault/${entry.id}/reveal`)).data.password, 'rete-segreta');
   assert.equal(entry.notes, 'piano 2');
 });
+
+test('foto della tessera: al massimo due, solo immagini, non nell\'elenco', async () => {
+  const { be } = await fresh();
+  const c = (await call(be, '/cards', 'POST', { name: 'Negozio', number: '1' })).data;
+  const foto = 'data:image/jpeg;base64,' + btoa('finta');
+  const upd = (await call(be, `/cards/${c.id}`, 'PUT', { photos: [foto, 'http://x', foto, foto] })).data;
+  assert.equal(upd.photoCount, 2);
+  assert.equal((await call(be, '/cards')).data[0].photos, undefined);
+  assert.deepEqual((await call(be, `/cards/${c.id}`)).data.photos, [foto, foto]);
+});

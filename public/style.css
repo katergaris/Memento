@@ -1210,3 +1210,38 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 .sort-bar label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text-muted); }
 .sort-bar select { padding: 6px 10px; border-radius: 10px; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); }
 @media (max-width: 760px) { .sort-bar select { font-size: 16px; } }
+
+/* ---------- Pagina della carta ---------- */
+.card-page { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.card-page-bar { display: flex; justify-content: space-between; align-items: center; margin: -4px -8px 0; }
+.card-visual { border-radius: 26px; overflow: hidden; background: #fff; box-shadow: 0 14px 30px -18px rgba(18, 19, 24, .35); }
+.cv-top { aspect-ratio: 2.7; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(18, 19, 24, .08); }
+.cv-top img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.cv-name { color: #fff; font-size: 26px; font-weight: 800; padding: 0 20px; text-align: center; overflow-wrap: anywhere; }
+.cv-bottom { padding: 22px 22px 18px; text-align: center; background: #fff; }
+.cv-bottom .card-code svg { width: 100%; max-width: 360px; height: auto; max-height: 230px; display: block; margin: 0 auto; }
+.cv-number { margin: 12px 0 0; font-size: 26px; font-weight: 600; letter-spacing: .04em; color: #121318; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; cursor: copy; }
+.card-code.hidden + .cv-number { font-size: 34px; margin-top: 4px; }
+.cv-actions { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); border-radius: 22px; padding: 6px; }
+.cv-actions button {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 4px; border: none; background: none;
+  border-radius: 16px; cursor: pointer; font: inherit; font-size: 13.5px; font-weight: 700; color: var(--ink);
+}
+.cv-actions button + button { box-shadow: -1px 0 0 var(--border-soft); }
+.cv-actions button svg { width: 28px; height: 28px; color: var(--accent); }
+.cv-actions button:hover { background: var(--accent-bg); }
+.card-page .card-facts { background: var(--surface); border-radius: 22px; padding: 0 16px; }
+.card-page .card-facts:empty { display: none; }
+.card-page .card-facts .vd-row:last-child { border-bottom: none; }
+.card-notes-text { margin: 0; padding: 0 6px; color: var(--text-muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+.card-notes-text:empty { display: none; }
+.card-page-foot { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.card-photos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.photo-slot { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.photo-label { font-size: 13px; font-weight: 700; color: var(--text-faint); }
+.photo-slot img { width: 100%; aspect-ratio: 1.586; object-fit: cover; border-radius: 14px; cursor: zoom-in; }
+.photo-add {
+  aspect-ratio: 1.586; border: 2px dashed var(--border); border-radius: 14px; background: var(--surface-2); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font: inherit; font-weight: 700; color: var(--text-muted);
+}
+.photo-add svg { width: 28px; height: 28px; }

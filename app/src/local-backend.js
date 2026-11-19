@@ -675,8 +675,15 @@
       const amount = (raw) => { if (raw === undefined) return undefined; if (raw === null || raw === '') return null; const n = Number(String(raw).replace(',', '.')); return Number.isFinite(n) ? Math.round(n * 100) / 100 : null; };
       const color = (raw) => (/^#[0-9a-fA-F]{6}$/.test(String(raw || '')) ? raw : '');
       const brand = (raw) => (/^[a-z0-9-]{1,60}$/.test(String(raw || '')) ? raw : '');
-      const ser = (r) => { const { pin, ...rest } = r; return { ...rest, hasPin: !!pin }; };
-      if (!id && method === 'GET') return this.sorted('cards').map(ser);
+      const ser = (r, withPhotos = false) => {
+        const { pin, photos, ...rest } = r;
+        const out = { ...rest, hasPin: !!pin, photoCount: (photos || []).length };
+        if (withPhotos) out.photos = (photos || []).slice();
+        return out;
+      };
+      const cleanPhotos = (raw) => (Array.isArray(raw) ? raw.filter((p) => typeof p === 'string' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(p) && p.length <= 900000).slice(0, 2) : undefined);
+      if (!id && method === 'GET') return this.sorted('cards').map((r) => ser(r));
+      if (id && !sub && method === 'GET') return ser(this.find('cards', id) || fail(404, 'Carta non trovata'), true);
       if (!id && method === 'POST') {
         if (!body.name) fail(400, 'Il nome e\' obbligatorio');
         return h.mutate(() => h.created(ser(this.insert('cards', {
@@ -703,6 +710,7 @@
         if (body.number !== undefined) f.number = String(body.number || '').trim();
         if (body.color !== undefined) f.color = color(body.color);
         if (body.brand !== undefined) f.brand = brand(body.brand);
+        const ph = cleanPhotos(body.photos); if (ph !== undefined) f.photos = ph;
         if (body.pin === '-') f.pin = null; else if (body.pin) f.pin = String(body.pin);
         const b = amount(body.balance); if (b !== undefined) f.balance = b;
         if (body.expiry_date !== undefined) f.expiry_date = body.expiry_date || null;

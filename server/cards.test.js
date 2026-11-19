@@ -36,6 +36,12 @@ test('carta fedelta\': crea, legge, aggiorna, elimina', async () => {
     assert.equal(upd.format, 'EAN13');
     assert.equal((await call(`/${c.id}`, 'PUT', { brand: 'esselunga' })).data.brand, 'esselunga');
     assert.equal((await call(`/${c.id}`, 'PUT', { brand: '../x' })).data.brand, '');
+    const foto = 'data:image/jpeg;base64,' + Buffer.from('finta-immagine').toString('base64');
+    const conFoto = (await call(`/${c.id}`, 'PUT', { photos: [foto, 'javascript:alert(1)', foto, foto] })).data;
+    assert.equal(conFoto.photoCount, 2);
+    assert.equal(conFoto.photos, undefined);
+    assert.deepEqual((await call(`/${c.id}`)).data.photos, [foto, foto]);
+    assert.equal((await call('')).data.find((x) => x.id === c.id).photos, undefined);
     await call(`/${c.id}`, 'DELETE');
     assert.equal((await call('')).data.length, 1);
   });

@@ -9,9 +9,20 @@ const router = express.Router();
 const KINDS = ['fedelta', 'regalo'];
 const FORMATS = ['QR', 'CODE128', 'EAN13', 'EAN8', 'UPC', 'CODE39', 'ITF', 'NONE'];
 
-function serialize(row) {
-  const { pin_encrypted, ...card } = row;
-  return { ...card, tags: JSON.parse(row.tags || '[]'), hasPin: !!pin_encrypted };
+// Nell'elenco le foto non viaggiano (pesano): solo quante sono; la carta
+// singola (GET /:id) le ha tutte.
+function serialize(row, { photos = false } = {}) {
+  const { pin_encrypted, photos: rawPhotos, ...card } = row;
+  let list = [];
+  try { list = JSON.parse(rawPhotos || '[]'); } catch (e) { list = []; }
+  const out = { ...card, tags: JSON.parse(row.tags || '[]'), hasPin: !!pin_encrypted, photoCount: list.length };
+  if (photos) out.photos = list;
+  return out;
+}
+// Al massimo due immagini (fronte, retro), JPEG/PNG/WebP in data URL.
+function cleanPhotos(raw) {
+  if (!Array.isArray(raw)) return undefined;
+  return raw.filter((p) => typeof p === 'string' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(p) && p.length <= 900000).slice(0, 2);
 }
 function parseAmount(raw) {
   if (raw === undefined) return undefined;
@@ -33,6 +44,12 @@ router.get('/', (req, res) => {
   res.json(rows.map(serialize));
 });
 
+router.get('/:id', (req, res) => {
+  const row = db.prepare('SELECT * FROM cards WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Carta non trovata' });
+  res.json(serialize(row, { photos: true }));
+});
+
 router.post('/', (req, res) => {
   const { kind = 'fedelta', name, brand = '', number = '', format = 'CODE128', color = '', holder = '', pin = '', balance = null, currency = 'EUR', expiry_date = null, notes = '', tags = [] } = req.body;
   if (!name) return res.status(400).json({ error: 'Il nome e\' obbligatorio' });
@@ -50,6 +67,8 @@ router.put('/:id', (req, res) => {
   const existing = db.prepare('SELECT * FROM cards WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Carta non trovata' });
   const { kind, name, brand, number, format, color, holder, pin, balance, currency, expiry_date, notes, tags } = req.body;
+  const photos = cleanPhotos(req.body.photos);
+  if (photos !== undefined) db.prepare('UPDATE cards SET photos = ? WHERE id = ?').run(JSON.stringify(photos), req.params.id);
   const parsedBalance = parseAmount(balance);
   db.prepare(
     "UPDATE cards SET kind = ?, name = ?, brand = ?, number = ?, format = ?, color = ?, holder = ?, pin_encrypted = ?, balance = ?, currency = ?, expiry_date = ?, notes = ?, tags = ?, updated_at = datetime('now') WHERE id = ?"
