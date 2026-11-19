@@ -9,7 +9,8 @@
   // Se la registrazione fallisce (es. accesso in http semplice, senza
   // certificato: i service worker richiedono https) l'app funziona comunque,
   // solo senza installabilita' ne' cache offline.
-  if ('serviceWorker' in navigator) {
+  // Dentro l'app Android (window.MementoBackend) i file sono gia' nel telefono.
+  if ('serviceWorker' in navigator && !window.MementoBackend) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     });
@@ -144,11 +145,14 @@
   async function api(path, opts = {}) {
     let res;
     try {
-      res = await fetch('/api' + path, {
-        credentials: 'same-origin',
-        headers: opts.body instanceof FormData ? {} : { 'Content-Type': 'application/json' },
-        ...opts,
-      });
+      // App Android: risponde il motore scelto (server di casa o telefono).
+      res = window.MementoBackend
+        ? await window.MementoBackend.request(path, opts)
+        : await fetch('/api' + path, {
+          credentials: 'same-origin',
+          headers: opts.body instanceof FormData ? {} : { 'Content-Type': 'application/json' },
+          ...opts,
+        });
     } catch (e) {
       // fetch() lancia (invece di rispondere con un errore HTTP) quando non
       // c'e' proprio connessione: senza questo l'utente vedeva "Failed to
@@ -333,10 +337,14 @@
     `);
     box.querySelector('.preview-title').textContent = label;
     box.querySelector('.preview-close').addEventListener('click', closePreview);
-    if (doc.mime.startsWith('image/')) {
-      box.appendChild(el(`<img class="preview-media" src="${url}" alt="${esc(label)}" />`));
+    const media = doc.mime.startsWith('image/')
+      ? el(`<img class="preview-media" alt="${esc(label)}" />`)
+      : el(`<iframe class="preview-media preview-frame" title="${esc(label)}"></iframe>`);
+    box.appendChild(media);
+    if (window.MementoBackend && window.MementoBackend.fileUrl) {
+      window.MementoBackend.fileUrl(url).then((u) => { media.src = u; }).catch((err) => toast(err.message));
     } else {
-      box.appendChild(el(`<iframe class="preview-media preview-frame" src="${url}" title="${esc(label)}"></iframe>`));
+      media.src = url;
     }
     backdrop.appendChild(box);
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closePreview(); });
@@ -454,6 +462,15 @@
     setupMode = status.setupNeeded;
     authSub.textContent = setupMode ? tr('auth_sub_setup') : tr('auth_sub_login');
     authSubmit.textContent = setupMode ? tr('auth_submit_setup') : tr('auth_submit_login');
+    // Sul telefono c'e' una sola persona: basta la password principale.
+    if (status.local) {
+      const userRow = document.getElementById('auth-username').closest('label');
+      userRow.classList.add('hidden');
+      document.getElementById('auth-username').value = 'io';
+      authSub.textContent = setupMode ? tr('local_auth_setup') : tr('local_auth_unlock');
+      authSubmit.textContent = setupMode ? tr('local_auth_create') : tr('local_auth_unlock_btn');
+      document.getElementById('auth-password').setAttribute('autocomplete', setupMode ? 'new-password' : 'current-password');
+    }
     showAuthScreen();
   }
 
@@ -2098,7 +2115,9 @@
         if (barEl) barEl.style.width = `${Math.round((remaining / 30) * 100)}%`;
         remaining -= 1;
       };
-      tick();
+      // Primo giro al prossimo ciclo: l'elemento viene messo sullo schermo
+      // subito dopo questa chiamata.
+      setTimeout(tick, 0);
       timer = setInterval(tick, 1000);
     }
 
@@ -3095,6 +3114,9 @@
   }
 
   views.security = async (root) => {
+    if (window.MementoBackend && window.MementoBackend.renderSettings) {
+      if (await window.MementoBackend.renderSettings(root, window.MementoUI)) return;
+    }
     const info = await api('/security');
     root.innerHTML = '';
     root.appendChild(el(`<div class="view-header"><h2>${esc(tr('nav_security_title'))}</h2></div>`));
@@ -3264,6 +3286,7 @@
       <p><code class="cmd-line">docker compose exec memento node server/disable-2fa.js</code></p>
     `));
     root.appendChild(help);
+    if (window.MementoBackend && window.MementoBackend.extendSettings) window.MementoBackend.extendSettings(root, window.MementoUI);
   };
 
   // ---------------- Global search ----------------
@@ -3349,6 +3372,16 @@
     e.preventDefault();
     searchInput.focus();
   });
+
+  // App Android: i collegamenti a /api/... (scarica, backup) non possono
+  // aprire una pagina del server: li gestisce il motore scelto.
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a[href^="/api/"]');
+    if (!a || !window.MementoBackend || !window.MementoBackend.download) return;
+    e.preventDefault();
+    window.MementoBackend.download(a.getAttribute('href')).catch((err) => toast(err.message));
+  });
+  window.MementoUI = { el, esc, tr, toast, openModal, closeModal, render };
 
   // Molti handler fanno "await api(...)" senza try/catch: senza questa rete di
   // sicurezza un errore restava solo in console e per l'utente non succedeva nulla.
