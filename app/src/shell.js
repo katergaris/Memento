@@ -71,6 +71,40 @@
     });
   }
 
+  // Dopo ogni modifica (e allo sblocco) si riprogrammano le notifiche e, nella
+  // modalita' telefono, si sincronizza con Drive se collegato. A raffica:
+  // una sola volta dopo qualche secondo di calma.
+  function afterChanges(be, engine) {
+    const N = window.MementoNative;
+    if (!N) return;
+    clearTimeout(afterChanges.t1); clearTimeout(afterChanges.t2);
+    afterChanges.t1 = setTimeout(() => N.Notify.reschedule(be).catch(() => {}), 3000);
+    if (engine) afterChanges.t2 = setTimeout(() => N.Sync.auto(engine), 30000);
+  }
+  function watch(be, engine) {
+    const inner = be.request;
+    be.request = async (path, opts = {}) => {
+      const method = (opts.method || 'GET').toUpperCase();
+      // Impronta prima di mostrare una password del vault (preferenza).
+      if (/^\/vault\/[^/]+\/reveal$/.test(path) && method === 'GET' && window.MementoNative && engine === null) {
+        if (!(await window.MementoNative.Bio.confirmVault())) {
+          return { ok: false, status: 403, json: async () => ({ error: tr('bio_failed') }) };
+        }
+      }
+      const res = await inner(path, opts);
+      const authOk = res.ok && (path === '/auth/login' || path === '/auth/setup');
+      if (res.ok && (method !== 'GET' || authOk)) afterChanges(be, engine);
+      if (res.ok && path === '/auth/status') {
+        // La risposta si legge una volta sola: la si rilegge da qui.
+        const data = await res.json();
+        if (data.authenticated) afterChanges(be, engine);
+        return { ok: true, status: res.status, json: async () => data, headers: res.headers };
+      }
+      return res;
+    };
+    return be;
+  }
+
   // ---------------- Modalita' collegata ----------------
   function serverBackend(base) {
     const root = base.replace(/\/+$/, '');
@@ -94,7 +128,9 @@
         const m = cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
         await saveFile(await res.blob(), m ? decodeURIComponent(m[1]) : 'memento-file');
       },
-      extendSettings(root2, ui) {
+      async extendSettings(root2, ui) {
+        root2.appendChild(notifyBlock(ui, this));
+        root2.appendChild(await bioBlock(ui, null));
         root2.appendChild(appBlock(ui, tr('app_mode_server_on', { url: root })));
       },
     };
@@ -103,12 +139,31 @@
   // ---------------- Modalita' sul telefono ----------------
   function localBackend() {
     const storage = idbStorage();
-    const be = new window.MementoLocalBackend.LocalBackend(storage, { version: 'app' });
+    const be = new window.MementoLocalBackend.LocalBackend(storage, {
+      version: 'app',
+      confirmReveal: () => (window.MementoNative ? window.MementoNative.Bio.confirmVault() : true),
+    });
     const today = () => new Date().toISOString().slice(0, 10);
     return {
       mode: 'local',
       engine: be,
       request: (path, opts) => be.request(path, opts),
+      // Schermata di sblocco: tasto impronta (e primo tentativo automatico).
+      async offerBiometric(onUnlocked) {
+        const N = window.MementoNative;
+        if (!N || !N.Bio.settings().unlock || !(await N.Bio.available())) return;
+        const form = document.getElementById('auth-form');
+        if (form.querySelector('[data-bio-unlock]')) return;
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'btn btn-block'; btn.dataset.bioUnlock = '1';
+        btn.textContent = tr('bio_unlock_btn');
+        const tryUnlock = async () => {
+          try { if (await N.Bio.unlock(be)) { btn.remove(); afterChanges(this, be); onUnlocked(); } } catch (_) { /* resta la password */ }
+        };
+        btn.addEventListener('click', tryUnlock);
+        form.appendChild(btn);
+        tryUnlock();
+      },
       async fileUrl(url) {
         const m = url.match(/\/api\/drive\/([^/]+)\/(view|download)/);
         if (!m) throw new Error(tr('err_unexpected'));
@@ -140,8 +195,13 @@
           <p class="card-sub" data-sync-state></p>
           <div class="card-actions" style="padding-top:10px" data-sync-actions></div></div>`);
         root.appendChild(sync);
-        if (window.MementoSync) window.MementoSync.renderPanel(sync, ui, be);
-        else sync.querySelector('[data-sync-state]').textContent = tr('local_sync_soon');
+        if (window.MementoNative) window.MementoNative.Sync.renderPanel(sync, ui, be);
+        else sync.querySelector('[data-sync-state]').textContent = tr('sync_not_configured');
+
+        const info = await (await be.request('/security')).json();
+        root.appendChild(ui.totpBlock(info));
+        root.appendChild(await bioBlock(ui, be));
+        root.appendChild(notifyBlock(ui, this));
 
         const pw = ui.el(`<div class="section-block"><h3>${esc(tr('local_password_title'))}</h3>
           <div class="card-actions" style="padding-top:4px"><button type="button" class="btn" data-change>${esc(tr('local_change_password'))}</button>
@@ -200,11 +260,59 @@
         e.preventDefault();
         if (form.p1.value !== form.p2.value) { ui.toast(tr('local_password_mismatch')); return; }
         try { await be.changePassword(form.cur.value, form.p1.value); } catch (err) { ui.toast(err.message); return; }
+        if (window.MementoNative) window.MementoNative.Bio.refreshKey(be).catch(() => {});
         ui.closeModal(); ui.toast(tr('local_password_changed'));
       });
       form.querySelector('[data-cancel]').addEventListener('click', ui.closeModal);
       ui.openModal(tr('local_change_password'), form);
     }
+  }
+
+  // Interruttore come quelli di "Sezioni visibili".
+  function toggleRow(ui, label, checked, onChange) {
+    const row = ui.el(`<label class="toggle-row"><span></span><input type="checkbox" role="switch" /></label>`);
+    row.querySelector('span').textContent = label;
+    const input = row.querySelector('input');
+    input.checked = checked;
+    input.addEventListener('change', async () => {
+      try { await onChange(input.checked); } catch (e) { input.checked = !input.checked; ui.toast(e.message); }
+    });
+    return row;
+  }
+  function notifyBlock(ui, be) {
+    const N = window.MementoNative;
+    const block = ui.el(`<div class="section-block"><h3>${esc(tr('notify_title'))}</h3><div class="toggle-list"></div></div>`);
+    const list = block.querySelector('.toggle-list');
+    if (!N || !N.Notify.available()) { list.appendChild(ui.el(`<p class="card-sub">${esc(tr('notify_unavailable'))}</p>`)); return block; }
+    const s = N.Notify.settings();
+    const hourRow = ui.el(`<label class="toggle-row"><span>${esc(tr('notify_hour'))}</span><select>${Array.from({ length: 24 }, (_, h) => `<option value="${h}">${String(h).padStart(2, '0')}:00</option>`).join('')}</select></label>`);
+    hourRow.querySelector('select').value = String(s.hour);
+    hourRow.querySelector('select').addEventListener('change', (e) => { N.Notify.setHour(Number(e.target.value)); N.Notify.reschedule(be).catch(() => {}); });
+    hourRow.classList.toggle('hidden', !s.on);
+    list.appendChild(toggleRow(ui, tr('notify_on'), s.on, async (on) => {
+      await N.Notify.enable(on);
+      hourRow.classList.toggle('hidden', !on);
+      if (on) { await N.Notify.reschedule(be); ui.toast(tr('notify_enabled')); }
+    }));
+    list.appendChild(hourRow);
+    return block;
+  }
+  async function bioBlock(ui, engine) {
+    const N = window.MementoNative;
+    const block = ui.el(`<div class="section-block"><h3>${esc(tr('bio_title'))}</h3><div class="toggle-list"></div></div>`);
+    const list = block.querySelector('.toggle-list');
+    if (!N || !(await N.Bio.available())) { list.appendChild(ui.el(`<p class="card-sub">${esc(tr('bio_unavailable'))}</p>`)); return block; }
+    const s = N.Bio.settings();
+    if (engine) {
+      list.appendChild(toggleRow(ui, tr('bio_unlock'), s.unlock, async (on) => {
+        if (on) await N.Bio.enableUnlock(engine); else await N.Bio.disableUnlock();
+      }));
+    }
+    list.appendChild(toggleRow(ui, tr('bio_vault'), s.vault, async (on) => {
+      if (on && !(await N.Bio.verify(tr('bio_enable_reason')))) throw new Error(tr('bio_failed'));
+      N.Bio.setVault(on);
+    }));
+    return block;
   }
 
   // Blocco comune: modalita' attuale e cambio modalita'.
@@ -299,6 +407,7 @@
       const be = window.MementoBackend;
       if (!be || be.mode !== 'local') return;
       if (!isActive) { hiddenAt = Date.now(); return; }
+      if (window.MementoNative && be.engine.unlocked) window.MementoNative.Sync.auto(be.engine);
       if (hiddenAt && Date.now() - hiddenAt > 5 * 60 * 1000 && be.engine.unlocked) { be.engine.lock(); location.reload(); }
     });
   }
@@ -312,7 +421,8 @@
   async function boot() {
     let mode = localStorage.getItem(MODE_KEY);
     if (mode !== 'local' && mode !== 'server') mode = await chooseMode();
-    window.MementoBackend = mode === 'local' ? localBackend() : serverBackend(localStorage.getItem(URL_KEY) || '');
+    const backend = mode === 'local' ? localBackend() : serverBackend(localStorage.getItem(URL_KEY) || '');
+    window.MementoBackend = watch(backend, mode === 'local' ? backend.engine : null);
     document.documentElement.dataset.appMode = mode;
     wireBackButton();
     loadApp();

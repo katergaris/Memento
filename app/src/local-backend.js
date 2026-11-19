@@ -16,6 +16,7 @@
   else root.MementoLocalBackend = factory(root.MementoCrypto, root.MementoTotp);
 })(typeof self !== 'undefined' ? self : this, function (MC, TOTP) {
   const ARCHIVE_FORMAT = 'memento-archive';
+  const CLOUD_FORMAT = 'memento-cloud';
   const EXPORT_FORMAT = 'memento-export';
   const TABLES = ['ideas', 'projects', 'reminders', 'accounts', 'vault', 'documents', 'dossiers', 'links', 'cards'];
   const TYPE_TABLE = { idea: 'ideas', project: 'projects', vault: 'vault', account: 'accounts', document: 'documents', reminder: 'reminders', dossier: 'dossiers', card: 'cards' };
@@ -166,7 +167,7 @@
       await this.save();
     }
 
-    async unlock(password) {
+    async unlock(password, code) {
       const envelope = await this.storage.get('archive');
       if (!envelope) fail(400, 'Nessun archivio');
       try {
@@ -177,6 +178,142 @@
         if (e.message === 'bad-password') fail(401, 'Password errata');
         throw e;
       }
+      // Verifica in due passaggi: il segreto sta dentro l'archivio cifrato,
+      // quindi si controlla dopo la password; senza codice valido si richiude.
+      const t = this.state.settings.totp;
+      if (t && t.enabled) {
+        if (!code) { this.lock(); fail(401, 'Serve il codice di verifica', { totpRequired: true }); }
+        if (!(await this.checkSecondFactor(code))) { this.lock(); fail(401, 'Codice non valido', { totpRequired: true }); }
+        await this.save();
+      }
+    }
+
+    // ---------------- Verifica in due passaggi ----------------
+    async checkSecondFactor(code) {
+      const t = this.state.settings.totp;
+      const clean = String(code || '').trim().toLowerCase().replace(/\s/g, '');
+      if (/^\d{6}$/.test(clean)) {
+        const now = TOTP.currentStep();
+        for (const step of [now - 1, now, now + 1]) {
+          if (step <= (t.lastStep || 0)) continue;
+          if ((await TOTP.codeForStep(t.secret, step)) === clean) { t.lastStep = step; return true; }
+        }
+        return false;
+      }
+      const hash = await MC.sha256Hex(clean.replace(/-/g, ''));
+      const rc = (t.recovery || []).find((r) => !r.used && r.hash === hash);
+      if (rc) { rc.used = true; return true; }
+      return false;
+    }
+    async verifyPassword(password) {
+      try { await MC.openWithPassword(await this.storage.get('archive'), password, ARCHIVE_FORMAT); return true; } catch (_) { return false; }
+    }
+    async newRecoveryCodes() {
+      const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
+      const codes = [];
+      const recovery = [];
+      for (let i = 0; i < 10; i++) {
+        const bytes = MC.randomBytes(8);
+        const raw = [...bytes].map((b) => alphabet[b % alphabet.length]).join('');
+        codes.push(raw.slice(0, 4) + '-' + raw.slice(4));
+        recovery.push({ hash: await MC.sha256Hex(raw), used: false });
+      }
+      this.state.settings.totp.recovery = recovery;
+      return codes;
+    }
+    async security(method, id, sub, body) {
+      const t = this.state.settings.totp || null;
+      if (!id && method === 'GET') {
+        return { username: this.state.user.username, totpEnabled: !!(t && t.enabled), recoveryCodesLeft: t && t.enabled ? (t.recovery || []).filter((r) => !r.used).length : 0, local: true };
+      }
+      if (id === 'totp' && sub === 'setup' && method === 'POST') {
+        if (t && t.enabled) fail(400, 'La verifica in due passaggi e\' gia\' attiva');
+        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+        const secret = [...MC.randomBytes(20)].map((b) => alphabet[b % 32]).join('');
+        this.state.settings.totp = { secret, enabled: false, lastStep: 0, recovery: [] };
+        await this.save();
+        const account = encodeURIComponent(this.state.user.username || 'telefono');
+        return { qr: '', secret: secret.replace(/(.{4})/g, '$1 ').trim(), otpauth: `otpauth://totp/Memento:${account}?secret=${secret}&issuer=Memento` };
+      }
+      if (id === 'totp' && sub === 'enable' && method === 'POST') {
+        if (!t || !t.secret) fail(400, 'Genera prima il QR da inquadrare');
+        if (t.enabled) fail(400, 'La verifica in due passaggi e\' gia\' attiva');
+        if (!/^\d{6}$/.test(String(body.code || '').trim()) || !(await this.checkSecondFactor(body.code))) {
+          fail(400, 'Codice non valido. Controlla che l\'ora del telefono sia corretta e riprova.');
+        }
+        t.enabled = true;
+        const codes = await this.newRecoveryCodes();
+        await this.save();
+        return { ok: true, recoveryCodes: codes };
+      }
+      if (id === 'totp' && sub === 'recovery-codes' && method === 'POST') {
+        if (!t || !t.enabled) fail(400, 'La verifica in due passaggi non e\' attiva');
+        if (!(await this.verifyPassword(body.password))) fail(403, 'Password non corretta');
+        const codes = await this.newRecoveryCodes();
+        await this.save();
+        return { ok: true, recoveryCodes: codes };
+      }
+      if (id === 'totp' && sub === 'disable' && method === 'POST') {
+        if (!(await this.verifyPassword(body.password))) fail(403, 'Password non corretta');
+        delete this.state.settings.totp;
+        await this.save();
+        return { ok: true };
+      }
+      fail(404, 'Non disponibile sul telefono');
+    }
+
+    // ---------------- Copia sul cloud (Google Drive) ----------------
+    // La copia e' cifrata con una chiave ricavata dalla password principale e
+    // da un sale che viaggia con la copia: un altro telefono con la stessa
+    // password la apre anche se il suo archivio usa un sale diverso. La
+    // chiave resta solo dentro l'archivio cifrato di ogni telefono.
+    get cloudReady() { return !!(this.state && this.state.settings.cloud && this.state.settings.cloud.key); }
+    async setupCloudKey(password, remoteKdf) {
+      if (!(await this.verifyPassword(password))) fail(403, 'Password non corretta');
+      const salt = remoteKdf ? remoteKdf.salt : MC.toB64(MC.randomBytes(16));
+      const iter = remoteKdf ? remoteKdf.iter : MC.ITERATIONS;
+      const key = await MC.deriveKey(password, MC.fromB64(salt), iter);
+      this.state.settings.cloud = { salt, iter, key: await MC.exportKey(key) };
+      await this.save();
+    }
+    async cloudKey() {
+      if (!this.cloudReady) fail(400, 'Copia sul cloud non configurata');
+      return MC.importKey(this.state.settings.cloud.key);
+    }
+    // Stato da caricare: senza la chiave cloud e con l'elenco dei file.
+    async cloudEnvelope() {
+      const key = await this.cloudKey();
+      const { cloud, ...settings } = this.state.settings;
+      const state = { ...this.state, settings };
+      const files = this.rows('documents').filter((d) => !d.deleted_at && d.stored_name).map((d) => d.stored_name);
+      return MC.sealWithKey(CLOUD_FORMAT, key, cloud.salt, cloud.iter, { app: 'memento', savedAt: new Date().toISOString(), state, files });
+    }
+    // Apre una copia del cloud: con la chiave di questo telefono se il sale
+    // coincide, altrimenti serve la password principale (stessa su tutti).
+    async openCloudEnvelope(envelope, password) {
+      if (!envelope || envelope.format !== CLOUD_FORMAT) fail(400, 'Copia sul cloud non riconosciuta');
+      const c = this.state.settings.cloud;
+      if (!c || c.salt !== envelope.kdf.salt || c.iter !== envelope.kdf.iter) {
+        if (!password) fail(401, 'Serve la password principale', { passwordRequired: true });
+        await this.setupCloudKey(password, envelope.kdf);
+      }
+      try {
+        const bytes = await MC.decryptBytes(await this.cloudKey(), envelope.iv, envelope.ct);
+        return JSON.parse(new TextDecoder().decode(bytes));
+      } catch (_) {
+        fail(401, 'La copia sul cloud usa un\'altra password principale', { passwordRequired: true });
+      }
+    }
+    async cloudFile(storedName) {
+      const f = await this.storage.get('file:' + storedName);
+      if (!f) return null;
+      const bytes = await MC.decryptBytes(this.key, f.iv, f.ct);
+      return MC.encryptBytes(await this.cloudKey(), bytes);
+    }
+    async hasFile(storedName) { return !!(await this.storage.get('file:' + storedName)); }
+    async importCloudFile(storedName, enc) {
+      const bytes = await MC.decryptBytes(await this.cloudKey(), enc.iv, enc.ct);
+      await this.storage.put('file:' + storedName, await MC.encryptBytes(this.key, bytes));
     }
 
     // Sblocco con la chiave gia' derivata (custodita dal portachiavi Android
@@ -201,6 +338,13 @@
       const oldKey = this.key;
       this.salt = MC.toB64(MC.randomBytes(16));
       this.key = await MC.deriveKey(next, MC.fromB64(this.salt), this.iter);
+      // La copia sul cloud segue la nuova password (nuovo sale): gli altri
+      // telefoni la chiederanno alla prossima sincronizzazione.
+      if (this.state.settings.cloud) {
+        const salt = MC.toB64(MC.randomBytes(16));
+        const ck = await MC.deriveKey(next, MC.fromB64(salt), MC.ITERATIONS);
+        this.state.settings.cloud = { salt, iter: MC.ITERATIONS, key: await MC.exportKey(ck) };
+      }
       // I file del Drive sono cifrati con la vecchia chiave: si ricifrano.
       for (const d of this.rows('documents')) {
         const f = await this.storage.get('file:' + d.stored_name);
@@ -309,7 +453,7 @@
       if (res === 'auth') {
         if (id === 'status') return { setupNeeded: !(await this.hasArchive()), authenticated: this.unlocked, local: true };
         if (id === 'setup' && method === 'POST') { await this.setup(body.username, body.password); return { ok: true }; }
-        if (id === 'login' && method === 'POST') { await this.unlock(body.password); return { ok: true }; }
+        if (id === 'login' && method === 'POST') { await this.unlock(body.password, body.code); return { ok: true }; }
         if (id === 'logout' && method === 'POST') { this.lock(); return { ok: true }; }
         fail(404, 'Non trovato');
       }
@@ -456,9 +600,7 @@
           return out;
         }
         case 'security':
-          if (!id && method === 'GET') return { username: this.state.user.username, totpEnabled: false, local: true, webauthn: [] };
-          fail(404, 'Non disponibile sul telefono');
-          break;
+          return this.security(method, id, sub, body);
         case 'push':
           fail(404, 'Non disponibile sul telefono');
           break;
@@ -694,5 +836,5 @@
     };
   }
 
-  return { LocalBackend, mergeStates, emptyState, parseCsv, memoryStorage, ARCHIVE_FORMAT, EXPORT_FORMAT, HttpError };
+  return { LocalBackend, mergeStates, emptyState, parseCsv, memoryStorage, ARCHIVE_FORMAT, EXPORT_FORMAT, CLOUD_FORMAT, HttpError };
 });

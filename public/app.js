@@ -472,6 +472,7 @@
       document.getElementById('auth-password').setAttribute('autocomplete', setupMode ? 'new-password' : 'current-password');
     }
     showAuthScreen();
+    if (status.local && !setupMode && window.MementoBackend.offerBiometric) window.MementoBackend.offerBiometric(startApp);
   }
 
   const authCodeRow = document.getElementById('auth-code-row');
@@ -3488,8 +3489,14 @@
           <li>${tr('totp_step2')}</li>
         </ol>
       `));
-      const qr = el(`<div class="qr-box">${data.qr}</div>`);
+      const qr = el(`<div class="qr-box">${data.qr || ''}</div>`);
       wrap.appendChild(qr);
+      if (!data.qr && data.otpauth) {
+        loadScript('/vendor/qrcode.js').then(() => {
+          const code = window.qrcode(0, 'M'); code.addData(data.otpauth); code.make();
+          qr.innerHTML = code.createSvgTag({ cellSize: 5, margin: 2, scalable: true });
+        });
+      }
       wrap.appendChild(el(`
         <p class="card-sub">${tr('totp_manual_hint')}
         <br /><code class="totp-secret">${esc(data.secret)}</code></p>
@@ -3531,15 +3538,9 @@
     });
   }
 
-  views.security = async (root) => {
-    if (window.MementoBackend && window.MementoBackend.renderSettings) {
-      if (await window.MementoBackend.renderSettings(root, window.MementoUI)) return;
-    }
-    const info = await api('/security');
-    root.innerHTML = '';
-    root.appendChild(el(`<div class="view-header"><h2>${esc(tr('nav_security_title'))}</h2></div>`));
-    root.appendChild(sectionsBlock());
-
+  // Blocco "Verifica in due passaggi": lo usano sia il server sia la
+  // modalita' "Sul telefono" (stesse rotte /security/totp/*).
+  function totpBlock(info) {
     const block = el(`<div class="section-block"><h3>${esc(tr('section_2fa'))}</h3></div>`);
 
     if (!info.totpEnabled) {
@@ -3597,7 +3598,19 @@
       }
     }
 
-    root.appendChild(block);
+    return block;
+  }
+
+  views.security = async (root) => {
+    if (window.MementoBackend && window.MementoBackend.renderSettings) {
+      if (await window.MementoBackend.renderSettings(root, window.MementoUI)) return;
+    }
+    const info = await api('/security');
+    root.innerHTML = '';
+    root.appendChild(el(`<div class="view-header"><h2>${esc(tr('nav_security_title'))}</h2></div>`));
+    root.appendChild(sectionsBlock());
+
+    root.appendChild(totpBlock(info));
 
     const bioBlock = el(`<div class="section-block"><h3>${esc(tr('section_biometric'))}</h3></div>`);
     if (!webauthnSupported()) {
@@ -3728,7 +3741,7 @@
       <p><code class="cmd-line">docker compose exec memento node server/disable-2fa.js</code></p>
     `));
     root.appendChild(help);
-    if (window.MementoBackend && window.MementoBackend.extendSettings) window.MementoBackend.extendSettings(root, window.MementoUI);
+    if (window.MementoBackend && window.MementoBackend.extendSettings) await window.MementoBackend.extendSettings(root, window.MementoUI);
   };
 
   // ---------------- Global search ----------------
@@ -3823,7 +3836,7 @@
     e.preventDefault();
     window.MementoBackend.download(a.getAttribute('href')).catch((err) => toast(err.message));
   });
-  window.MementoUI = { el, esc, tr, toast, openModal, closeModal, render, sectionsBlock };
+  window.MementoUI = { el, esc, tr, toast, openModal, closeModal, render, sectionsBlock, totpBlock, loadScript };
 
   // Molti handler fanno "await api(...)" senza try/catch: senza questa rete di
   // sicurezza un errore restava solo in console e per l'utente non succedeva nulla.

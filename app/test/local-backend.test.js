@@ -213,3 +213,62 @@ test('vault: tipo Codici anche solo con il segreto 2FA', async () => {
   assert.equal(c.data.type, 'code');
   assert.equal(c.data.hasTotp, true);
 });
+
+test('verifica in due passaggi sul telefono: attivazione, sblocco, codici di recupero', async () => {
+  const { be, storage } = await fresh();
+  const setup = (await call(be, '/security/totp/setup', 'POST')).data;
+  assert.match(setup.otpauth, /^otpauth:\/\/totp\//);
+  const secret = setup.secret.replace(/\s/g, '');
+  assert.equal((await call(be, '/security/totp/enable', 'POST', { code: '000000' })).status, 400);
+  const code = await appTotp.codeForStep(secret, appTotp.currentStep());
+  const enabled = (await call(be, '/security/totp/enable', 'POST', { code })).data;
+  assert.equal(enabled.recoveryCodes.length, 10);
+  assert.equal((await call(be, '/security')).data.recoveryCodesLeft, 10);
+
+  const again = new LocalBackend(storage);
+  const noCode = await call(again, '/auth/login', 'POST', { password: 'password-lunga' });
+  assert.equal(noCode.status, 401);
+  assert.equal(noCode.data.totpRequired, true);
+  assert.equal((await call(again, '/ideas')).status, 401);
+  // lo stesso codice gia' usato non vale una seconda volta
+  assert.equal((await call(again, '/auth/login', 'POST', { password: 'password-lunga', code })).status, 401);
+  assert.equal((await call(again, '/auth/login', 'POST', { password: 'password-lunga', code: enabled.recoveryCodes[0] })).status, 200);
+  assert.equal((await call(again, '/security')).data.recoveryCodesLeft, 9);
+  await call(again, '/auth/logout', 'POST');
+  assert.equal((await call(again, '/auth/login', 'POST', { password: 'password-lunga', code: enabled.recoveryCodes[0] })).status, 401);
+  await call(again, '/auth/login', 'POST', { password: 'password-lunga', code: enabled.recoveryCodes[1] });
+  assert.equal((await call(again, '/security/totp/disable', 'POST', { password: 'sbagliata' })).status, 403);
+  await call(again, '/security/totp/disable', 'POST', { password: 'password-lunga' });
+  await call(again, '/auth/logout', 'POST');
+  assert.equal((await call(again, '/auth/login', 'POST', { password: 'password-lunga' })).status, 200);
+});
+
+test('copia sul cloud: due telefoni con la stessa password principale', async () => {
+  const a = (await fresh()).be;
+  await call(a, '/ideas', 'POST', { title: 'Dal telefono A' });
+  const fd = new FormData();
+  fd.append('file', new File(['documento A'], 'a.txt', { type: 'text/plain' }));
+  const doc = (await call(a, '/drive', 'POST', fd)).data;
+  await assert.rejects(a.setupCloudKey('sbagliata'), /Password/);
+  await a.setupCloudKey('password-lunga');
+  const env = await a.cloudEnvelope();
+  assert.ok(!JSON.stringify(env).includes('Dal telefono A'));
+  assert.ok(!JSON.stringify(env).includes(a.state.settings.cloud.key));
+  const encFile = await a.cloudFile(doc.stored_name);
+
+  // telefono B: archivio con sale diverso, stessa password principale
+  const b = (await fresh()).be;
+  await call(b, '/ideas', 'POST', { title: 'Dal telefono B' });
+  await assert.rejects(b.openCloudEnvelope(env), (e) => e.data && e.data.passwordRequired);
+  const payload = await b.openCloudEnvelope(env, 'password-lunga');
+  await b.mergeRemote(payload.state);
+  await b.importCloudFile(doc.stored_name, encFile);
+  const titles = (await call(b, '/ideas')).data.map((i) => i.title).sort();
+  assert.deepEqual(titles, ['Dal telefono A', 'Dal telefono B']);
+  assert.equal(await (await b.fileBlob(doc.id)).blob.text(), 'documento A');
+  // B ricarica e A riapre senza chiedere la password (stessa chiave cloud)
+  const env2 = await b.cloudEnvelope();
+  const back = await a.openCloudEnvelope(env2);
+  await a.mergeRemote(back.state);
+  assert.equal((await call(a, '/ideas')).data.length, 2);
+});

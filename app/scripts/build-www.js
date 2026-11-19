@@ -12,9 +12,15 @@ const WWW = path.join(APP, 'www');
 fs.rmSync(WWW, { recursive: true, force: true });
 fs.cpSync(PUBLIC, WWW, { recursive: true, filter: (src) => !/[\\/](cli\.(html|js)|sw\.js|offline\.html)$/.test(src) });
 fs.mkdirSync(path.join(WWW, 'app-src'), { recursive: true });
-for (const f of ['crypto.js', 'totp.js', 'local-backend.js', 'shell.js']) {
+for (const f of ['crypto.js', 'totp.js', 'local-backend.js', 'native.js', 'shell.js']) {
   fs.copyFileSync(path.join(APP, 'src', f), path.join(WWW, 'app-src', f));
 }
+
+// Configurazione dell'app: l'ID client Google (tipo "Applicazione web")
+// per la sincronizzazione con Drive arriva dalla variabile d'ambiente
+// GOOGLE_WEB_CLIENT_ID (in GitHub Actions: variabile del repository).
+fs.writeFileSync(path.join(WWW, 'app-src', 'config.js'),
+  `window.MEMENTO_CONFIG = ${JSON.stringify({ googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID || '' })};\n`);
 
 // Caratteri: file woff2 latin dai pacchetti @fontsource.
 const fontsDir = path.join(WWW, 'fonts');
@@ -37,9 +43,11 @@ html = html
   .replace(/<link href="https:\/\/fonts\.googleapis\.com[^>]*>/, '<link rel="stylesheet" href="/fonts/fonts.css" />')
   .replace(/<link rel="manifest"[^>]*>\s*/, '')
   .replace('<script src="/app.js"></script>', [
+    '<script src="/app-src/config.js"></script>',
     '<script src="/app-src/crypto.js"></script>',
     '<script src="/app-src/totp.js"></script>',
     '<script src="/app-src/local-backend.js"></script>',
+    '<script src="/app-src/native.js"></script>',
     '<script src="/app-src/shell.js"></script>',
   ].join('\n'));
 if (!html.includes('/app-src/shell.js')) throw new Error('index.html: non trovo lo script di app.js da sostituire');

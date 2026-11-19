@@ -38,6 +38,8 @@ jobs:
           java-version: 21
 
       - name: Dipendenze e cartella web
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
         run: |
           npm ci
           node scripts/build-www.js
@@ -50,8 +52,13 @@ jobs:
             --splashBackgroundColor '#F2F3EE' --splashBackgroundColorDark '#121318'
           # Server di casa raggiungibile anche in http (rete locale / Tailscale).
           sed -i 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
-          # Fotocamera per leggere QR (codici 2FA) e codici a barre delle carte.
-          sed -i 's#<application#<uses-permission android:name="android.permission.CAMERA" />\n    <application#' android/app/src/main/AndroidManifest.xml
+          # Permessi: fotocamera (QR e codici a barre), impronta, notifiche delle
+          # scadenze anche dopo il riavvio del telefono.
+          for P in CAMERA USE_BIOMETRIC POST_NOTIFICATIONS RECEIVE_BOOT_COMPLETED; do
+            sed -i "s#<application#<uses-permission android:name=\"android.permission.$P\" />\n    <application#" android/app/src/main/AndroidManifest.xml
+          done
+          # Attivita' principale con l'aggancio per l'accesso Google a Drive.
+          cp android-overrides/MainActivity.java android/app/src/main/java/io/github/katergaris/memento/MainActivity.java
           # Versione: numero progressivo della build e versione di package.json.
           VERSION=$(node -p "require('./package.json').version")
           sed -i "s/versionCode 1$/versionCode ${GITHUB_RUN_NUMBER}/; s/versionName \"1.0\"/versionName \"${VERSION}\"/" android/app/build.gradle
