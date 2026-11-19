@@ -384,7 +384,7 @@ input:focus, textarea:focus, select:focus {
 .quick-capture {
   position: fixed; z-index: 95; top: 84px; left: 50%; transform: translateX(-50%);
   width: min(520px, calc(100vw - 24px)); padding: 14px;
-  background: var(--surface); border: 2px solid var(--accent-soft); border-radius: var(--radius-lg);
+  background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-lg);
   box-shadow: var(--shadow-frame);
 }
 .qc-drag-handle {
@@ -398,8 +398,30 @@ input:focus, textarea:focus, select:focus {
 }
 @media (max-width: 760px) {
   .quick-capture.qc-inline { margin-bottom: 14px; }
-  .quick-capture { top: auto; bottom: calc(var(--tabbar-h) + 24px + env(safe-area-inset-bottom, 0px)); }
+  /* Telefono: foglio che sale dal basso, sopra la barra, senza maniglia. */
+  .quick-capture {
+    top: auto; left: 12px; right: 12px; transform: none; width: auto;
+    bottom: calc(var(--tabbar-h) + 22px + env(safe-area-inset-bottom, 0px));
+    border: none; border-radius: 24px; padding: 14px; box-shadow: 0 -8px 40px rgba(18, 19, 24, .22);
+  }
+  .quick-capture .qc-drag-handle { display: none; }
 }
+/* Tipi della cattura: pulsanti con simbolo */
+.qc-types { display: flex; gap: 6px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.qc-types::-webkit-scrollbar { display: none; }
+.qc-type {
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-width: 58px; height: 52px; padding: 4px 6px; border: none; border-radius: 14px; cursor: pointer;
+  background: var(--surface-2); color: var(--text-muted); font: inherit; font-size: 11px; font-weight: 700;
+}
+.qc-type svg { width: 20px; height: 20px; }
+.qc-type.on { background: var(--ink); color: #fff; }
+.qc-type:not(.on):hover { background: var(--accent-bg); color: var(--accent); }
+.quick-capture .composer textarea { min-height: 76px; font-size: 16px; border-radius: 16px; padding: 12px 14px; }
+.quick-capture .composer-row { flex-wrap: nowrap; gap: 8px; margin-top: 10px; }
+.quick-capture .composer-row .btn-primary { height: 52px; padding: 0 18px; border-radius: 14px; font-size: 15px; }
+/* Telefono: i suggerimenti per @cartella e #tag si aprono sopra il testo. */
+@media (max-width: 760px) { .quick-capture .composer-menu { top: auto; bottom: 100%; margin: 0 0 6px; } }
 
 /* ---------- Oggi: bacheca a blocchi ---------- */
 .board {
@@ -1182,3 +1204,9 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 .qr-big svg { width: 100%; height: auto; display: block; }
 .qr-caption { margin: 12px 0 0; font-size: 14px; color: var(--text-muted); text-align: center; }
 .qr-caption:empty { display: none; }
+
+/* ---------- Vault: ordinamento ---------- */
+.sort-bar { display: flex; justify-content: flex-end; margin: -4px 0 10px; }
+.sort-bar label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text-muted); }
+.sort-bar select { padding: 6px 10px; border-radius: 10px; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); }
+@media (max-width: 760px) { .sort-bar select { font-size: 16px; } }

@@ -847,7 +847,12 @@
         <textarea id="qc-text" placeholder="${esc(tr('qc_placeholder'))}" rows="2"></textarea>
         <div id="qc-link-badge"></div>
         <div class="composer-row">
-          <button type="button" class="btn btn-sm" id="qc-type" title="${esc(tr('qc_change_type'))}">…</button>
+          <div class="qc-types" role="group">
+            <button type="button" class="qc-type on" data-token="/nota">${strokeIcon(APP_TILES.ideas.path)}<span>${esc(tr('type_idea'))}</span></button>
+            <button type="button" class="qc-type" data-token="/scadenza">${strokeIcon(APP_TILES.reminders.path)}<span>${esc(tr('type_reminder'))}</span></button>
+            <button type="button" class="qc-type" data-token="/progetto">${strokeIcon(APP_TILES.projects.path)}<span>${esc(tr('type_project'))}</span></button>
+            <button type="button" class="qc-type" data-token="/doc">${strokeIcon(APP_TILES.drive.path)}<span>${esc(tr('type_document'))}</span></button>
+          </div>
           <button type="button" class="btn btn-primary" id="qc-save">${esc(tr('btn_save'))}</button>
         </div>
       </div>
@@ -972,13 +977,12 @@
       applyTypeCommand(item.token);
     }
 
-    composer.querySelector('#qc-type').addEventListener('click', () => {
-      qcMenuTrigger = { type: 'button' };
-      openQcMenu(QC_COMMANDS);
-      // Rimette il focus sul testo: le frecce/Invio per scegliere dal menu
-      // sono gestite dal keydown della textarea, non del tasto "…".
-      textarea.focus();
-    });
+    // Tipi come pulsanti con simbolo: Nota resta qui, gli altri aprono il
+    // modulo completo del loro tipo (scadenza, progetto, documento).
+    composer.querySelectorAll('.qc-type').forEach((b) => b.addEventListener('click', () => {
+      if (b.dataset.token === '/nota') { textarea.focus(); return; }
+      applyTypeCommand(b.dataset.token);
+    }));
 
     textarea.addEventListener('input', updateQcMenu);
     textarea.addEventListener('click', updateQcMenu);
@@ -2313,12 +2317,28 @@
       { key: 'card', label: tr('vault_kind_card'), test: (x) => x.type === 'card' },
     ].filter((t) => t.key === 'all' || entries.some(t.test));
     let tab = sessionStorage.getItem('memento-vault-tab') || 'all';
+    // Ordinamento (preferenza del dispositivo): predefinito alfabetico.
+    const SORTS = {
+      az: (a, b) => a.site.localeCompare(b.site, undefined, { sensitivity: 'base' }),
+      za: (a, b) => b.site.localeCompare(a.site, undefined, { sensitivity: 'base' }),
+      recent: (a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')),
+      type: (a, b) => String(a.type).localeCompare(String(b.type)) || a.site.localeCompare(b.site, undefined, { sensitivity: 'base' }),
+    };
+    let sort = localStorage.getItem('memento-vault-sort') || 'az';
+    if (!SORTS[sort]) sort = 'az';
     if (!TABS.some((t) => t.key === tab)) tab = 'all';
 
     const seg = el('<div class="seg" role="tablist"></div>');
+    const sortBar = el(`<div class="sort-bar"><label><span>${esc(tr('sort_label'))}</span><select>
+      <option value="az">${esc(tr('sort_az'))}</option><option value="za">${esc(tr('sort_za'))}</option>
+      <option value="recent">${esc(tr('sort_recent'))}</option><option value="type">${esc(tr('sort_type'))}</option></select></label></div>`);
     const list = el('<div class="vault-list"></div>');
     root.appendChild(seg);
+    root.appendChild(sortBar);
     root.appendChild(list);
+    const sortSelect = sortBar.querySelector('select');
+    sortSelect.value = sort;
+    sortSelect.addEventListener('change', () => { sort = sortSelect.value; localStorage.setItem('memento-vault-sort', sort); paint(); });
 
     const LOGO_TINTS = [['#E3E9FF', '#2448E0'], ['#FFE3DE', '#B4231A'], ['#EEFBC6', '#4B5E00'], ['#F3E8FF', '#7048E8'], ['#FFF0D6', '#A85A00'], ['#FCE4EE', '#B0285A']];
     const tintFor = (name) => LOGO_TINTS[[...String(name)].reduce((a, c) => a + c.charCodeAt(0), 0) % LOGO_TINTS.length];
@@ -2512,7 +2532,7 @@
       });
       list.innerHTML = '';
       const test = TABS.find((t) => t.key === tab).test;
-      entries.filter(test).forEach((entry) => {
+      entries.filter(test).sort(SORTS[sort]).forEach((entry) => {
         const [bg, fg] = tintFor(entry.site);
         const card = el(`
           <div class="vcard" tabindex="0" role="button">
@@ -2568,7 +2588,7 @@
   // Loghi dei negozi (public/brands, licenza in LICENZA.txt): si mostrano
   // senza modifiche, solo per riconoscere la tessera del negozio.
   let brandsPromise = null;
-  const loadBrands = () => (brandsPromise = brandsPromise || fetch('/brands/index.json').then((r) => r.json()).catch(() => []));
+  const loadBrands = () => (brandsPromise = brandsPromise || loadScript('/brands/index.js').then(() => window.MEMENTO_BRANDS || []).catch(() => []));
   const brandSrc = (id) => `/brands/${encodeURIComponent(id)}.png`;
   const normName = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
   const cardColor = (c) => c.color || CARD_COLORS[[...String(c.name)].reduce((a, ch) => a + ch.charCodeAt(0), 0) % CARD_COLORS.length];
@@ -2750,6 +2770,14 @@
       root.appendChild(el(`<div class="empty-state">${esc(tr('cards_empty'))}</div>`));
       return;
     }
+    // Carte create senza scegliere il suggerimento: logo dal nome, se coincide.
+    const brands = await loadBrands();
+    const byName = new Map(brands.map((b) => [normName(b.name), b]));
+    cards.forEach((c) => {
+      if (c.brand) return;
+      const b = byName.get(normName(c.name));
+      if (b) { c.brand = b.id; if (!c.color) c.color = b.color; }
+    });
     const groups = [['fedelta', tr('card_kind_loyalty_pl')], ['regalo', tr('card_kind_gift_pl')]];
     groups.forEach(([kind, title]) => {
       const list = cards.filter((c) => c.kind === kind).sort((a, b) => a.name.localeCompare(b.name));
