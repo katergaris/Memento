@@ -132,6 +132,12 @@
 "color": "#FFFFFE"
 },
 {
+"id": "basko",
+"name": "Basko",
+"category": "supermercati",
+"color": "#49A154"
+},
+{
 "id": "bata",
 "name": "Bata",
 "category": "abbigliamento",
@@ -1290,6 +1296,12 @@
 "color": "#FFFFFF"
 },
 {
+"id": "obi",
+"name": "OBI",
+"category": "casa",
+"color": "#FFFFFF"
+},
+{
 "id": "oltre",
 "name": "Oltre",
 "category": "abbigliamento",
@@ -1710,6 +1722,12 @@
 "color": "#EF85B4"
 },
 {
+"id": "tecnomat",
+"name": "Tecnomat",
+"category": "casa",
+"color": "#061934"
+},
+{
 "id": "telepass",
 "name": "Telepass",
 "category": "servizi",
@@ -1756,6 +1774,12 @@
 "name": "Tigotà",
 "category": "profumerie",
 "color": "#359DAE"
+},
+{
+"id": "tigros",
+"name": "Tigros",
+"category": "supermercati",
+"color": "#FFD500"
 },
 {
 "id": "timberland",
