@@ -2595,6 +2595,13 @@
   const brandSrc = (id) => `/brands/${encodeURIComponent(id)}.png`;
   const normName = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
   const cardColor = (c) => c.color || CARD_COLORS[[...String(c.name)].reduce((a, ch) => a + ch.charCodeAt(0), 0) % CARD_COLORS.length];
+  // Colore chiaro (es. bianco, giallo): sopra ci va testo scuro.
+  const isLightColor = (hex) => {
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || '');
+    if (!m) return false;
+    const [r, g, b] = m.slice(1).map((x) => parseInt(x, 16) / 255);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.62;
+  };
   const fmtBalance = (c) => (c.balance == null ? '' : fmtMoney(c.balance));
 
   function cardModal(existing) {
@@ -2910,17 +2917,25 @@
       root.appendChild(el(`<h3 class="group-title">${esc(title)}</h3>`));
       const grid = el('<div class="wallet-grid"></div>');
       list.forEach((c) => {
+        // Come una tessera vera: logo con i margini in alto, nome e ultime
+        // cifre in basso; testo chiaro o scuro secondo il colore di fondo.
         const tile = el(c.brand
-          ? `<button type="button" class="wallet-card has-logo"><img class="wc-logo" alt="" loading="lazy" /><span class="wc-meta"></span></button>`
+          ? `<button type="button" class="wallet-card has-logo"><span class="wc-logo-box"><img class="wc-logo" alt="" loading="lazy" /></span><span class="wc-foot"><span class="wc-label"></span><span class="wc-digits"></span></span><span class="wc-meta"></span></button>`
           : `<button type="button" class="wallet-card"><span class="wc-initial"></span><span class="wc-name"></span><span class="wc-meta"></span></button>`);
         tile.style.setProperty('--card', cardColor(c));
+        if (isLightColor(cardColor(c))) tile.classList.add('on-light');
+        if (c.brand) {
+          tile.querySelector('.wc-label').textContent = c.name;
+          const digits = String(c.number || '').replace(/\s/g, '');
+          tile.querySelector('.wc-digits').textContent = digits.length > 4 ? `•••• ${digits.slice(-4)}` : digits;
+        }
         tile.setAttribute('aria-label', c.name);
         if (c.brand) {
           const img = tile.querySelector('.wc-logo');
           img.src = brandSrc(c.brand);
           img.alt = c.name;
           // Logo mancante (marchio tolto dall'elenco): torna all'iniziale.
-          img.addEventListener('error', () => { tile.classList.remove('has-logo'); img.remove(); tile.prepend(el(`<span class="wc-name">${esc(c.name)}</span>`)); tile.prepend(el(`<span class="wc-initial">${esc(c.name.trim().charAt(0).toUpperCase())}</span>`)); });
+          img.addEventListener('error', () => { tile.classList.remove('has-logo'); tile.querySelector('.wc-logo-box').remove(); tile.querySelector('.wc-foot').remove(); tile.prepend(el(`<span class="wc-name">${esc(c.name)}</span>`)); tile.prepend(el(`<span class="wc-initial">${esc(c.name.trim().charAt(0).toUpperCase())}</span>`)); });
         }
         if (!c.brand) {
           tile.querySelector('.wc-initial').textContent = c.name.trim().charAt(0).toUpperCase();
