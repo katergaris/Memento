@@ -217,6 +217,7 @@
         pw.querySelector('[data-lock]').addEventListener('click', () => { be.lock(); location.reload(); });
         root.appendChild(pw);
 
+        root.appendChild(ui.themeBlock());
         root.appendChild(ui.sectionsBlock());
         root.appendChild(appBlock(ui, tr('app_mode_local_on')));
         return true;
@@ -327,8 +328,8 @@
     const b = ui.el(`<div class="section-block"><h3>${esc(tr('app_mode_title'))}</h3><p class="card-sub"></p>
       <div class="card-actions" style="padding-top:10px"><button type="button" class="btn" data-switch>${esc(tr('app_mode_switch'))}</button></div></div>`);
     b.querySelector('.card-sub').textContent = label;
-    b.querySelector('[data-switch]').addEventListener('click', () => {
-      if (!confirm(tr('app_mode_switch_confirm'))) return;
+    b.querySelector('[data-switch]').addEventListener('click', async () => {
+      if (!(await ui.askConfirm(tr('app_mode_switch_confirm'), { confirmLabel: tr('app_mode_switch'), danger: false }))) return;
       localStorage.removeItem(MODE_KEY);
       location.hash = '';
       location.reload();

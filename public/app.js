@@ -178,12 +178,63 @@
     return data;
   }
 
-  function toast(msg) {
-    const el = document.createElement('div');
-    el.className = 'toast';
-    el.textContent = msg;
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 3200);
+  // Avviso in basso; con action mostra un tasto (es. "Annulla").
+  function toast(msg, { action, onAction, duration } = {}) {
+    document.querySelectorAll('.toast').forEach((t) => t.remove());
+    const box = document.createElement('div');
+    box.className = 'toast';
+    const text = document.createElement('span');
+    text.textContent = msg;
+    box.appendChild(text);
+    if (action && onAction) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'toast-action'; b.textContent = action;
+      b.addEventListener('click', () => { box.remove(); onAction(); });
+      box.appendChild(b);
+    }
+    document.body.appendChild(box);
+    setTimeout(() => box.remove(), duration || (action ? 5500 : 3200));
+  }
+  // Annullabile: l'azione e' gia' fatta, "Annulla" la disfa.
+  const undoToast = (msg, undo) => toast(msg, { action: tr('btn_undo'), onAction: async () => { await undo(); haptic('light'); } });
+
+  // Vibrazione leggera dove c'e' (app Android).
+  function haptic(kind = 'light') {
+    const H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
+    if (!H) return;
+    try {
+      if (kind === 'success') H.notification({ type: 'SUCCESS' });
+      else H.impact({ style: kind === 'medium' ? 'MEDIUM' : 'LIGHT' });
+    } catch (_) { /* senza vibrazione */ }
+  }
+
+  // Conferma con un foglio dell'app al posto di confirm() del browser.
+  function askConfirm(message, { confirmLabel, danger = true } = {}) {
+    return new Promise((resolve) => {
+      const wrap = el(`<div class="ask"><p class="ask-text"></p><div class="form-actions"><button type="button" class="btn btn-ghost" data-no></button><button type="button" class="btn ${danger ? 'btn-danger-solid' : 'btn-primary'}" data-yes></button></div></div>`);
+      wrap.querySelector('.ask-text').textContent = message;
+      wrap.querySelector('[data-no]').textContent = tr('btn_cancel');
+      wrap.querySelector('[data-yes]').textContent = confirmLabel || (danger ? tr('btn_delete') : tr('btn_confirm'));
+      let done = false;
+      const finish = (v) => { if (done) return; done = true; closeModal(); resolve(v); };
+      wrap.querySelector('[data-no]').addEventListener('click', () => finish(false));
+      wrap.querySelector('[data-yes]').addEventListener('click', () => finish(true));
+      openModal('', wrap, { onClose: () => { if (!done) { done = true; resolve(false); } } });
+    });
+  }
+  // Richiesta di un valore (es. importo) al posto di prompt().
+  function askValue(title, { label = '', inputmode = 'text', placeholder = '' } = {}) {
+    return new Promise((resolve) => {
+      const form = el(`<form class="modal-body" style="padding:0"><div class="form-row"><label></label><input type="text" name="v" required /></div>
+        <div class="form-actions"><button type="button" class="btn btn-ghost" data-no>${esc(tr('btn_cancel'))}</button><button type="submit" class="btn btn-primary">${esc(tr('btn_confirm'))}</button></div></form>`);
+      form.querySelector('label').textContent = label;
+      form.v.setAttribute('inputmode', inputmode); form.v.placeholder = placeholder;
+      let done = false;
+      form.addEventListener('submit', (e) => { e.preventDefault(); done = true; closeModal(); resolve(form.v.value); });
+      form.querySelector('[data-no]').addEventListener('click', () => { done = true; closeModal(); resolve(null); });
+      openModal(title, form, { onClose: () => { if (!done) { done = true; resolve(null); } } });
+      setTimeout(() => form.v.focus(), 250);
+    });
   }
 
   function esc(str) {
@@ -267,7 +318,7 @@
   const modalTpl = document.getElementById('tpl-modal');
   let activeModal = null;
 
-  function openModal(title, bodyNode) {
+  function openModal(title, bodyNode, { onClose } = {}) {
     closeModal();
     const frag = modalTpl.content.cloneNode(true);
     const backdrop = frag.querySelector('.modal-backdrop');
@@ -288,14 +339,44 @@
         setTimeout(() => { submitBtn.disabled = false; }, 8000);
       });
     }
+    if (!title) frag.querySelector('.modal-title').classList.add('hidden');
     document.body.appendChild(frag);
     activeModal = document.body.lastElementChild;
+    activeModal._onClose = onClose;
+    attachSheetDrag(activeModal);
   }
 
   function closeModal() {
     if (!activeModal) return false;
-    activeModal.remove(); activeModal = null;
+    const m = activeModal;
+    activeModal = null;
+    if (m._onClose) { try { m._onClose(); } catch (_) { /* nessuno */ } }
+    // Uscita con movimento (foglio che scende / riquadro che svanisce).
+    m.classList.add('closing');
+    setTimeout(() => m.remove(), 180);
     return true;
+  }
+
+  // Telefono: il foglio si chiude anche trascinandolo verso il basso.
+  function attachSheetDrag(backdrop) {
+    const sheet = backdrop.querySelector('.modal');
+    const handle = backdrop.querySelector('.modal-header');
+    if (!sheet || !handle || !window.matchMedia('(max-width: 760px)').matches) return;
+    let startY = null, dy = 0;
+    handle.addEventListener('pointerdown', (e) => { startY = e.clientY; dy = 0; sheet.style.transition = 'none'; handle.setPointerCapture(e.pointerId); });
+    handle.addEventListener('pointermove', (e) => {
+      if (startY === null) return;
+      dy = Math.max(0, e.clientY - startY);
+      sheet.style.transform = `translateY(${dy}px)`;
+    });
+    const end = () => {
+      if (startY === null) return;
+      startY = null;
+      sheet.style.transition = '';
+      if (dy > 110) closeModal(); else sheet.style.transform = '';
+    };
+    handle.addEventListener('pointerup', end);
+    handle.addEventListener('pointercancel', end);
   }
 
   // ---------------- Anteprima documento a schermo intero ----------------
@@ -623,6 +704,37 @@
       });
       list.appendChild(row);
     });
+    return block;
+  }
+
+  // Tema: automatico (come il telefono), chiaro o scuro. Il primo calcolo e'
+  // in index.html, prima del disegno; qui la scelta e il cambio al volo.
+  const THEME_KEY = 'memento-theme';
+  function applyTheme() {
+    const pref = localStorage.getItem(THEME_KEY) || 'auto';
+    const dark = pref === 'dark' || (pref === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', dark ? '#0F1013' : '#F2F3EE');
+    const SB = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.StatusBar;
+    if (SB) { try { SB.setStyle({ style: dark ? 'DARK' : 'LIGHT' }); SB.setBackgroundColor({ color: dark ? '#0F1013' : '#F2F3EE' }); } catch (_) { /* barra di sistema non disponibile */ } }
+  }
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+  applyTheme();
+  function themeBlock() {
+    const block = el(`<div class="section-block"><h3>${esc(tr('section_theme'))}</h3><div class="seg seg-form theme-seg"></div></div>`);
+    const seg = block.querySelector('.theme-seg');
+    const paint = () => {
+      const cur = localStorage.getItem(THEME_KEY) || 'auto';
+      seg.innerHTML = '';
+      [['auto', tr('theme_auto')], ['light', tr('theme_light')], ['dark', tr('theme_dark')]].forEach(([v, label]) => {
+        const b = el(`<button type="button" class="${v === cur ? 'on' : ''}"></button>`);
+        b.textContent = label;
+        b.addEventListener('click', () => { localStorage.setItem(THEME_KEY, v); applyTheme(); paint(); haptic(); });
+        seg.appendChild(b);
+      });
+    };
+    paint();
     return block;
   }
 
@@ -1063,7 +1175,7 @@
     viewHost.innerHTML = '';
     viewHost.appendChild(contentEl);
     viewHost.scrollTop = 0;
-    contentEl.appendChild(el(`<div class="empty-state">${esc(tr('loading_label'))}</div>`));
+    contentEl.appendChild(el('<div class="skeleton" aria-hidden="true"><i></i><i></i><i></i></div>'));
     try {
       await views[view](contentEl, opts);
     } catch (err) {
@@ -1071,6 +1183,31 @@
       contentEl.appendChild(el(`<div class="empty-state">${esc(tr('err_view_prefix'))}: ${esc(err.message)}</div>`));
     }
   }
+
+  // Tirare giu' in cima alla sezione la ridisegna (e sincronizza, se c'e').
+  (function pullToRefresh() {
+    let y0 = null, pulled = 0;
+    const tip = el('<div class="pull-tip" aria-hidden="true"></div>');
+    viewHost.parentNode.insertBefore(tip, viewHost);
+    viewHost.addEventListener('touchstart', (e) => { y0 = viewHost.scrollTop <= 0 ? e.touches[0].clientY : null; pulled = 0; }, { passive: true });
+    viewHost.addEventListener('touchmove', (e) => {
+      if (y0 === null) return;
+      pulled = Math.max(0, Math.min(110, e.touches[0].clientY - y0));
+      tip.style.height = `${pulled * 0.6}px`;
+      tip.classList.toggle('ready', pulled > 80);
+    }, { passive: true });
+    viewHost.addEventListener('touchend', () => {
+      if (y0 === null) return;
+      y0 = null;
+      tip.style.height = '';
+      tip.classList.remove('ready');
+      if (pulled > 80 && currentView) {
+        haptic();
+        if (window.MementoBackend && window.MementoBackend.syncNow && window.MementoNative && window.MementoNative.Sync.settings().on) window.MementoBackend.syncNow();
+        render(currentView, { fromHash: true });
+      }
+    });
+  })();
 
   // ---------------- Collegamento a fascicolo (riutilizzabile) ----------------
   async function openLinkToDossierModal(itemType, itemId, itemLabel) {
@@ -1172,6 +1309,35 @@
   const ICON_COPY = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/></svg>';
   const ICON_ARROW = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 
+  // Gesto: scorrere una riga verso destra (Fatto) o sinistra (Domani).
+  function attachSwipe(row, { right, left }) {
+    let x0 = null, y0 = 0, dx = 0, swiping = false;
+    row.classList.add('swipeable');
+    row.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') return; x0 = e.clientX; y0 = e.clientY; dx = 0; swiping = false; });
+    row.addEventListener('pointermove', (e) => {
+      if (x0 === null) return;
+      const mx = e.clientX - x0, my = e.clientY - y0;
+      if (!swiping && Math.abs(mx) > 12 && Math.abs(mx) > Math.abs(my) * 1.5) { swiping = true; row.setPointerCapture(e.pointerId); }
+      if (!swiping) return;
+      dx = (mx > 0 && !right) || (mx < 0 && !left) ? 0 : mx;
+      row.style.transform = `translateX(${dx}px)`;
+      row.dataset.swipe = dx > 60 ? 'right' : dx < -60 ? 'left' : '';
+    });
+    const end = () => {
+      if (x0 === null) return;
+      x0 = null;
+      row.style.transition = 'transform .18s ease';
+      row.style.transform = '';
+      setTimeout(() => { row.style.transition = ''; }, 200);
+      const dir = row.dataset.swipe; row.dataset.swipe = '';
+      if (swiping) { row.addEventListener('click', (ev) => ev.stopPropagation(), { capture: true, once: true }); }
+      if (dir === 'right' && right) { haptic('medium'); right(); }
+      if (dir === 'left' && left) { haptic('medium'); left(); }
+    };
+    row.addEventListener('pointerup', end);
+    row.addEventListener('pointercancel', end);
+  }
+
   // Bacheca a blocchi: in cima quello che va fatto oggi e domani (blocco
   // scuro, con il numero in grande), poi i prossimi 30 giorni, i progetti col
   // prossimo passo da spuntare, le note e le cartelle. Ogni promemoria ha le
@@ -1227,7 +1393,8 @@
     }
     async function done(r) {
       await api(`/reminders/${r.id}`, { method: 'DELETE' });
-      toast(tr('toast_done_nice'));
+      haptic('success');
+      undoToast(tr('toast_done_nice'), async () => { await api(`/reminders/${r.id}/restore`, { method: 'POST' }); refresh(); });
       refresh();
     }
     // Azioni a destra della riga: promemoria = Sposta a domani + Fatto,
@@ -1270,6 +1437,7 @@
       pill.classList.add(x.days < 0 ? 'pill-late' : 'pill-today');
       if (pill.textContent === x.sub) li.querySelector('small').textContent = '';
       li.appendChild(rowActions(x));
+      if (x.kind === 'reminder') attachSwipe(li, { right: () => done(x.item), left: x.days < 1 ? () => snooze(x.item) : null });
       li.addEventListener('click', () => open(x));
       li.addEventListener('keydown', (e) => { if (e.key === 'Enter') open(x); });
       focusList.appendChild(li);
@@ -1291,6 +1459,7 @@
       row.querySelector('.date-text small').textContent = [x.sub, relativeDayLabel(x.days)].filter(Boolean).join(' · ');
       if (x.days <= 3) row.classList.add('date-soon');
       row.appendChild(rowActions(x));
+      if (x.kind === 'reminder') attachSwipe(row, { right: () => done(x.item), left: null });
       row.addEventListener('click', () => open(x));
       row.addEventListener('keydown', (e) => { if (e.key === 'Enter') open(x); });
       dateList.appendChild(row);
@@ -1438,7 +1607,7 @@
         });
         row.querySelector('[data-link]').addEventListener('click', () => openLinkToDossierModal('reminder', r.id, r.label));
         row.querySelector('[data-del]').addEventListener('click', async () => {
-          if (!confirm(tr('confirm_delete_reminder'))) return;
+          if (!(await askConfirm(tr('confirm_delete_reminder')))) return;
           await api(`/reminders/${r.id}`, { method: 'DELETE' });
           toast(tr('toast_reminder_deleted')); render('reminders');
         });
@@ -1622,7 +1791,7 @@
       const side = el(`<span class="form-actions-side"><button type="button" class="btn btn-ghost" data-link>${esc(tr('btn_link_folder'))}</button><button type="button" class="btn btn-ghost btn-danger" data-del>${esc(tr('btn_delete'))}</button></span>`);
       side.querySelector('[data-link]').addEventListener('click', () => { closeModal(); openLinkToDossierModal('idea', idea.id, idea.title); });
       side.querySelector('[data-del]').addEventListener('click', async () => {
-        if (!confirm(tr('confirm_delete_idea'))) return;
+        if (!(await askConfirm(tr('confirm_delete_idea')))) return;
         await api(`/ideas/${idea.id}`, { method: 'DELETE' });
         closeModal(); toast(tr('toast_idea_deleted')); render('ideas');
       });
@@ -1804,7 +1973,7 @@
         if (highlightId && String(p.id) === highlightId) card.classList.add('card-highlight');
         card.querySelector('.project-card-main').addEventListener('click', () => renderProject(p));
         card.querySelector('.project-card-del').addEventListener('click', async () => {
-          if (!confirm(tr('confirm_delete_project'))) return;
+          if (!(await askConfirm(tr('confirm_delete_project')))) return;
           await api(`/projects/${p.id}`, { method: 'DELETE' });
           const idx = projects.findIndex((x) => x.id === p.id);
           if (idx !== -1) projects.splice(idx, 1);
@@ -1910,7 +2079,7 @@
       });
       panel.querySelector('[data-link]').addEventListener('click', () => openLinkToDossierModal('project', p.id, p.title));
       panel.querySelector('[data-del]').addEventListener('click', async () => {
-        if (!confirm(tr('confirm_delete_project'))) return;
+        if (!(await askConfirm(tr('confirm_delete_project')))) return;
         await api(`/projects/${p.id}`, { method: 'DELETE' });
         const idx = projects.findIndex((x) => x.id === p.id);
         if (idx !== -1) projects.splice(idx, 1);
@@ -2467,7 +2636,7 @@
       }
       if (actions.querySelector('[data-link]')) actions.querySelector('[data-link]').addEventListener('click', () => { closeModal(); openLinkToDossierModal('vault', entry.id, entry.site); });
       actions.querySelector('[data-del]').addEventListener('click', async () => {
-        if (!confirm(received ? tr('share_leave_confirm') : tr('confirm_delete_vault_entry'))) return;
+        if (!(await askConfirm(received ? tr('share_leave_confirm') : tr('confirm_delete_vault_entry')))) return;
         await api(`/vault/${entry.id}`, { method: 'DELETE' });
         closeModal(); toast(tr('toast_vault_deleted')); render('vault');
       });
@@ -2568,8 +2737,29 @@
           });
           right.appendChild(copy);
         }
-        card.addEventListener('click', () => openDetail(entry));
+        card.addEventListener('click', () => { if (card.dataset.longpress) { delete card.dataset.longpress; return; } openDetail(entry); });
         card.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === card) openDetail(entry); });
+        // Pressione lunga: copia la password (o il codice 2FA) senza aprire.
+        let pressTimer = null;
+        card.addEventListener('pointerdown', () => {
+          pressTimer = setTimeout(async () => {
+            card.dataset.longpress = '1';
+            haptic('medium');
+            try {
+              if (entry.hasTotp && (entry.type === 'code' || tab === 'codes')) {
+                const t = await api(`/vault/${entry.id}/totp`);
+                await navigator.clipboard.writeText(t.code); toast(tr('toast_code_copied'));
+              } else if (entry.type !== 'note') {
+                const full = await revealFull(entry);
+                await navigator.clipboard.writeText(full.password || ''); toast(tr('toast_copied'));
+              }
+            } catch (err) { toast(err.message); }
+          }, 550);
+        });
+        ['pointerup', 'pointerleave', 'pointercancel', 'pointermove'].forEach((ev) => card.addEventListener(ev, (e) => {
+          if (ev === 'pointermove' && Math.abs(e.movementY || 0) < 3) return;
+          clearTimeout(pressTimer);
+        }));
         if (highlightId && String(entry.id) === highlightId) card.classList.add('card-highlight');
         list.appendChild(card);
       });
@@ -2838,7 +3028,7 @@
         const bal = fact(tr('card_field_balance'), fmtBalance(card) || '—', 'card-balance');
         const spend = el(`<button type="button" class="btn btn-sm">${esc(tr('card_spend'))}</button>`);
         spend.addEventListener('click', async () => {
-          const raw = prompt(tr('card_spend_prompt'));
+          const raw = await askValue(tr('card_spend'), { label: tr('card_spend_prompt'), inputmode: 'decimal', placeholder: '0,00' });
           if (!raw) return;
           const updated = await api(`/cards/${card.id}/spend`, { method: 'POST', body: JSON.stringify({ amount: raw }) });
           bal.querySelector('.vd-value').textContent = fmtBalance(updated);
@@ -2908,14 +3098,20 @@
       };
       page.querySelector('[data-photos]').addEventListener('click', openPhotos);
       page.querySelector('[data-del]').addEventListener('click', async () => {
-        if (!confirm(tr('confirm_delete_card'))) return;
+        if (!(await askConfirm(tr('confirm_delete_card')))) return;
         await api(`/cards/${card.id}`, { method: 'DELETE' });
         toast(tr('toast_card_deleted')); render('cards');
       });
     }
     const openCard = (c) => render('cards', { highlight: c.id });
+    const USED_KEY = 'memento-cards-used';
+    const usedMap = () => { try { return JSON.parse(localStorage.getItem(USED_KEY) || '{}'); } catch (_) { return {}; } };
 
-    if (highlightId) { await renderCardPage(highlightId); return; }
+    if (highlightId) {
+      const used = usedMap(); used[highlightId] = Date.now(); localStorage.setItem(USED_KEY, JSON.stringify(used));
+      await renderCardPage(highlightId);
+      return;
+    }
 
     if (!cards.length) {
       root.appendChild(el(`<div class="empty-state">${esc(tr('cards_empty'))}</div>`));
@@ -2930,7 +3126,8 @@
     });
     const groups = [['fedelta', tr('card_kind_loyalty_pl')], ['regalo', tr('card_kind_gift_pl')]];
     groups.forEach(([kind, title]) => {
-      const list = cards.filter((c) => c.kind === kind).sort((a, b) => a.name.localeCompare(b.name));
+      const used = usedMap();
+      const list = cards.filter((c) => c.kind === kind).sort((a, b) => (used[b.id] || 0) - (used[a.id] || 0) || a.name.localeCompare(b.name));
       if (!list.length) return;
       root.appendChild(el(`<h3 class="group-title">${esc(title)}</h3>`));
       const grid = el('<div class="wallet-grid"></div>');
@@ -3295,7 +3492,7 @@
       card.querySelector('[data-link]').addEventListener('click', () => openLinkToDossierModal('account', a.id, a.service));
       card.querySelector('[data-vault]').addEventListener('click', () => openLinkVaultModal(a));
       card.querySelector('[data-del]').addEventListener('click', async () => {
-        if (!confirm(tr('confirm_delete_account'))) return;
+        if (!(await askConfirm(tr('confirm_delete_account')))) return;
         await api(`/accounts/${a.id}`, { method: 'DELETE' });
         toast(tr('toast_account_deleted')); render('accounts');
       });
@@ -3447,7 +3644,7 @@
         openModal(tr('modal_edit_document'), form);
       });
       row.querySelector('[data-del]').addEventListener('click', async () => {
-        if (!confirm(tr('confirm_delete_document'))) return;
+        if (!(await askConfirm(tr('confirm_delete_document')))) return;
         await api(`/drive/${d.id}`, { method: 'DELETE' });
         toast(tr('toast_document_deleted')); render('drive');
       });
@@ -3582,7 +3779,7 @@
       head.querySelector('[data-add]').addEventListener('click', () => openQuickCapture(d));
       head.querySelector('[data-edit]').addEventListener('click', () => openDossierForm(d));
       head.querySelector('[data-del]').addEventListener('click', async () => {
-        if (!confirm(tr('confirm_delete_dossier'))) return;
+        if (!(await askConfirm(tr('confirm_delete_dossier')))) return;
         await api(`/dossiers/${d.id}`, { method: 'DELETE' });
         toast(tr('toast_dossier_deleted')); render('dossiers');
       });
@@ -3721,7 +3918,7 @@
         toast(tr('toast_restored')); render('trash');
       });
       row.querySelector('[data-purge]').addEventListener('click', async () => {
-        if (!confirm(tr('confirm_purge'))) return;
+        if (!(await askConfirm(tr('confirm_purge')))) return;
         await api(`/trash/${item.type}/${item.id}`, { method: 'DELETE' });
         toast(tr('toast_purged')); render('trash');
       });
@@ -3914,6 +4111,7 @@
     const info = await api('/security');
     root.innerHTML = '';
     root.appendChild(el(`<div class="view-header"><h2>${esc(tr('nav_security_title'))}</h2></div>`));
+    root.appendChild(themeBlock());
     root.appendChild(sectionsBlock());
 
     root.appendChild(totpBlock(info));
@@ -4075,17 +4273,39 @@
       if (!results.length) {
         searchResults.appendChild(el(`<div class="search-result-item">${esc(tr('no_results'))}</div>`));
       } else {
-        results.filter((r) => !isHidden(TYPE_TO_VIEW[r.type])).slice(0, 20).forEach((r) => {
-          const item = el(`<div class="search-result-item"><span>${esc(r.label)}</span><span class="search-result-tag">${esc(TYPE_LABELS[r.type] || r.type)}</span></div>`);
-          const activate = () => {
-            searchResults.classList.add('hidden');
-            searchInput.value = '';
-            appHeader.classList.remove('search-open');
-            render(TYPE_TO_VIEW[r.type] || 'ideas', { highlight: r.id });
-          };
-          item.addEventListener('click', activate);
-          makeActivatable(item, 'option', activate);
-          searchResults.appendChild(item);
+        // Risultati divisi per tipo, con il simbolo della sezione; sulle voci
+        // del vault un tasto per copiare la password senza aprirla.
+        const shown = results.filter((r) => !isHidden(TYPE_TO_VIEW[r.type])).slice(0, 40);
+        const order = ['vault', 'card', 'idea', 'reminder', 'project', 'account', 'document', 'dossier'];
+        order.forEach((type) => {
+          const group = shown.filter((r) => r.type === type);
+          if (!group.length) return;
+          searchResults.appendChild(el(`<div class="search-group">${appIcon(TYPE_TO_VIEW[type], 20)}<span>${esc(TYPE_LABELS[type] || type)}</span></div>`));
+          group.forEach((r) => {
+            const item = el(`<div class="search-result-item"><span class="sr-label"></span></div>`);
+            item.querySelector('.sr-label').textContent = r.label;
+            const activate = () => {
+              searchResults.classList.add('hidden');
+              searchInput.value = '';
+              appHeader.classList.remove('search-open');
+              render(TYPE_TO_VIEW[r.type] || 'ideas', { highlight: r.id });
+            };
+            if (r.type === 'vault') {
+              const copy = el(`<button type="button" class="sq-btn" aria-label="${esc(tr('btn_copy'))}">${ICON_COPY}</button>`);
+              copy.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                try {
+                  let full;
+                  try { full = await api(`/vault/${r.id}/reveal`); } catch (err) { if (!(err.data && err.data.webauthnRequired)) throw err; full = await revealWithFingerprint(r.id); }
+                  await navigator.clipboard.writeText(full.password || ''); haptic(); toast(tr('toast_copied'));
+                } catch (err) { toast(err.message); }
+              });
+              item.appendChild(copy);
+            }
+            item.addEventListener('click', activate);
+            makeActivatable(item, 'option', activate);
+            searchResults.appendChild(item);
+          });
         });
       }
       searchResults.classList.remove('hidden');
@@ -4142,7 +4362,7 @@
     e.preventDefault();
     window.MementoBackend.download(a.getAttribute('href')).catch((err) => toast(err.message));
   });
-  window.MementoUI = { el, esc, tr, toast, openModal, closeModal, render, sectionsBlock, totpBlock, loadScript };
+  window.MementoUI = { el, esc, tr, toast, openModal, closeModal, render, sectionsBlock, totpBlock, loadScript, askConfirm, askValue, haptic, themeBlock };
 
   // Molti handler fanno "await api(...)" senza try/catch: senza questa rete di
   // sicurezza un errore restava solo in console e per l'utente non succedeva nulla.
