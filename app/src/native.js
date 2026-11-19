@@ -48,7 +48,10 @@
       const typeLabel = { reminder: tr('type_reminder'), account: tr('type_account'), document: tr('type_document'), project: tr('type_project') };
       const now = Date.now();
       const notifications = [];
-      upcoming.forEach((x) => {
+      let hidden = [];
+      try { hidden = JSON.parse(localStorage.getItem('memento-hidden-sections') || '[]'); } catch (_) { hidden = []; }
+      const viewOf = { project: 'projects', account: 'accounts', document: 'drive' };
+      upcoming.filter((x) => !hidden.includes(viewOf[x.type])).forEach((x) => {
         const time = x.type === 'reminder' && times.get(String(x.id)) ? times.get(String(x.id)).slice(0, 5) : `${String(s.hour).padStart(2, '0')}:00`;
         const at = new Date(`${String(x.date).slice(0, 10)}T${time}:00`);
         if (isNaN(at) || at.getTime() <= now) return;

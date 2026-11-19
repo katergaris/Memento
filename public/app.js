@@ -617,6 +617,7 @@
         const h = hiddenViews();
         if (input.checked) h.delete(view); else h.add(view);
         localStorage.setItem(HIDDEN_KEY, JSON.stringify([...h]));
+        if (window.MementoNative && window.MementoBackend) window.MementoNative.Notify.reschedule(window.MementoBackend).catch(() => {});
         buildNavigation();
         markActiveNav(currentView);
       });
@@ -850,8 +851,8 @@
           <div class="qc-types" role="group">
             <button type="button" class="qc-type on" data-token="/nota">${strokeIcon(APP_TILES.ideas.path)}<span>${esc(tr('type_idea'))}</span></button>
             <button type="button" class="qc-type" data-token="/scadenza">${strokeIcon(APP_TILES.reminders.path)}<span>${esc(tr('type_reminder'))}</span></button>
-            <button type="button" class="qc-type" data-token="/progetto">${strokeIcon(APP_TILES.projects.path)}<span>${esc(tr('type_project'))}</span></button>
-            <button type="button" class="qc-type" data-token="/doc">${strokeIcon(APP_TILES.drive.path)}<span>${esc(tr('type_document'))}</span></button>
+            ${isHidden('projects') ? '' : `<button type="button" class="qc-type" data-token="/progetto">${strokeIcon(APP_TILES.projects.path)}<span>${esc(tr('type_project'))}</span></button>`}
+            ${isHidden('drive') ? '' : `<button type="button" class="qc-type" data-token="/doc">${strokeIcon(APP_TILES.drive.path)}<span>${esc(tr('type_document'))}</span></button>`}
           </div>
           <button type="button" class="btn btn-primary" id="qc-save">${esc(tr('btn_save'))}</button>
         </div>
@@ -917,7 +918,8 @@
       qcMenuTrigger = trigger;
       if (!trigger) { closeQcMenu(); return; }
       if (trigger.type === '/') {
-        openQcMenu(QC_COMMANDS.filter((c) => c.token.slice(1).startsWith(trigger.query)));
+        const off = { '/progetto': 'projects', '/doc': 'drive' };
+        openQcMenu(QC_COMMANDS.filter((c) => c.token.slice(1).startsWith(trigger.query) && !(off[c.token] && isHidden(off[c.token]))));
       } else if (trigger.type === '@') {
         openQcMenu(dossiers.filter((d) => d.title.toLowerCase().includes(trigger.query)).map((d) => ({ token: '@' + d.title, desc: tr('qc_desc_folder'), dossier: d })));
       } else {
@@ -931,6 +933,7 @@
     // cartella, cosa che qui non e' mai stata replicata apposta.
     function applyTypeCommand(token) {
       if (token === '/nota') return;
+      if ((token === '/progetto' && isHidden('projects')) || (token === '/doc' && isHidden('drive'))) return;
       if (token === '/scadenza') {
         const form = reminderModal();
         form.addEventListener('submit', async (e) => {
@@ -3390,7 +3393,8 @@
     // i dettagli (avanzamento, date, importi) si prendono dagli elenchi delle
     // sezioni, gia' disponibili, cosi' il server non cambia. ----
     async function renderDossier(d) {
-      const has = (type) => d.items.some((it) => it.type === type);
+      // Le voci delle sezioni spente (Sezioni visibili) non compaiono.
+      const has = (type) => !isHidden(TYPE_TO_VIEW[type]) && d.items.some((it) => it.type === type);
       const [projects, ideas, reminders, accounts, docs, vault] = await Promise.all([
         has('project') ? api('/projects') : [], has('idea') ? api('/ideas') : [],
         has('reminder') ? api('/reminders') : [], has('account') ? api('/accounts') : [],
