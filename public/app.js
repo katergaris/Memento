@@ -2592,6 +2592,28 @@
   // senza modifiche, solo per riconoscere la tessera del negozio.
   let brandsPromise = null;
   const loadBrands = () => (brandsPromise = brandsPromise || loadScript('/brands/index.js').then(() => window.MEMENTO_BRANDS || []).catch(() => []));
+  // Marchio dal nome della carta: nome uguale, nome che contiene il marchio
+  // ("Carta Leroy Merlin") o inizio del marchio ("Leroy"); vince il piu' lungo.
+  const GENERIC_WORDS = /\b(cinemas?|supermercati|farmacia|profumerie|store|italia|carta|tessera|card|fedelta|fedeltà)\b/gi;
+  const nameWords = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter(Boolean);
+  function brandForName(brands, name) {
+    const n = normName(name);
+    const words = nameWords(name);
+    const core = normName(String(name).replace(GENERIC_WORDS, ''));
+    if (!n) return null;
+    // Il marchio compare come parole intere, una dopo l'altra, nel nome.
+    const hasWords = (bw) => bw.length && words.some((_, i) => bw.every((w, j) => words[i + j] === w));
+    let best = null;
+    for (const b of brands) {
+      const bn = normName(b.name);
+      const bcore = normName(b.name.replace(GENERIC_WORDS, ''));
+      const ok = bn === n || (bcore && bcore === core)
+        || (bn.length >= 4 && hasWords(nameWords(b.name)))
+        || (core.length >= 4 && bn.startsWith(core));
+      if (ok && (!best || normName(best.name).length < bn.length)) best = b;
+    }
+    return best;
+  }
   const brandSrc = (id) => `/brands/${encodeURIComponent(id)}.png`;
   const normName = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
   const cardColor = (c) => c.color || CARD_COLORS[[...String(c.name)].reduce((a, ch) => a + ch.charCodeAt(0), 0) % CARD_COLORS.length];
@@ -2768,8 +2790,7 @@
     async function renderCardPage(id) {
       const card = await api(`/cards/${id}`);
       if (!card.brand) {
-        const strip = (t) => normName(String(t).replace(/\b(cinemas?|supermercati|farmacia|profumerie|store|italia)\b/gi, ''));
-        const b = (await loadBrands()).find((x) => normName(x.name) === normName(card.name) || strip(x.name) === normName(card.name));
+        const b = brandForName(await loadBrands(), card.name);
         if (b) { card.brand = b.id; if (!card.color) card.color = b.color; }
       }
       viewTitle.textContent = card.name;
@@ -2902,12 +2923,9 @@
     }
     // Carte create senza scegliere il suggerimento: logo dal nome, se coincide.
     const brands = await loadBrands();
-    const byName = new Map(brands.map((b) => [normName(b.name), b]));
-    // "UCI" trova anche "UCI Cinemas": nome del marchio senza parole generiche.
-    brands.forEach((b) => { const short = normName(b.name.replace(/\b(cinemas?|supermercati|farmacia|profumerie|store|italia)\b/gi, '')); if (short && !byName.has(short)) byName.set(short, b); });
     cards.forEach((c) => {
       if (c.brand) return;
-      const b = byName.get(normName(c.name));
+      const b = brandForName(brands, c.name);
       if (b) { c.brand = b.id; if (!c.color) c.color = b.color; }
     });
     const groups = [['fedelta', tr('card_kind_loyalty_pl')], ['regalo', tr('card_kind_gift_pl')]];
