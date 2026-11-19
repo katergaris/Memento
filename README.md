@@ -131,9 +131,22 @@ Il conteggio riparte a ogni utilizzo: con `SESSION_DAYS=7`, se apri Memento alme
 
 ## Dal telefono
 
-L'interfaccia è pensata prima di tutto per il telefono: al posto della barra laterale compare una **barra in basso** con Oggi, Cerca, il "+" per annotare, Cartelle e "Sezioni" (tutte le altre, più "Esci"). Il tasto "indietro" del telefono torna alla sezione precedente.
+L'interfaccia è pensata prima di tutto per il telefono: al posto della barra laterale compare una **barra in basso** con Oggi, Note, il "+" per annotare, Vault e "Altro" (tutte le altre sezioni, più "Esci"). La ricerca si apre dalla lente in alto. Il tasto "indietro" del telefono torna alla sezione precedente.
 
 Puoi anche **aggiungerlo alla schermata home** e usarlo come un'app, senza barra del browser: dal telefono apri l'indirizzo di Memento e scegli "Aggiungi a schermata Home" (Safari) o "Installa app" / "Aggiungi a schermata Home" (Chrome). Serve che il telefono raggiunga il server: stessa rete di casa, oppure una VPN.
+
+## App Android
+
+Nella cartella `app/` c'è l'app Android (Capacitor) con la stessa interfaccia. Al primo avvio si sceglie come usarla:
+
+- **Sul telefono**: i dati stanno solo nel telefono, in un archivio cifrato (AES-GCM, chiave ricavata dalla password principale). Funziona senza rete e senza server. Da Sicurezza → Dati si esporta un file `.memento` cifrato con una password (contiene anche i documenti) e lo si reimporta su un altro telefono.
+- **Collegata al server**: l'app usa il tuo server Memento, come il browser.
+
+Si può cambiare modalità quando si vuole: i dati di ciascuna restano dove sono.
+
+L'APK lo costruisce GitHub Actions (`.github/workflows/android.yml`) a ogni modifica di `public/` o `app/`, e lo allega alla pagina dell'esecuzione. Con un tag `app-vX.Y.Z` lo pubblica anche nelle Release. Per firmarlo sempre con la stessa chiave (necessario per aggiornare l'app senza disinstallarla) servono i segreti del repository `ANDROID_KEYSTORE_B64` (il file PKCS12 in base64) e `ANDROID_KEYSTORE_PASSWORD`.
+
+Build locale: `cd app && npm ci && npm run build:www && npx cap add android && npx cap sync android`, poi Android Studio o `./gradlew assembleDebug` dentro `app/android`.
 
 ## Verifica in due passaggi (Google Authenticator)
 
