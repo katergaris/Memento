@@ -19,6 +19,10 @@ function parseAmount(raw) {
   const n = Number(String(raw).replace(',', '.'));
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
 }
+// Id di un logo di public/brands (minuscole, cifre, trattini).
+function cleanBrand(raw) {
+  return /^[a-z0-9-]{1,60}$/.test(String(raw || '')) ? raw : '';
+}
 function cleanColor(raw) {
   return /^#[0-9a-fA-F]{6}$/.test(String(raw || '')) ? raw : '';
 }
@@ -30,12 +34,12 @@ router.get('/', (req, res) => {
 });
 
 router.post('/', (req, res) => {
-  const { kind = 'fedelta', name, number = '', format = 'CODE128', color = '', holder = '', pin = '', balance = null, currency = 'EUR', expiry_date = null, notes = '', tags = [] } = req.body;
+  const { kind = 'fedelta', name, brand = '', number = '', format = 'CODE128', color = '', holder = '', pin = '', balance = null, currency = 'EUR', expiry_date = null, notes = '', tags = [] } = req.body;
   if (!name) return res.status(400).json({ error: 'Il nome e\' obbligatorio' });
   const info = db.prepare(
-    'INSERT INTO cards (kind, name, number, format, color, holder, pin_encrypted, balance, currency, expiry_date, notes, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO cards (kind, name, brand, number, format, color, holder, pin_encrypted, balance, currency, expiry_date, notes, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
   ).run(
-    KINDS.includes(kind) ? kind : 'fedelta', name, String(number || '').trim(), FORMATS.includes(format) ? format : 'CODE128',
+    KINDS.includes(kind) ? kind : 'fedelta', name, cleanBrand(brand), String(number || '').trim(), FORMATS.includes(format) ? format : 'CODE128',
     cleanColor(color), holder, pin ? encrypt(String(pin)) : null, parseAmount(balance) ?? null, currency || 'EUR',
     expiry_date || null, notes, JSON.stringify(tags)
   );
@@ -45,13 +49,14 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
   const existing = db.prepare('SELECT * FROM cards WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Carta non trovata' });
-  const { kind, name, number, format, color, holder, pin, balance, currency, expiry_date, notes, tags } = req.body;
+  const { kind, name, brand, number, format, color, holder, pin, balance, currency, expiry_date, notes, tags } = req.body;
   const parsedBalance = parseAmount(balance);
   db.prepare(
-    "UPDATE cards SET kind = ?, name = ?, number = ?, format = ?, color = ?, holder = ?, pin_encrypted = ?, balance = ?, currency = ?, expiry_date = ?, notes = ?, tags = ?, updated_at = datetime('now') WHERE id = ?"
+    "UPDATE cards SET kind = ?, name = ?, brand = ?, number = ?, format = ?, color = ?, holder = ?, pin_encrypted = ?, balance = ?, currency = ?, expiry_date = ?, notes = ?, tags = ?, updated_at = datetime('now') WHERE id = ?"
   ).run(
     kind && KINDS.includes(kind) ? kind : existing.kind,
     name ?? existing.name,
+    brand !== undefined ? cleanBrand(brand) : existing.brand,
     number !== undefined ? String(number || '').trim() : existing.number,
     format && FORMATS.includes(format) ? format : existing.format,
     color !== undefined ? cleanColor(color) : existing.color,

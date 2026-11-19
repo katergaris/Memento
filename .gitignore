@@ -14,3 +14,6 @@ logos/
 
 # Studio dell interfaccia e bozze (documenti di lavoro, non pubblici)
 docs/studio-interfaccia/
+
+# Materiale sorgente (foto, dataset dei loghi): non va nel repository
+risorse/

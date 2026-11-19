@@ -252,6 +252,10 @@ memento/
     └── icon-*.png              # icone dell'app
 ```
 
+## Loghi dei negozi
+
+La sezione Carte propone il logo del negozio mentre scrivi il nome. I loghi in `public/brands/` vengono dal dataset "common logos" (© 2025 Vasiliki): selezione e metadati sono distribuiti con licenza CC BY-NC 4.0, con un permesso aggiuntivo per le app di carte fedeltà (testo completo in `public/brands/LICENZA.txt`). I loghi sono mostrati senza modifiche e solo per riconoscere la tessera del negozio; marchi e loghi appartengono ai rispettivi titolari e Memento non è affiliato con loro. Se sei titolare di un marchio e vuoi che il logo venga tolto, apri una segnalazione.
+
 ## Licenza
 
 Distribuito con licenza MIT — vedi [LICENSE](LICENSE). Puoi usarlo, modificarlo e ridistribuirlo liberamente.

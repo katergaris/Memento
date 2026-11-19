@@ -530,12 +530,13 @@
       const FORMATS = ['QR', 'CODE128', 'EAN13', 'EAN8', 'UPC', 'CODE39', 'ITF', 'NONE'];
       const amount = (raw) => { if (raw === undefined) return undefined; if (raw === null || raw === '') return null; const n = Number(String(raw).replace(',', '.')); return Number.isFinite(n) ? Math.round(n * 100) / 100 : null; };
       const color = (raw) => (/^#[0-9a-fA-F]{6}$/.test(String(raw || '')) ? raw : '');
+      const brand = (raw) => (/^[a-z0-9-]{1,60}$/.test(String(raw || '')) ? raw : '');
       const ser = (r) => { const { pin, ...rest } = r; return { ...rest, hasPin: !!pin }; };
       if (!id && method === 'GET') return this.sorted('cards').map(ser);
       if (!id && method === 'POST') {
         if (!body.name) fail(400, 'Il nome e\' obbligatorio');
         return h.mutate(() => h.created(ser(this.insert('cards', {
-          kind: KINDS.includes(body.kind) ? body.kind : 'fedelta', name: body.name, number: String(body.number || '').trim(),
+          kind: KINDS.includes(body.kind) ? body.kind : 'fedelta', name: body.name, brand: brand(body.brand), number: String(body.number || '').trim(),
           format: FORMATS.includes(body.format) ? body.format : 'CODE128', color: color(body.color), holder: body.holder || '',
           pin: body.pin ? String(body.pin) : null, balance: amount(body.balance) ?? null, currency: body.currency || 'EUR',
           expiry_date: body.expiry_date || null, notes: body.notes || '', tags: body.tags || [],
@@ -557,6 +558,7 @@
         if (body.format && FORMATS.includes(body.format)) f.format = body.format;
         if (body.number !== undefined) f.number = String(body.number || '').trim();
         if (body.color !== undefined) f.color = color(body.color);
+        if (body.brand !== undefined) f.brand = brand(body.brand);
         if (body.pin === '-') f.pin = null; else if (body.pin) f.pin = String(body.pin);
         const b = amount(body.balance); if (b !== undefined) f.balance = b;
         if (body.expiry_date !== undefined) f.expiry_date = body.expiry_date || null;

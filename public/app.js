@@ -2438,6 +2438,12 @@
   const CARD_FORMATS = [
     ['CODE128', 'Code 128'], ['EAN13', 'EAN-13'], ['QR', 'QR'], ['EAN8', 'EAN-8'], ['UPC', 'UPC-A'], ['CODE39', 'Code 39'], ['ITF', 'ITF'], ['NONE', tr('card_format_none')],
   ];
+  // Loghi dei negozi (public/brands, licenza in LICENZA.txt): si mostrano
+  // senza modifiche, solo per riconoscere la tessera del negozio.
+  let brandsPromise = null;
+  const loadBrands = () => (brandsPromise = brandsPromise || fetch('/brands/index.json').then((r) => r.json()).catch(() => []));
+  const brandSrc = (id) => `/brands/${encodeURIComponent(id)}.png`;
+  const normName = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
   const cardColor = (c) => c.color || CARD_COLORS[[...String(c.name)].reduce((a, ch) => a + ch.charCodeAt(0), 0) % CARD_COLORS.length];
   const fmtBalance = (c) => (c.balance == null ? '' : fmtMoney(c.balance));
 
@@ -2448,7 +2454,10 @@
           <button type="button" data-kind="fedelta">${esc(tr('card_kind_loyalty'))}</button>
           <button type="button" data-kind="regalo">${esc(tr('card_kind_gift'))}</button>
         </div>
-        <div class="form-row"><label>${esc(tr('card_field_name'))}</label><input type="text" name="name" required /></div>
+        <div class="form-row brand-row"><label>${esc(tr('card_field_name'))}</label>
+          <div class="brand-input"><img class="brand-chosen hidden" alt="" /><input type="text" name="name" required autocomplete="off" /><button type="button" class="icon-btn brand-clear hidden" aria-label="${esc(tr('card_brand_remove'))}">✕</button></div>
+          <div class="brand-suggest hidden" role="listbox"></div>
+        </div>
         <div class="form-row">
           <label>${esc(tr('card_field_number'))}</label>
           <div style="display:flex;gap:6px"><input type="text" name="number" style="flex:1" autocomplete="off" /><button type="button" class="btn btn-sm" data-scan>${esc(tr('btn_scan'))}</button></div>
@@ -2471,6 +2480,36 @@
     `);
     let kind = existing ? existing.kind : 'fedelta';
     let color = existing ? existing.color : '';
+    let brand = existing ? existing.brand || '' : '';
+    const chosen = form.querySelector('.brand-chosen');
+    const clearBtn = form.querySelector('.brand-clear');
+    const suggest = form.querySelector('.brand-suggest');
+    const syncBrand = () => {
+      chosen.classList.toggle('hidden', !brand);
+      clearBtn.classList.toggle('hidden', !brand);
+      if (brand) chosen.src = brandSrc(brand);
+    };
+    clearBtn.addEventListener('click', () => { brand = ''; syncBrand(); form.name.focus(); });
+    // Mentre si scrive il nome compaiono i negozi con il logo.
+    form.name.addEventListener('input', async () => {
+      const q = normName(form.name.value);
+      if (brand) { brand = ''; syncBrand(); }
+      suggest.innerHTML = '';
+      if (q.length < 2) { suggest.classList.add('hidden'); return; }
+      const list = (await loadBrands()).filter((b) => normName(b.name).includes(q))
+        .sort((a, b) => (normName(a.name).indexOf(q) - normName(b.name).indexOf(q)) || (a.name.length - b.name.length)).slice(0, 6);
+      list.forEach((b) => {
+        const item = el(`<button type="button" class="brand-item" role="option"><img alt="" loading="lazy" /><span></span></button>`);
+        item.querySelector('img').src = brandSrc(b.id);
+        item.querySelector('span').textContent = b.name;
+        item.addEventListener('click', () => {
+          brand = b.id; form.name.value = b.name; color = b.color; syncColor(); syncBrand();
+          suggest.classList.add('hidden');
+        });
+        suggest.appendChild(item);
+      });
+      suggest.classList.toggle('hidden', !list.length);
+    });
     const syncKind = () => {
       form.querySelectorAll('[data-kind]').forEach((b) => b.classList.toggle('on', b.dataset.kind === kind));
       form.querySelector('[data-gift]').classList.toggle('hidden', kind !== 'regalo');
@@ -2495,9 +2534,9 @@
       form.expiry_date.value = existing.expiry_date ? existing.expiry_date.slice(0, 10) : '';
       form.notes.value = existing.notes || '';
     }
-    syncKind(); syncColor();
+    syncKind(); syncColor(); syncBrand();
     form.collect = () => {
-      const body = { kind, name: form.name.value.trim(), number: form.number.value.trim(), format: form.format.value, color, notes: form.notes.value };
+      const body = { kind, brand, name: form.name.value.trim(), number: form.number.value.trim(), format: form.format.value, color, notes: form.notes.value };
       if (kind === 'regalo') {
         body.balance = form.balance.value.trim();
         body.expiry_date = form.expiry_date.value || null;
@@ -2534,6 +2573,7 @@
     async function openCard(card) {
       const wrap = el(`
         <div class="card-open">
+          ${card.brand ? `<div class="card-brand" style="background:${esc(cardColor(card))}"><img src="${brandSrc(card.brand)}" alt="${esc(card.name)}" /></div>` : ''}
           <div class="card-code-box"><div class="card-code"></div><p class="card-number"></p></div>
           <div class="card-facts"></div>
           <div class="form-actions"><span class="form-actions-side"><button type="button" class="btn btn-ghost btn-danger" data-del>${esc(tr('btn_delete'))}</button></span><button type="button" class="btn" data-edit>${esc(tr('btn_edit'))}</button></div>
@@ -2590,10 +2630,22 @@
       root.appendChild(el(`<h3 class="group-title">${esc(title)}</h3>`));
       const grid = el('<div class="wallet-grid"></div>');
       list.forEach((c) => {
-        const tile = el(`<button type="button" class="wallet-card"><span class="wc-initial"></span><span class="wc-name"></span><span class="wc-meta"></span></button>`);
+        const tile = el(c.brand
+          ? `<button type="button" class="wallet-card has-logo"><img class="wc-logo" alt="" loading="lazy" /><span class="wc-meta"></span></button>`
+          : `<button type="button" class="wallet-card"><span class="wc-initial"></span><span class="wc-name"></span><span class="wc-meta"></span></button>`);
         tile.style.setProperty('--card', cardColor(c));
-        tile.querySelector('.wc-initial').textContent = c.name.trim().charAt(0).toUpperCase();
-        tile.querySelector('.wc-name').textContent = c.name;
+        tile.setAttribute('aria-label', c.name);
+        if (c.brand) {
+          const img = tile.querySelector('.wc-logo');
+          img.src = brandSrc(c.brand);
+          img.alt = c.name;
+          // Logo mancante (marchio tolto dall'elenco): torna all'iniziale.
+          img.addEventListener('error', () => { tile.classList.remove('has-logo'); img.remove(); tile.prepend(el(`<span class="wc-name">${esc(c.name)}</span>`)); tile.prepend(el(`<span class="wc-initial">${esc(c.name.trim().charAt(0).toUpperCase())}</span>`)); });
+        }
+        if (!c.brand) {
+          tile.querySelector('.wc-initial').textContent = c.name.trim().charAt(0).toUpperCase();
+          tile.querySelector('.wc-name').textContent = c.name;
+        }
         const meta = [];
         if (c.kind === 'regalo' && c.balance != null) meta.push(fmtBalance(c));
         if (c.kind === 'regalo' && c.expiry_date) meta.push(relativeDayLabel(calendarDaysFromToday(c.expiry_date)));
@@ -2604,6 +2656,7 @@
       });
       root.appendChild(grid);
     });
+    if (cards.some((c) => c.brand)) root.appendChild(el(`<p class="brands-note">${esc(tr('cards_brands_note'))}</p>`));
     if (highlightId && opts.fromHash === undefined) {
       const c = cards.find((x) => String(x.id) === highlightId);
       if (c) openCard(c);

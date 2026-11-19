@@ -1139,3 +1139,28 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
   .wc-name { font-size: 15px; }
   .wc-initial { width: 30px; height: 30px; font-size: 15px; border-radius: 10px; }
 }
+
+/* ---------- Carte: loghi dei negozi ---------- */
+.brand-row { position: relative; }
+.brand-input { display: flex; align-items: center; gap: 8px; }
+.brand-input input { flex: 1; min-width: 0; }
+.brand-chosen { height: 40px; width: 64px; object-fit: contain; border-radius: 8px; background: var(--surface-2); flex: none; }
+.brand-suggest {
+  position: absolute; left: 0; right: 0; top: 100%; z-index: 30; margin-top: 4px; padding: 6px;
+  background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-frame); display: flex; flex-direction: column; gap: 2px;
+}
+.brand-item { display: flex; align-items: center; gap: 12px; border: none; background: none; padding: 6px; border-radius: 12px; cursor: pointer; font: inherit; color: var(--text); text-align: left; }
+.brand-item:hover, .brand-item:focus-visible { background: var(--accent-bg); outline: none; }
+.brand-item img { width: 72px; height: 36px; object-fit: contain; border-radius: 6px; flex: none; }
+.brand-item span { font-weight: 600; }
+.wallet-card.has-logo { display: flex; align-items: center; justify-content: center; padding: 0; background: var(--card); }
+.wallet-card.has-logo::after { display: none; }
+.wc-logo { width: 100%; height: 100%; object-fit: contain; display: block; }
+.wallet-card.has-logo .wc-meta {
+  position: absolute; left: 10px; bottom: 10px; background: rgba(18, 19, 24, .72); color: #fff;
+  padding: 3px 9px; border-radius: 999px; font-size: 12px; min-height: 0;
+}
+.wallet-card.has-logo .wc-meta:empty { display: none; }
+.card-brand { border-radius: 16px; overflow: hidden; aspect-ratio: 3.2; display: flex; align-items: center; justify-content: center; }
+.card-brand img { width: 100%; height: 100%; object-fit: contain; }
+.brands-note { margin: 4px 0 20px; font-size: 12px; color: var(--text-faint); }

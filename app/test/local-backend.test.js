@@ -192,7 +192,8 @@ test('sblocco con la chiave custodita dal telefono (impronta)', async () => {
 
 test('carte fedelta\' e regalo: come sul server', async () => {
   const { be, storage } = await fresh();
-  const g = (await call(be, '/cards', 'POST', { kind: 'regalo', name: 'Libreria', balance: '25,50', pin: '4321', format: 'QR', number: 'ABC' })).data;
+  const g = (await call(be, '/cards', 'POST', { kind: 'regalo', name: 'Libreria', brand: 'feltrinelli', balance: '25,50', pin: '4321', format: 'QR', number: 'ABC' })).data;
+  assert.equal(g.brand, 'feltrinelli');
   assert.equal(g.balance, 25.5);
   assert.equal(g.hasPin, true);
   assert.equal(g.pin, undefined);

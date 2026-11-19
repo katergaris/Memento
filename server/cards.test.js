@@ -34,6 +34,8 @@ test('carta fedelta\': crea, legge, aggiorna, elimina', async () => {
     const upd = (await call(`/${c.id}`, 'PUT', { notes: 'tessera famiglia' })).data;
     assert.equal(upd.name, 'Supermercato');
     assert.equal(upd.format, 'EAN13');
+    assert.equal((await call(`/${c.id}`, 'PUT', { brand: 'esselunga' })).data.brand, 'esselunga');
+    assert.equal((await call(`/${c.id}`, 'PUT', { brand: '../x' })).data.brand, '');
     await call(`/${c.id}`, 'DELETE');
     assert.equal((await call('')).data.length, 1);
   });

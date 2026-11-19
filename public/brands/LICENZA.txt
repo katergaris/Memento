@@ -1,0 +1,35 @@
+Licenza d'uso – common logos
+Copyright © 2025 Vasiliki
+1. Oggetto
+Il Dataset comprende:
+Contenuti di Terzi: immagini di loghi e marchi appartenenti ai rispettivi titolari;
+Contributi dell'Autore: selezione, organizzazione, annotazioni, etichette e metadati realizzati dall'Autore.
+I Contributi dell'Autore sono distribuiti con licenza Creative Commons Attribuzione – 
+Non commerciale 4.0 Internazionale (CC BY-NC 4.0): https://creativecommons.org/licenses/by-nc/4.0/legalcode.it, con il permesso aggiuntivo previsto dalla sezione 4.
+La presente licenza non concede alcun diritto sui Contenuti di Terzi.
+2. Marchi e contenuti di terzi
+Tutti i loghi e i marchi presenti sono di proprietà dei rispettivi titolari. La loro inclusione non implica affiliazione, sponsorizzazione o approvazione da parte dei titolari. Chi usa il Dataset è responsabile di verificare di poter utilizzare i Contenuti di Terzi per i propri scopi, nei limiti della legge applicabile.
+3. Usi consentiti
+Ricerca scientifica, didattica e uso personale non commerciale, compresi l'analisi e l'addestramento di modelli a scopo di ricerca non commerciale, oltre all'uso previsto dalla sezione 4.
+4. Uso nelle app per carte fedeltà
+In aggiunta a quanto previsto dalla sezione 1, l'Autore consente l'uso dei Contributi dell'Autore, anche a fini commerciali, all'interno di applicazioni per la gestione di carte fedeltà, al solo scopo di permettere all'utente di riconoscere la tessera del relativo esercizio commerciale.
+Questo consenso riguarda esclusivamente i Contributi dell'Autore. Sui Contenuti di Terzi l'Autore non concede alcun diritto: chi li utilizza lo fa sotto la propria responsabilità, nei limiti dell'uso identificativo consentito dalla legge, e alle seguenti condizioni:
+a) i loghi sono mostrati senza modifiche e solo per identificare la carta fedeltà del rispettivo titolare;
+b) i loghi non compaiono nel nome, nell'icona, nelle schermate dello store o nella pubblicità dell'app;
+c) l'app dichiara in modo visibile di non essere affiliata ai titolari dei marchi, salvo accordi specifici;
+d) il logo viene rimosso tempestivamente su richiesta del titolare del marchio, e comunque quando viene rimosso dal Dataset ai sensi della sezione 7.
+5. Usi vietati
+qualsiasi uso commerciale, salvo quanto previsto dalla sezione 4;
+usare i loghi come marchi propri o in modo da generare confusione con i titolari;
+creare loghi contraffatti, pagine di phishing o contenuti che impersonino i titolari;
+rimuovere le note di copyright e di marchio.
+6. Redistribuzione e citazione
+Il Dataset può essere redistribuito solo alle stesse condizioni e includendo questo file. 
+7. Rimozione su richiesta
+I titolari dei marchi possono chiedere la rimozione dei propri contenuti scrivendo a [EMAIL]. L'Autore si impegna a rimuoverli entro [30] giorni. Gli utilizzatori si impegnano a usare la versione più aggiornata del Dataset e a eliminare i contenuti rimossi, anche dalle proprie applicazioni.
+8. Esclusione di garanzia
+Il Dataset è fornito "così com'è", senza garanzie di alcun tipo. Nei limiti consentiti dalla legge, l'Autore non risponde di danni derivanti dal suo utilizzo, comprese eventuali contestazioni dei titolari dei marchi.
+9. Cessazione
+In caso di violazione di questa licenza, i diritti concessi cessano automaticamente.
+10. Legge applicabile
+La presente licenza è regolata dalla legge italiana, fatte salve le norme inderogabili a tutela dei consumatori.
