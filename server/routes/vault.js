@@ -18,7 +18,9 @@ function currentUser(req) {
 // password_encrypted), non lo schema. "password_encrypted" contiene sempre
 // l'unico segreto principale della voce: la password, il numero di carta o il
 // contenuto della nota sicura, a seconda del tipo.
-const VALID_TYPES = ['password', 'note', 'card'];
+// code = codici 2FA, codici di recupero, PIN: il contenuto puo' mancare se
+// c'e' il segreto TOTP (un codice 2FA da solo).
+const VALID_TYPES = ['password', 'note', 'card', 'code'];
 
 function serialize(row, { reveal = false } = {}) {
   const base = { ...row, tags: JSON.parse(row.tags || '[]'), hasTotp: !!row.totp_secret_encrypted };
@@ -114,7 +116,8 @@ function encryptTotpSecret(raw) {
 
 router.post('/', (req, res) => {
   const { site, username = '', password, url = '', notes = '', tags = [], type = 'password', totp_secret = '', card_cvv = '', card_expiry = '' } = req.body;
-  if (!site || !password) return res.status(400).json({ error: 'Titolo e contenuto sono obbligatori' });
+  const codeOnly = type === 'code' && totp_secret;
+  if (!site || (!password && !codeOnly)) return res.status(400).json({ error: 'Titolo e contenuto sono obbligatori' });
   const finalType = VALID_TYPES.includes(type) ? type : 'password';
 
   let totpSecretEncrypted = null;
@@ -131,7 +134,7 @@ router.post('/', (req, res) => {
       'INSERT INTO vault_entries (site, username, password_encrypted, url, notes, tags, type, totp_secret_encrypted, card_cvv_encrypted, card_expiry) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     )
     .run(
-      site, username, encrypt(password), url, notes, JSON.stringify(tags),
+      site, username, encrypt(password || ''), url, notes, JSON.stringify(tags),
       finalType, totpSecretEncrypted, card_cvv ? encrypt(card_cvv) : null, card_expiry || null
     );
   res.status(201).json(serialize(db.prepare('SELECT * FROM vault_entries WHERE id = ?').get(info.lastInsertRowid)));

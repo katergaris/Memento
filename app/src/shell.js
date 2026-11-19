@@ -150,6 +150,7 @@
         pw.querySelector('[data-lock]').addEventListener('click', () => { be.lock(); location.reload(); });
         root.appendChild(pw);
 
+        root.appendChild(ui.sectionsBlock());
         root.appendChild(appBlock(ui, tr('app_mode_local_on')));
         return true;
       },

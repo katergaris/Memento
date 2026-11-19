@@ -17,11 +17,11 @@
 })(typeof self !== 'undefined' ? self : this, function (MC, TOTP) {
   const ARCHIVE_FORMAT = 'memento-archive';
   const EXPORT_FORMAT = 'memento-export';
-  const TABLES = ['ideas', 'projects', 'reminders', 'accounts', 'vault', 'documents', 'dossiers', 'links'];
-  const TYPE_TABLE = { idea: 'ideas', project: 'projects', vault: 'vault', account: 'accounts', document: 'documents', reminder: 'reminders', dossier: 'dossiers' };
+  const TABLES = ['ideas', 'projects', 'reminders', 'accounts', 'vault', 'documents', 'dossiers', 'links', 'cards'];
+  const TYPE_TABLE = { idea: 'ideas', project: 'projects', vault: 'vault', account: 'accounts', document: 'documents', reminder: 'reminders', dossier: 'dossiers', card: 'cards' };
   const LABEL = {
     idea: (r) => r.title, project: (r) => r.title, vault: (r) => r.site, account: (r) => r.service,
-    document: (r) => r.display_name || r.original_name, dossier: (r) => r.title, reminder: (r) => r.label,
+    document: (r) => r.display_name || r.original_name, dossier: (r) => r.title, reminder: (r) => r.label, card: (r) => r.name,
   };
   const PREVIEWABLE_MIME = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf']);
 
@@ -377,6 +377,7 @@
           if (id && method === 'DELETE') return softDelete('reminders');
           break;
         }
+        case 'cards': return this.cards(method, id, sub, body, { mutate, softDelete, restore, created });
         case 'accounts': return this.accounts(method, id, sub, body, { mutate, softDelete, restore, created });
         case 'vault': return this.vault(method, id, sub, body, { mutate, softDelete, restore, created });
         case 'drive': return this.drive(method, id, sub, body, { mutate, softDelete, restore, created });
@@ -391,7 +392,7 @@
           if (id && sub === 'links' && method === 'POST') return mutate(() => {
             const d = this.find('dossiers', id) || fail(404, 'Fascicolo non trovato');
             const t = TYPE_TABLE[body.item_type];
-            if (!t || body.item_type === 'dossier') fail(400, 'Tipo di elemento non valido');
+            if (!t || body.item_type === 'dossier' || body.item_type === 'card') fail(400, 'Tipo di elemento non valido');
             if (!this.find(t, body.item_id)) fail(404, 'Elemento da collegare non trovato');
             const existing = this.rows('links').find((l) => String(l.dossier_id) === String(d.id) && l.item_type === body.item_type && String(l.item_id) === String(body.item_id));
             if (existing) { if (existing.deleted_at) this.touch(existing, { deleted_at: null }); }
@@ -450,6 +451,7 @@
           this.live('accounts').filter((r) => has(r.service, r.email, r.notes, r.tags)).forEach((r) => out.push({ type: 'account', id: r.id, label: r.service }));
           this.live('documents').filter((r) => has(r.original_name, r.display_name, r.folder, r.tags)).forEach((r) => out.push({ type: 'document', id: r.id, label: r.display_name || r.original_name }));
           this.live('dossiers').filter((r) => has(r.title, r.description)).forEach((r) => out.push({ type: 'dossier', id: r.id, label: r.title }));
+          this.live('cards').filter((r) => has(r.name, r.number, r.notes, r.tags)).forEach((r) => out.push({ type: 'card', id: r.id, label: r.name }));
           this.live('reminders').filter((r) => has(r.label, r.notes)).forEach((r) => out.push({ type: 'reminder', id: r.id, label: r.label }));
           return out;
         }
@@ -523,8 +525,49 @@
       fail(404, 'Endpoint non trovato');
     }
 
+    cards(method, id, sub, body, h) {
+      const KINDS = ['fedelta', 'regalo'];
+      const FORMATS = ['QR', 'CODE128', 'EAN13', 'EAN8', 'UPC', 'CODE39', 'ITF', 'NONE'];
+      const amount = (raw) => { if (raw === undefined) return undefined; if (raw === null || raw === '') return null; const n = Number(String(raw).replace(',', '.')); return Number.isFinite(n) ? Math.round(n * 100) / 100 : null; };
+      const color = (raw) => (/^#[0-9a-fA-F]{6}$/.test(String(raw || '')) ? raw : '');
+      const ser = (r) => { const { pin, ...rest } = r; return { ...rest, hasPin: !!pin }; };
+      if (!id && method === 'GET') return this.sorted('cards').map(ser);
+      if (!id && method === 'POST') {
+        if (!body.name) fail(400, 'Il nome e\' obbligatorio');
+        return h.mutate(() => h.created(ser(this.insert('cards', {
+          kind: KINDS.includes(body.kind) ? body.kind : 'fedelta', name: body.name, number: String(body.number || '').trim(),
+          format: FORMATS.includes(body.format) ? body.format : 'CODE128', color: color(body.color), holder: body.holder || '',
+          pin: body.pin ? String(body.pin) : null, balance: amount(body.balance) ?? null, currency: body.currency || 'EUR',
+          expiry_date: body.expiry_date || null, notes: body.notes || '', tags: body.tags || [],
+        }))));
+      }
+      if (id && sub === 'restore') return h.restore('cards');
+      if (id && sub === 'pin') { const r = this.find('cards', id) || fail(404, 'Carta non trovata'); return { pin: r.pin || '' }; }
+      if (id && sub === 'spend') return h.mutate(() => {
+        const r = this.find('cards', id) || fail(404, 'Carta non trovata');
+        const a = amount(body.amount);
+        if (!a || a <= 0) fail(400, 'Importo non valido');
+        return ser(this.touch(r, { balance: Math.max(0, Math.round(((r.balance || 0) - a) * 100) / 100) }));
+      });
+      if (id && method === 'PUT') return h.mutate(() => {
+        const r = this.find('cards', id) || fail(404, 'Carta non trovata');
+        const f = {};
+        ['name', 'holder', 'currency', 'notes', 'tags'].forEach((k) => { if (body[k] !== undefined && body[k] !== null) f[k] = body[k]; });
+        if (body.kind && KINDS.includes(body.kind)) f.kind = body.kind;
+        if (body.format && FORMATS.includes(body.format)) f.format = body.format;
+        if (body.number !== undefined) f.number = String(body.number || '').trim();
+        if (body.color !== undefined) f.color = color(body.color);
+        if (body.pin === '-') f.pin = null; else if (body.pin) f.pin = String(body.pin);
+        const b = amount(body.balance); if (b !== undefined) f.balance = b;
+        if (body.expiry_date !== undefined) f.expiry_date = body.expiry_date || null;
+        return ser(this.touch(r, f));
+      });
+      if (id && method === 'DELETE') return h.softDelete('cards');
+      fail(404, 'Endpoint non trovato');
+    }
+
     async vault(method, id, sub, body, h) {
-      const VALID = ['password', 'note', 'card'];
+      const VALID = ['password', 'note', 'card', 'code'];
       const ser = (r, reveal = false) => {
         const { password, totp_secret, card_cvv, ...rest } = r;
         const out = { ...rest, hasTotp: !!totp_secret };
@@ -562,10 +605,11 @@
         return { code: await TOTP.codeForStep(r.totp_secret, TOTP.currentStep()), secondsRemaining: 30 - (Math.floor(Date.now() / 1000) % 30) };
       }
       if (!id && method === 'POST') {
-        if (!body.site || !body.password) fail(400, 'Titolo e contenuto sono obbligatori');
+        const codeOnly = body.type === 'code' && body.totp_secret;
+        if (!body.site || (!body.password && !codeOnly)) fail(400, 'Titolo e contenuto sono obbligatori');
         const totp = body.totp_secret ? cleanTotp(body.totp_secret) : null;
         return h.mutate(() => h.created(ser(this.insert('vault', {
-          site: body.site, username: body.username || '', password: body.password, url: body.url || '', notes: body.notes || '', tags: body.tags || [],
+          site: body.site, username: body.username || '', password: body.password || '', url: body.url || '', notes: body.notes || '', tags: body.tags || [],
           type: VALID.includes(body.type) ? body.type : 'password', totp_secret: totp, card_cvv: body.card_cvv || null, card_expiry: body.card_expiry || null,
         }))));
       }

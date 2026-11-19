@@ -189,3 +189,26 @@ test('sblocco con la chiave custodita dal telefono (impronta)', async () => {
   await again.unlockWithKey(raw);
   assert.equal((await call(again, '/ideas')).data.length, 1);
 });
+
+test('carte fedelta\' e regalo: come sul server', async () => {
+  const { be, storage } = await fresh();
+  const g = (await call(be, '/cards', 'POST', { kind: 'regalo', name: 'Libreria', balance: '25,50', pin: '4321', format: 'QR', number: 'ABC' })).data;
+  assert.equal(g.balance, 25.5);
+  assert.equal(g.hasPin, true);
+  assert.equal(g.pin, undefined);
+  assert.equal((await call(be, `/cards/${g.id}/pin`)).data.pin, '4321');
+  assert.equal((await call(be, `/cards/${g.id}/spend`, 'POST', { amount: 30 })).data.balance, 0);
+  assert.ok(!JSON.stringify(await storage.get('archive')).includes('4321'));
+  assert.equal((await call(be, '/search?q=libr')).data[0].type, 'card');
+  await call(be, `/cards/${g.id}`, 'DELETE');
+  assert.equal((await call(be, '/trash')).data[0].type, 'card');
+});
+
+test('vault: tipo Codici anche solo con il segreto 2FA', async () => {
+  const { be } = await fresh();
+  assert.equal((await call(be, '/vault', 'POST', { site: 'X', type: 'code' })).status, 400);
+  const c = await call(be, '/vault', 'POST', { site: 'GitHub', type: 'code', totp_secret: 'JBSWY3DPEHPK3PXP' });
+  assert.equal(c.status, 201);
+  assert.equal(c.data.type, 'code');
+  assert.equal(c.data.hasTotp, true);
+});

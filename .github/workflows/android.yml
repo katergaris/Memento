@@ -46,10 +46,12 @@ jobs:
         run: |
           npx cap add android
           npx capacitor-assets generate --android \
-            --iconBackgroundColor '#1E1736' --iconBackgroundColorDark '#1E1736' \
-            --splashBackgroundColor '#F4F1FB' --splashBackgroundColorDark '#1E1736'
+            --iconBackgroundColor '#121318' --iconBackgroundColorDark '#121318' \
+            --splashBackgroundColor '#F2F3EE' --splashBackgroundColorDark '#121318'
           # Server di casa raggiungibile anche in http (rete locale / Tailscale).
           sed -i 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
+          # Fotocamera per leggere QR (codici 2FA) e codici a barre delle carte.
+          sed -i 's#<application#<uses-permission android:name="android.permission.CAMERA" />\n    <application#' android/app/src/main/AndroidManifest.xml
           # Versione: numero progressivo della build e versione di package.json.
           VERSION=$(node -p "require('./package.json').version")
           sed -i "s/versionCode 1$/versionCode ${GITHUB_RUN_NUMBER}/; s/versionName \"1.0\"/versionName \"${VERSION}\"/" android/app/build.gradle

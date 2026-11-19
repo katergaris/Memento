@@ -532,25 +532,29 @@
   // compaiono nella barra laterale, nel foglio "Sezioni" del telefono e nelle
   // griglie di Progetti/Cartelle, cosi' una sezione si riconosce dal colore
   // prima ancora di leggerne il nome (icone piene e colorate, mai grigio minimal).
+  // Icone a tratto sottile (stile delle app attuali) su un quadrato appena
+  // tinto del colore della sezione: si riconoscono dal colore senza le
+  // tessere piene di una volta. Gli stessi simboli servono alla barra in basso.
   const APP_TILES = {
-    today: { color: '#6D4AFF', path: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>' },
-    projects: { color: '#3B5BDB', path: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7.5 9h9M7.5 13h6"/>' },
-    ideas: { color: '#E0A100', path: '<path d="M5 3h10l4 4v14H5z"/><path d="M9 12h6M9 16h4"/>' },
-    vault: { color: '#1E1736', path: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>' },
-    accounts: { color: '#B43FD1', path: '<path d="M4 12a8 8 0 0 1 14-5l2 2M20 12a8 8 0 0 1-14 5l-2-2"/><path d="M20 4v5h-5M4 20v-5h5"/>' },
-    drive: { color: '#F06A2A', path: '<path d="M12 15V4M7 9l5-5 5 5"/><path d="M4 15v5h16v-5"/>' },
-    dossiers: { color: '#2F9E44', path: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>' },
-    reminders: { color: '#E8436B', path: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2.5h6"/>' },
-    calendar: { color: '#3B5BDB', path: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>' },
-    trash: { color: '#6E6690', path: '<path d="M4.5 7h15M9.5 7V4.5h5V7M7 7l1 12.5h8L17 7"/>' },
-    security: { color: '#6E6690', path: '<path d="M12 2.5l7 2.6v5.8c0 4.6-3 8-7 9.6-4-1.6-7-5-7-9.6V5.1z"/><path d="M9 12l2 2 4-4.5"/>' },
-    esci: { color: '#6E6690', path: '<path d="M10 4H5v16h5M14 8l4 4-4 4M9 12h9"/>' },
+    today: { color: '#2F5BFF', path: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>' },
+    projects: { color: '#7048E8', path: '<path d="M4 7h16M4 12h10M4 17h7"/><circle cx="18" cy="16.5" r="3"/>' },
+    ideas: { color: '#C77700', path: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>' },
+    vault: { color: '#121318', path: '<rect x="4.5" y="10.5" width="15" height="10.5" rx="3"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><path d="M12 15v2"/>' },
+    cards: { color: '#D6336C', path: '<rect x="2.5" y="5.5" width="19" height="13" rx="3"/><path d="M6.5 9.5v5M9.5 9.5v5M12 9.5v5M15 9.5v5M17.5 9.5v5"/>' },
+    accounts: { color: '#9C36B5', path: '<path d="M17 2.5 20.5 6 17 9.5"/><path d="M3.5 11.5V10a4 4 0 0 1 4-4h13M7 21.5 3.5 18 7 14.5"/><path d="M20.5 12.5V14a4 4 0 0 1-4 4h-13"/>' },
+    drive: { color: '#E8590C', path: '<path d="M7 18a4.5 4.5 0 1 1 .9-8.9A6 6 0 0 1 19.5 11 3.5 3.5 0 0 1 18 18z"/><path d="M12 15.5v-5M9.8 12.5 12 10.3l2.2 2.2"/>' },
+    dossiers: { color: '#2F9E44', path: '<path d="M3.5 7.5a2 2 0 0 1 2-2h3.6l2 2h7.4a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>' },
+    reminders: { color: '#E03131', path: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.6M9.5 2.5h5"/>' },
+    calendar: { color: '#1C7ED6', path: '<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>' },
+    trash: { color: '#6A6C66', path: '<path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/>' },
+    security: { color: '#6A6C66', path: '<path d="M12 3 19 5.8v5.4c0 4.4-3 7.7-7 9.3-4-1.6-7-4.9-7-9.3V5.8z"/><path d="m9 12 2 2 4-4.5"/>' },
+    esci: { color: '#6A6C66', path: '<path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M9 12h10"/>' },
   };
 
   function appIcon(nome, size = 18) {
     const tile = APP_TILES[nome];
     if (!tile) return '';
-    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" class="app-tile"><rect width="24" height="24" rx="6.5" fill="${tile.color}"/><g transform="translate(4.4 4.4) scale(0.633)" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${tile.path}</g></svg>`;
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" class="app-tile"><rect width="24" height="24" rx="7.5" fill="${tile.color}" fill-opacity="0.11"/><g transform="translate(4.8 4.8) scale(0.6)" fill="none" stroke="${tile.color}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">${tile.path}</g></svg>`;
   }
 
   // Icone vettoriali "pulite" (tratto, non pixel-art): usate solo per il
@@ -582,6 +586,7 @@
     { view: 'projects', label: tr('nav_projects') },
     { view: 'ideas', label: tr('nav_ideas') },
     { view: 'vault', label: tr('nav_vault') },
+    { view: 'cards', label: tr('nav_cards') },
     { view: 'accounts', label: tr('nav_accounts') },
     { view: 'drive', label: tr('nav_drive') },
     { view: 'dossiers', label: tr('nav_dossiers') },
@@ -590,13 +595,42 @@
     { view: 'trash', label: tr('nav_trash') },
     { view: 'security', label: tr('nav_security') },
   ];
+  // Sezioni che si possono spegnere (Sicurezza -> Sezioni visibili): spariscono
+  // da menu, Oggi e ricerca, i dati restano. Preferenza del dispositivo.
+  const HIDEABLE_VIEWS = ['projects', 'cards', 'accounts', 'drive', 'dossiers', 'calendar'];
+  const HIDDEN_KEY = 'memento-hidden-sections';
+  function hiddenViews() {
+    try { return new Set(JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]')); } catch (_) { return new Set(); }
+  }
+  function isHidden(view) { return hiddenViews().has(view); }
+  function visibleSections() { const h = hiddenViews(); return SECTIONS.filter((s) => !h.has(s.view)); }
+  function sectionsBlock() {
+    const block = el(`<div class="section-block"><h3>${esc(tr('section_visible_sections'))}</h3><div class="toggle-list"></div></div>`);
+    const list = block.querySelector('.toggle-list');
+    HIDEABLE_VIEWS.forEach((view) => {
+      const row = el(`<label class="toggle-row">${appIcon(view, 30)}<span></span><input type="checkbox" role="switch" /></label>`);
+      row.querySelector('span').textContent = VIEW_LABELS[view];
+      const input = row.querySelector('input');
+      input.checked = !isHidden(view);
+      input.addEventListener('change', () => {
+        const h = hiddenViews();
+        if (input.checked) h.delete(view); else h.add(view);
+        localStorage.setItem(HIDDEN_KEY, JSON.stringify([...h]));
+        buildNavigation();
+        markActiveNav(currentView);
+      });
+      list.appendChild(row);
+    });
+    return block;
+  }
+
   // Voci di configurazione separate da quelle d'uso quotidiano con un
   // divisore nel menu Avvio, per ridurre le scelte a parita' di sguardo.
   const SETTINGS_VIEWS = new Set(['trash', 'security']);
 
   // Sezione in cui vive ciascun tipo di elemento collegato a una cartella o
   // trovato dalla ricerca globale: usata per aprire l'elemento cliccandolo.
-  const TYPE_TO_VIEW = { document: 'drive', idea: 'ideas', project: 'projects', account: 'accounts', vault: 'vault', reminder: 'reminders', dossier: 'dossiers' };
+  const TYPE_TO_VIEW = { document: 'drive', idea: 'ideas', project: 'projects', account: 'accounts', vault: 'vault', reminder: 'reminders', dossier: 'dossiers', card: 'cards' };
 
   const VIEW_LABELS = Object.fromEntries(SECTIONS.map((s) => [s.view, s.label]));
 
@@ -639,7 +673,7 @@
   function buildNavigation() {
     sidebarNav.innerHTML = '';
     sidebarSecondary.innerHTML = '';
-    SECTIONS.forEach((s) => {
+    visibleSections().forEach((s) => {
       const quiet = SETTINGS_VIEWS.has(s.view);
       (quiet ? sidebarSecondary : sidebarNav).appendChild(navLink(s, quiet ? 'nav-link-quiet' : ''));
     });
@@ -677,7 +711,7 @@
     // Foglio "Sezioni" del telefono: tutte le sezioni come tessere grandi.
     sectionsSheet.innerHTML = '';
     const grid = el('<div class="sheet-grid"></div>');
-    SECTIONS.forEach((s) => {
+    visibleSections().forEach((s) => {
       const a = el(`<a class="sheet-tile" href="#/${s.view}" data-view="${s.view}">${appIcon(s.view, 52)}<span></span></a>`);
       a.querySelector('span').textContent = s.label;
       grid.appendChild(a);
@@ -716,7 +750,7 @@
   // #/vault, #/dossiers/12 -> { view, opts }. Sezione sconosciuta: Oggi.
   function routeFromHash() {
     const [view, id] = location.hash.replace(/^#\/?/, '').split('/');
-    if (!view || !SECTIONS.some((s) => s.view === view)) return { view: 'today', opts: {} };
+    if (!view || !visibleSections().some((s) => s.view === view)) return { view: 'today', opts: {} };
     return { view, opts: id ? { highlight: id } : {} };
   }
   window.addEventListener('hashchange', () => {
@@ -994,7 +1028,7 @@
   const views = {}; // popolate piu' sotto
 
   async function render(view, opts = {}) {
-    if (!views[view]) view = 'today';
+    if (!views[view] || isHidden(view)) view = 'today';
     // Indirizzo della sezione: un passo nuovo nella cronologia, tranne quando
     // ci si arriva proprio dalla cronologia (indietro/avanti) o all'avvio.
     // Una cartella aperta ha il suo indirizzo (#/dossiers/12): "indietro"
@@ -1132,8 +1166,8 @@
   // prossimo passo da spuntare, le note e le cartelle. Ogni promemoria ha le
   // stesse due azioni (Sposta a domani, Fatto), sempre nello stesso posto.
   views.today = async (root) => {
-    const [reminders, projects, accounts, docs, ideas, dossiers] = await Promise.all([
-      api('/reminders'), api('/projects'), api('/accounts'), api('/drive'), api('/ideas'), api('/dossiers'),
+    const [reminders, projects, accounts, docs, ideas, dossiers, cards] = await Promise.all([
+      api('/reminders'), api('/projects'), api('/accounts'), api('/drive'), api('/ideas'), api('/dossiers'), api('/cards').catch(() => []),
     ]);
     root.innerHTML = '';
     const refresh = () => render('today', { fromHash: true });
@@ -1143,11 +1177,11 @@
       const days = calendarDaysFromToday(r.date);
       if (days !== null) deadlines.push({ kind: 'reminder', item: r, days, date: r.date, title: r.label, sub: r.time ? r.time.slice(0, 5) : '' });
     });
-    projects.filter((p) => p.deadline && p.status !== 'fatto').forEach((p) => {
+    if (!isHidden('projects')) projects.filter((p) => p.deadline && p.status !== 'fatto').forEach((p) => {
       const days = calendarDaysFromToday(p.deadline);
       if (days !== null) deadlines.push({ kind: 'project', item: p, days, date: p.deadline, title: p.title, sub: tr('type_project') });
     });
-    accounts.forEach((a) => {
+    if (!isHidden('accounts')) accounts.forEach((a) => {
       const next = nextRenewalDate(a.renewal_day, a.renewal_month, a.billing_frequency) || (a.renewal_date ? a.renewal_date : null);
       if (!next) return;
       const days = calendarDaysFromToday(next);
@@ -1156,16 +1190,21 @@
       const iso = next instanceof Date ? `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}` : String(next);
       deadlines.push({ kind: 'account', item: a, days, date: iso, title: tr('today_renewal_of', { name: a.service }), sub: tr('type_account') + amount });
     });
-    docs.filter((d) => d.expiry_date).forEach((d) => {
+    if (!isHidden('drive')) docs.filter((d) => d.expiry_date).forEach((d) => {
       const days = calendarDaysFromToday(d.expiry_date);
       if (days !== null) deadlines.push({ kind: 'document', item: d, days, date: d.expiry_date, title: d.display_name || d.original_name, sub: tr('type_document') });
+    });
+    if (!isHidden('cards')) cards.filter((c) => c.kind === 'regalo' && c.expiry_date && (c.balance == null || c.balance > 0)).forEach((c) => {
+      const days = calendarDaysFromToday(c.expiry_date);
+      const bal = c.balance != null ? ` · ${fmtMoney(c.balance)}` : '';
+      if (days !== null) deadlines.push({ kind: 'card', item: c, days, date: c.expiry_date, title: c.name, sub: tr('card_kind_gift') + bal });
     });
     const relevant = deadlines
       .filter((x) => x.days <= TODAY_WINDOW_DAYS && (x.days >= 0 || x.kind === 'reminder' || x.kind === 'project'))
       .sort((a, b) => a.days - b.days || String(a.sub).localeCompare(String(b.sub)));
     const focus = relevant.filter((x) => x.days <= 1);
     const later = relevant.filter((x) => x.days > 1);
-    const KIND_VIEW = { reminder: 'reminders', project: 'projects', account: 'accounts', document: 'drive' };
+    const KIND_VIEW = { reminder: 'reminders', project: 'projects', account: 'accounts', document: 'drive', card: 'cards' };
     const open = (x) => render(KIND_VIEW[x.kind], { highlight: x.item.id });
 
     async function snooze(r) {
@@ -1251,7 +1290,7 @@
     board.appendChild(upTile);
 
     // --- Progetti: avanzamento a tacche e prossimo passo spuntabile ---
-    const active = projects.filter((p) => p.status === 'in_corso')
+    const active = isHidden('projects') ? [] : projects.filter((p) => p.status === 'in_corso')
       .sort((a, b) => (a.deadline || '9999').localeCompare(b.deadline || '9999'));
     active.slice(0, 4).forEach((p) => {
       const card = el(`
@@ -1313,7 +1352,7 @@
     });
 
     // --- Cartelle ---
-    if (dossiers.length) {
+    if (dossiers.length && !isHidden('dossiers')) {
       const dt = el(`<section class="tile tile-list tile-wide"><div class="tile-head"><h2></h2><a href="#/dossiers"></a></div><div class="chip-row"></div></section>`);
       dt.querySelector('h2').textContent = tr('nav_dossiers');
       dt.querySelector('.tile-head a').textContent = tr('today_all_n', { n: dossiers.length });
@@ -1890,7 +1929,102 @@
     return Array.from(bytes, (n) => chars[n % chars.length]).join('');
   }
 
-  function vaultModal(existing) {
+  // ---------------- Codici a barre e QR ----------------
+  // Le librerie (public/vendor) si caricano solo quando servono.
+  const loadedScripts = {};
+  function loadScript(src) {
+    if (!loadedScripts[src]) {
+      loadedScripts[src] = new Promise((resolve, reject) => {
+        const tag = document.createElement('script');
+        tag.src = src; tag.onload = resolve; tag.onerror = () => reject(new Error(tr('err_unexpected')));
+        document.head.appendChild(tag);
+      });
+    }
+    return loadedScripts[src];
+  }
+  const ZXING_FORMATS = { QR_CODE: 'QR', CODE_128: 'CODE128', EAN_13: 'EAN13', EAN_8: 'EAN8', UPC_A: 'UPC', CODE_39: 'CODE39', ITF: 'ITF' };
+
+  // Lettura con la fotocamera (o da una foto): risolve con { text, format }
+  // oppure null se si chiude la finestra.
+  function scanCode() {
+    return new Promise((resolve) => {
+      let reader = null, done = false;
+      const wrap = el(`<div class="scanner">
+        <div class="scanner-view"><video playsinline muted></video><span class="scanner-frame"></span></div>
+        <p class="scanner-msg"></p>
+        <div class="form-actions"><label class="btn btn-ghost">${esc(tr('scan_from_photo'))}<input type="file" accept="image/*" class="hidden" /></label><button type="button" class="btn" data-cancel>${esc(tr('btn_cancel'))}</button></div>
+      </div>`);
+      const video = wrap.querySelector('video');
+      const msg = wrap.querySelector('.scanner-msg');
+      const finish = (value) => {
+        if (done) return;
+        done = true;
+        try { if (reader) reader.reset(); } catch (_) { /* gia' fermo */ }
+        const stream = video.srcObject;
+        if (stream) stream.getTracks().forEach((t) => t.stop());
+        closeModal();
+        resolve(value);
+      };
+      const found = (result) => finish({ text: result.getText(), format: ZXING_FORMATS[window.ZXing.BarcodeFormat[result.getBarcodeFormat()]] || 'CODE128' });
+      wrap.querySelector('[data-cancel]').addEventListener('click', () => finish(null));
+      openModal(tr('scan_title'), wrap);
+      const modalEl = wrap.closest('.modal-backdrop');
+      if (modalEl) {
+        modalEl.querySelector('.modal-close').addEventListener('click', () => finish(null));
+        modalEl.addEventListener('click', (e) => { if (e.target === modalEl) finish(null); });
+      }
+      loadScript('/vendor/zxing.min.js').then(() => {
+        reader = new window.ZXing.BrowserMultiFormatReader();
+        wrap.querySelector('input[type=file]').addEventListener('change', async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          try { found(await reader.decodeFromImageUrl(URL.createObjectURL(file))); } catch (_) { msg.textContent = tr('scan_not_found'); }
+        });
+        reader.decodeFromConstraints({ video: { facingMode: 'environment' } }, video, (result) => { if (result) found(result); })
+          .catch(() => { msg.textContent = tr('scan_no_camera'); });
+      }).catch((err) => { msg.textContent = err.message; });
+    });
+  }
+
+  // Disegna il codice di una carta (SVG su fondo bianco, come alla cassa).
+  async function renderCardCode(target, card) {
+    target.innerHTML = '';
+    const number = String(card.number || '');
+    if (!number || card.format === 'NONE') return false;
+    if (card.format === 'QR') {
+      await loadScript('/vendor/qrcode.js');
+      const qr = window.qrcode(0, 'M');
+      qr.addData(number);
+      qr.make();
+      target.innerHTML = qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
+      return true;
+    }
+    await loadScript('/vendor/jsbarcode.min.js');
+    const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    target.appendChild(svgEl);
+    try {
+      window.JsBarcode(svgEl, number, { format: card.format, displayValue: false, height: 90, margin: 8, width: 2.4 });
+    } catch (_) {
+      // Numero non valido per quel formato (es. EAN con cifra di controllo
+      // sbagliata): meglio un Code 128 leggibile che niente.
+      window.JsBarcode(svgEl, number, { format: 'CODE128', displayValue: false, height: 90, margin: 8, width: 2.2 });
+    }
+    return true;
+  }
+
+  // otpauth://totp/Banca:io@x.it?secret=ABC&issuer=Banca -> { secret, issuer, account }
+  function parseOtpauth(text) {
+    const m = String(text || '').match(/^otpauth:\/\/totp\/([^?]*)\?(.*)$/i);
+    if (!m) return null;
+    const params = new URLSearchParams(m[2]);
+    const label = decodeURIComponent(m[1] || '');
+    const [labelIssuer, account] = label.includes(':') ? label.split(/:(.*)/s) : ['', label];
+    const secret = params.get('secret');
+    if (!secret) return null;
+    return { secret, issuer: params.get('issuer') || labelIssuer || '', account: (account || '').trim() };
+  }
+
+  function vaultModal(existing, presetType) {
     const form = el(`
       <form class="modal-body" style="padding:0">
         <div class="form-row"><label>${esc(tr('field_title'))}</label><input type="text" name="site" required /></div>
@@ -1899,6 +2033,7 @@
             <option value="password">${esc(tr('vault_type_password'))}</option>
             <option value="note">${esc(tr('vault_type_note'))}</option>
             <option value="card">${esc(tr('vault_type_card'))}</option>
+            <option value="code">${esc(tr('vault_type_code'))}</option>
           </select>
         </div>
 
@@ -1912,16 +2047,25 @@
             </div>
           </div>
           <div class="form-row"><label>${esc(tr('field_url'))}</label><input type="text" name="url" /></div>
+        </div>
+
+        <div data-type-fields="password code">
           <div class="form-row">
             <label>${esc(tr('vault_totp_code'))}${existing ? esc(tr('leave_blank_m')) : esc(tr('totp_optional'))}</label>
-            <input type="text" name="totp_secret" placeholder="${esc(tr('vault_totp_placeholder'))}" />
-            <span class="field-hint">${esc(tr('vault_totp_hint'))}</span>
+            <div style="display:flex;gap:6px">
+              <input type="text" name="totp_secret" placeholder="${esc(tr('vault_totp_placeholder'))}" style="flex:1" />
+              <button type="button" class="btn btn-sm" data-scan-totp>${esc(tr('btn_scan_qr'))}</button>
+            </div>
           </div>
           <div class="form-row" id="remove-totp-row" style="display:none">
             <label style="flex-direction:row;align-items:center;gap:6px">
               <input type="checkbox" name="remove_totp" style="width:auto" /> ${esc(tr('vault_remove_totp'))}
             </label>
           </div>
+        </div>
+
+        <div data-type-fields="code">
+          <div class="form-row"><label>${esc(tr('field_codes'))}${existing ? esc(tr('leave_blank_m')) : ''}</label><textarea name="codes" rows="4" placeholder="${esc(tr('field_codes_placeholder'))}"></textarea></div>
         </div>
 
         <div data-type-fields="note">
@@ -1948,13 +2092,31 @@
 
     function syncTypeFields() {
       form.querySelectorAll('[data-type-fields]').forEach((group) => {
-        group.classList.toggle('hidden', group.dataset.typeFields !== form.type.value);
+        group.classList.toggle('hidden', !group.dataset.typeFields.split(' ').includes(form.type.value));
       });
     }
     form.type.addEventListener('change', syncTypeFields);
     form.querySelector('#gen-password').addEventListener('click', () => {
       form.password.value = generatePassword();
     });
+    form.querySelector('[data-scan-totp]').addEventListener('click', async () => {
+      // La lettura apre la sua finestra: il modulo si tiene da parte e si
+      // rimette al suo posto dopo.
+      const backdrop = form.closest('.modal-backdrop');
+      if (backdrop) backdrop.remove();
+      const result = await scanCode();
+      if (backdrop) { document.body.appendChild(backdrop); activeModal = backdrop; }
+      if (!result) return;
+      const otp = parseOtpauth(result.text);
+      if (!otp) { toast(tr('scan_not_totp')); return; }
+      form.totp_secret.value = otp.secret;
+      if (!form.site.value) form.site.value = otp.issuer || otp.account;
+      if (form.username && !form.username.value && otp.account) form.username.value = otp.account;
+    });
+    if (presetType) {
+      form.type.value = presetType;
+      form.type.closest('.form-row').classList.add('hidden');
+    }
 
     if (existing) {
       form.site.value = existing.site;
@@ -1973,6 +2135,7 @@
       // e cambiare tipo a quel punto scambierebbe il significato del segreto
       // gia' salvato (es. una password che diventa "numero di carta").
       form.type.disabled = true;
+      form.type.closest('.form-row').classList.add('hidden');
     }
     syncTypeFields();
     return form;
@@ -1985,12 +2148,11 @@
     const type = form.type.value;
     const tags = parseTags(form);
     const payload = { site: form.site.value, type, notes: form.notes.value, tags };
-    const primary = type === 'password' ? form.password.value : type === 'note' ? form.secure_note.value : form.card_number.value;
+    const primary = type === 'password' ? form.password.value : type === 'note' ? form.secure_note.value : type === 'code' ? form.codes.value : form.card_number.value;
     if (primary || !existing) payload.password = primary;
 
-    if (type === 'password') {
-      payload.username = form.username.value;
-      payload.url = form.url.value;
+    if (type === 'password' || type === 'code') {
+      if (type === 'password') { payload.username = form.username.value; payload.url = form.url.value; }
       if (form.remove_totp && form.remove_totp.checked) payload.totp_secret = '-';
       else if (form.totp_secret.value.trim()) payload.totp_secret = form.totp_secret.value.trim();
     } else if (type === 'card') {
@@ -2007,6 +2169,7 @@
     if (type === 'password' && !form.password.value) return tr('err_password_required');
     if (type === 'note' && !form.secure_note.value) return tr('err_note_content_required');
     if (type === 'card' && !form.card_number.value) return tr('err_card_number_required');
+    if (type === 'code' && !form.codes.value && !form.totp_secret.value.trim()) return tr('err_code_required');
     return null;
   }
 
@@ -2039,8 +2202,9 @@
       }
     });
 
-    root.querySelector('#new-vault').addEventListener('click', () => {
-      const form = vaultModal();
+    // "Nuova voce": prima si sceglie il tipo, poi si apre il modulo giusto.
+    const newEntry = (type) => {
+      const form = vaultModal(null, type);
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const error = vaultPrimaryFieldError(form, null);
@@ -2050,6 +2214,23 @@
       });
       form.querySelector('[data-cancel]').addEventListener('click', closeModal);
       openModal(tr('modal_new_vault_entry'), form);
+    };
+    const VAULT_KINDS = [
+      { type: 'password', label: tr('vault_kind_account'), sub: tr('vault_kind_account_sub'), icon: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/>' },
+      { type: 'note', label: tr('vault_kind_note'), sub: tr('vault_kind_note_sub'), icon: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>' },
+      { type: 'code', label: tr('vault_kind_code'), sub: tr('vault_kind_code_sub'), icon: '<rect x="3" y="6" width="18" height="12" rx="3"/><path d="M7 12h.01M10.5 12h.01M14 12h.01M17.5 12h.01"/>' },
+      { type: 'card', label: tr('vault_kind_card'), sub: tr('vault_kind_card_sub'), icon: '<rect x="2.5" y="5.5" width="19" height="13" rx="3"/><path d="M2.5 10h19M6 14.5h4"/>' },
+    ];
+    root.querySelector('#new-vault').addEventListener('click', () => {
+      const wrap = el('<div class="kind-list"></div>');
+      VAULT_KINDS.forEach((k) => {
+        const b = el(`<button type="button" class="kind-btn"><span class="kind-ic">${strokeIcon(k.icon)}</span><span class="kind-text"><b></b><small></small></span></button>`);
+        b.querySelector('b').textContent = k.label;
+        b.querySelector('small').textContent = k.sub;
+        b.addEventListener('click', () => newEntry(k.type));
+        wrap.appendChild(b);
+      });
+      openModal(tr('modal_new_vault_entry'), wrap);
     });
 
     if (!entries.length) {
@@ -2057,15 +2238,15 @@
       return;
     }
 
-    const TYPE_LABEL = { password: tr('vault_type_password'), note: tr('vault_type_note'), card: tr('vault_type_card') };
+    const TYPE_LABEL = { password: tr('vault_kind_account'), note: tr('vault_kind_note'), card: tr('vault_kind_card'), code: tr('vault_kind_code') };
     // Schede in alto: Codici mostra i codici 2FA gia' in chiaro (si sceglie
     // la scheda apposta), le altre filtrano per tipo.
     const TABS = [
       { key: 'all', label: tr('vault_tab_all'), test: () => true },
-      { key: 'codes', label: tr('vault_tab_codes'), test: (x) => x.hasTotp },
-      { key: 'password', label: tr('vault_tab_passwords'), test: (x) => x.type === 'password' },
-      { key: 'note', label: tr('vault_tab_notes'), test: (x) => x.type === 'note' },
-      { key: 'card', label: tr('vault_tab_cards'), test: (x) => x.type === 'card' },
+      { key: 'password', label: tr('vault_kind_account'), test: (x) => x.type === 'password' },
+      { key: 'note', label: tr('vault_kind_note'), test: (x) => x.type === 'note' },
+      { key: 'codes', label: tr('vault_kind_code'), test: (x) => x.type === 'code' || x.hasTotp },
+      { key: 'card', label: tr('vault_kind_card'), test: (x) => x.type === 'card' },
     ].filter((t) => t.key === 'all' || entries.some(t.test));
     let tab = sessionStorage.getItem('memento-vault-tab') || 'all';
     if (!TABS.some((t) => t.key === tab)) tab = 'all';
@@ -2075,7 +2256,7 @@
     root.appendChild(seg);
     root.appendChild(list);
 
-    const LOGO_TINTS = [['#EDE7FF', '#5233E0'], ['#FFE1E7', '#B4123A'], ['#FFF1BF', '#7A5A00'], ['#DCE6FF', '#2B44B8'], ['#E3F5E1', '#2B7A3D'], ['#F3E3FA', '#8A2BA8']];
+    const LOGO_TINTS = [['#E3E9FF', '#2448E0'], ['#FFE3DE', '#B4231A'], ['#EEFBC6', '#4B5E00'], ['#F3E8FF', '#7048E8'], ['#FFF0D6', '#A85A00'], ['#FCE4EE', '#B0285A']];
     const tintFor = (name) => LOGO_TINTS[[...String(name)].reduce((a, c) => a + c.charCodeAt(0), 0) % LOGO_TINTS.length];
 
     async function revealFull(entry) {
@@ -2157,6 +2338,8 @@
       if (entry.username) wrap.appendChild(field(tr('col_username'), entry.username));
       if (entry.type === 'note') {
         wrap.appendChild(field(tr('vault_type_note'), async () => (await full()).password, { secret: true }));
+      } else if (entry.type === 'code') {
+        wrap.appendChild(field(tr('field_codes'), async () => (await full()).password, { secret: true, mono: true }));
       } else {
         wrap.appendChild(field(entry.type === 'card' ? tr('vault_card_number') : tr('col_password'), async () => (await full()).password, { secret: true, mono: true }));
       }
@@ -2222,7 +2405,7 @@
         card.querySelector('b').textContent = entry.site;
         card.querySelector('small').textContent = entry.username || TYPE_LABEL[entry.type] || '';
         const right = card.querySelector('.vright');
-        if (entry.hasTotp && tab === 'codes') {
+        if (entry.hasTotp && (tab === 'codes' || entry.type === 'code')) {
           const box = el('<span class="otp-box"><span class="otp-code">…</span><span class="otp-timer"><i></i></span></span>');
           right.appendChild(box);
           box.addEventListener('click', (e) => { e.stopPropagation(); copyText(box.querySelector('.otp-code').textContent.replace(/\s/g, '')); });
@@ -2245,6 +2428,185 @@
     if (highlightId) {
       const target = list.querySelector('.card-highlight');
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  // ==================================================================
+  // CARTE (fedelta' e regalo, come un portafoglio)
+  // ==================================================================
+  const CARD_COLORS = ['#121318', '#2F5BFF', '#E8590C', '#D6336C', '#2F9E44', '#7048E8', '#C77700', '#1C7ED6'];
+  const CARD_FORMATS = [
+    ['CODE128', 'Code 128'], ['EAN13', 'EAN-13'], ['QR', 'QR'], ['EAN8', 'EAN-8'], ['UPC', 'UPC-A'], ['CODE39', 'Code 39'], ['ITF', 'ITF'], ['NONE', tr('card_format_none')],
+  ];
+  const cardColor = (c) => c.color || CARD_COLORS[[...String(c.name)].reduce((a, ch) => a + ch.charCodeAt(0), 0) % CARD_COLORS.length];
+  const fmtBalance = (c) => (c.balance == null ? '' : fmtMoney(c.balance));
+
+  function cardModal(existing) {
+    const form = el(`
+      <form class="modal-body" style="padding:0">
+        <div class="seg seg-form" role="radiogroup">
+          <button type="button" data-kind="fedelta">${esc(tr('card_kind_loyalty'))}</button>
+          <button type="button" data-kind="regalo">${esc(tr('card_kind_gift'))}</button>
+        </div>
+        <div class="form-row"><label>${esc(tr('card_field_name'))}</label><input type="text" name="name" required /></div>
+        <div class="form-row">
+          <label>${esc(tr('card_field_number'))}</label>
+          <div style="display:flex;gap:6px"><input type="text" name="number" style="flex:1" autocomplete="off" /><button type="button" class="btn btn-sm" data-scan>${esc(tr('btn_scan'))}</button></div>
+        </div>
+        <div class="form-row"><label>${esc(tr('card_field_format'))}</label><select name="format">${CARD_FORMATS.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select></div>
+        <div data-gift>
+          <div style="display:flex;gap:10px">
+            <div class="form-row" style="flex:1"><label>${esc(tr('card_field_balance'))}</label><input type="text" name="balance" inputmode="decimal" /></div>
+            <div class="form-row" style="flex:1"><label>${esc(tr('card_field_expiry'))}</label><input type="date" name="expiry_date" /></div>
+          </div>
+          <div class="form-row"><label>${esc(tr('card_field_pin'))}${existing && existing.hasPin ? esc(tr('leave_blank_m')) : ''}</label><input type="text" name="pin" inputmode="numeric" autocomplete="off" /></div>
+        </div>
+        <div class="form-row"><label>${esc(tr('card_field_color'))}</label><div class="swatches">${CARD_COLORS.map((c) => `<button type="button" class="swatch" data-color="${c}" style="background:${c}" aria-label="${c}"></button>`).join('')}</div></div>
+        <div class="form-row"><label>${esc(tr('field_notes'))}</label><textarea name="notes" rows="2"></textarea></div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" data-cancel>${esc(tr('btn_cancel'))}</button>
+          <button type="submit" class="btn btn-primary">${esc(tr('btn_save'))}</button>
+        </div>
+      </form>
+    `);
+    let kind = existing ? existing.kind : 'fedelta';
+    let color = existing ? existing.color : '';
+    const syncKind = () => {
+      form.querySelectorAll('[data-kind]').forEach((b) => b.classList.toggle('on', b.dataset.kind === kind));
+      form.querySelector('[data-gift]').classList.toggle('hidden', kind !== 'regalo');
+    };
+    const syncColor = () => form.querySelectorAll('.swatch').forEach((b) => b.classList.toggle('on', b.dataset.color === color));
+    form.querySelectorAll('[data-kind]').forEach((b) => b.addEventListener('click', () => { kind = b.dataset.kind; syncKind(); }));
+    form.querySelectorAll('.swatch').forEach((b) => b.addEventListener('click', () => { color = b.dataset.color; syncColor(); }));
+    form.querySelector('[data-scan]').addEventListener('click', async () => {
+      const backdrop = form.closest('.modal-backdrop');
+      if (backdrop) backdrop.remove();
+      const result = await scanCode();
+      if (backdrop) { document.body.appendChild(backdrop); activeModal = backdrop; }
+      if (!result) return;
+      form.number.value = result.text;
+      form.format.value = result.format;
+    });
+    if (existing) {
+      form.name.value = existing.name;
+      form.number.value = existing.number || '';
+      form.format.value = existing.format || 'CODE128';
+      form.balance.value = existing.balance == null ? '' : String(existing.balance).replace('.', ',');
+      form.expiry_date.value = existing.expiry_date ? existing.expiry_date.slice(0, 10) : '';
+      form.notes.value = existing.notes || '';
+    }
+    syncKind(); syncColor();
+    form.collect = () => {
+      const body = { kind, name: form.name.value.trim(), number: form.number.value.trim(), format: form.format.value, color, notes: form.notes.value };
+      if (kind === 'regalo') {
+        body.balance = form.balance.value.trim();
+        body.expiry_date = form.expiry_date.value || null;
+        if (form.pin.value.trim()) body.pin = form.pin.value.trim();
+      }
+      return body;
+    };
+    return form;
+  }
+
+  views.cards = async (root, opts = {}) => {
+    const highlightId = opts.highlight ? String(opts.highlight) : null;
+    const cards = await api('/cards');
+    root.innerHTML = '';
+    root.appendChild(el(`<div class="view-header"><h2>${esc(tr('nav_cards'))}</h2><div class="view-header-actions"><button class="btn btn-primary" id="new-card">${esc(tr('btn_new_card'))}</button></div></div>`));
+
+    const edit = (existing) => {
+      const form = cardModal(existing);
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const body = form.collect();
+        const saved = existing
+          ? await api(`/cards/${existing.id}`, { method: 'PUT', body: JSON.stringify(body) })
+          : await api('/cards', { method: 'POST', body: JSON.stringify(body) });
+        closeModal(); toast(tr('toast_card_saved'));
+        render('cards', { highlight: saved.id, fromHash: true });
+      });
+      form.querySelector('[data-cancel]').addEventListener('click', closeModal);
+      openModal(existing ? tr('modal_edit_card') : tr('modal_new_card'), form);
+    };
+    root.querySelector('#new-card').addEventListener('click', () => edit(null));
+
+    // Carta aperta: codice grande su bianco, numero leggibile, azioni.
+    async function openCard(card) {
+      const wrap = el(`
+        <div class="card-open">
+          <div class="card-code-box"><div class="card-code"></div><p class="card-number"></p></div>
+          <div class="card-facts"></div>
+          <div class="form-actions"><span class="form-actions-side"><button type="button" class="btn btn-ghost btn-danger" data-del>${esc(tr('btn_delete'))}</button></span><button type="button" class="btn" data-edit>${esc(tr('btn_edit'))}</button></div>
+        </div>
+      `);
+      const num = wrap.querySelector('.card-number');
+      num.textContent = card.number || '—';
+      num.addEventListener('click', async () => { try { await navigator.clipboard.writeText(card.number); toast(tr('toast_copied')); } catch (_) { /* niente appunti */ } });
+      const facts = wrap.querySelector('.card-facts');
+      const fact = (label, value, cls = '') => { const r = el(`<div class="vd-row"><span class="vd-label"></span><span class="vd-value ${cls}"></span><span class="vd-acts"></span></div>`); r.querySelector('.vd-label').textContent = label; r.querySelector('.vd-value').textContent = value; facts.appendChild(r); return r; };
+      if (card.kind === 'regalo') {
+        const bal = fact(tr('card_field_balance'), fmtBalance(card) || '—', 'card-balance');
+        const spend = el(`<button type="button" class="btn btn-sm">${esc(tr('card_spend'))}</button>`);
+        spend.addEventListener('click', async () => {
+          const raw = prompt(tr('card_spend_prompt'));
+          if (!raw) return;
+          const updated = await api(`/cards/${card.id}/spend`, { method: 'POST', body: JSON.stringify({ amount: raw }) });
+          card.balance = updated.balance;
+          bal.querySelector('.vd-value').textContent = fmtBalance(updated);
+          toast(tr('toast_card_spent'));
+        });
+        bal.querySelector('.vd-acts').appendChild(spend);
+        if (card.expiry_date) {
+          const days = calendarDaysFromToday(card.expiry_date);
+          fact(tr('card_field_expiry'), `${card.expiry_date.slice(0, 10).split('-').reverse().join('/')} · ${relativeDayLabel(days)}`);
+        }
+        if (card.hasPin) {
+          const pinRow = fact(tr('card_field_pin'), '••••', 'mono');
+          const eye = el(`<button type="button" class="sq-btn" title="${esc(tr('title_show'))}">${iconaLinea('occhio')}</button>`);
+          eye.addEventListener('click', async () => { pinRow.querySelector('.vd-value').textContent = (await api(`/cards/${card.id}/pin`)).pin || '—'; });
+          pinRow.querySelector('.vd-acts').appendChild(eye);
+        }
+      }
+      if (card.notes) fact(tr('field_notes'), card.notes);
+      wrap.querySelector('[data-edit]').addEventListener('click', () => { closeModal(); edit(card); });
+      wrap.querySelector('[data-del]').addEventListener('click', async () => {
+        if (!confirm(tr('confirm_delete_card'))) return;
+        await api(`/cards/${card.id}`, { method: 'DELETE' });
+        closeModal(); toast(tr('toast_card_deleted')); render('cards', { fromHash: true });
+      });
+      openModal(card.name, wrap);
+      const drawn = await renderCardCode(wrap.querySelector('.card-code'), card).catch(() => false);
+      if (!drawn) wrap.querySelector('.card-code').classList.add('hidden');
+    }
+
+    if (!cards.length) {
+      root.appendChild(el(`<div class="empty-state">${esc(tr('cards_empty'))}</div>`));
+      return;
+    }
+    const groups = [['fedelta', tr('card_kind_loyalty_pl')], ['regalo', tr('card_kind_gift_pl')]];
+    groups.forEach(([kind, title]) => {
+      const list = cards.filter((c) => c.kind === kind).sort((a, b) => a.name.localeCompare(b.name));
+      if (!list.length) return;
+      root.appendChild(el(`<h3 class="group-title">${esc(title)}</h3>`));
+      const grid = el('<div class="wallet-grid"></div>');
+      list.forEach((c) => {
+        const tile = el(`<button type="button" class="wallet-card"><span class="wc-initial"></span><span class="wc-name"></span><span class="wc-meta"></span></button>`);
+        tile.style.setProperty('--card', cardColor(c));
+        tile.querySelector('.wc-initial').textContent = c.name.trim().charAt(0).toUpperCase();
+        tile.querySelector('.wc-name').textContent = c.name;
+        const meta = [];
+        if (c.kind === 'regalo' && c.balance != null) meta.push(fmtBalance(c));
+        if (c.kind === 'regalo' && c.expiry_date) meta.push(relativeDayLabel(calendarDaysFromToday(c.expiry_date)));
+        tile.querySelector('.wc-meta').textContent = meta.join(' · ');
+        tile.addEventListener('click', () => openCard(c));
+        if (highlightId && String(c.id) === highlightId) tile.classList.add('card-highlight');
+        grid.appendChild(tile);
+      });
+      root.appendChild(grid);
+    });
+    if (highlightId && opts.fromHash === undefined) {
+      const c = cards.find((x) => String(x.id) === highlightId);
+      if (c) openCard(c);
     }
   };
 
@@ -2969,7 +3331,7 @@
   // ==================================================================
   // CESTINO
   // ==================================================================
-  const TYPE_LABELS = { idea: tr('type_idea'), project: tr('type_project'), vault: tr('type_vault'), account: tr('type_account'), document: tr('type_document'), dossier: tr('type_dossier'), reminder: tr('type_reminder') };
+  const TYPE_LABELS = { idea: tr('type_idea'), project: tr('type_project'), vault: tr('type_vault'), account: tr('type_account'), document: tr('type_document'), dossier: tr('type_dossier'), reminder: tr('type_reminder'), card: tr('type_card') };
 
   views.trash = async (root) => {
     const items = await api('/trash');
@@ -3120,6 +3482,7 @@
     const info = await api('/security');
     root.innerHTML = '';
     root.appendChild(el(`<div class="view-header"><h2>${esc(tr('nav_security_title'))}</h2></div>`));
+    root.appendChild(sectionsBlock());
 
     const block = el(`<div class="section-block"><h3>${esc(tr('section_2fa'))}</h3></div>`);
 
@@ -3314,7 +3677,7 @@
       if (!results.length) {
         searchResults.appendChild(el(`<div class="search-result-item">${esc(tr('no_results'))}</div>`));
       } else {
-        results.slice(0, 20).forEach((r) => {
+        results.filter((r) => !isHidden(TYPE_TO_VIEW[r.type])).slice(0, 20).forEach((r) => {
           const item = el(`<div class="search-result-item"><span>${esc(r.label)}</span><span class="search-result-tag">${esc(TYPE_LABELS[r.type] || r.type)}</span></div>`);
           const activate = () => {
             searchResults.classList.add('hidden');
@@ -3381,7 +3744,7 @@
     e.preventDefault();
     window.MementoBackend.download(a.getAttribute('href')).catch((err) => toast(err.message));
   });
-  window.MementoUI = { el, esc, tr, toast, openModal, closeModal, render };
+  window.MementoUI = { el, esc, tr, toast, openModal, closeModal, render, sectionsBlock };
 
   // Molti handler fanno "await api(...)" senza try/catch: senza questa rete di
   // sicurezza un errore restava solo in console e per l'utente non succedeva nulla.

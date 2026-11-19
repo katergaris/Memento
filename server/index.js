@@ -173,6 +173,7 @@ app.use('/api/accounts', auth.requireAuth, require('./routes/accounts'));
 app.use('/api/drive', auth.requireAuth, require('./routes/drive'));
 app.use('/api/dossiers', auth.requireAuth, require('./routes/dossiers'));
 app.use('/api/reminders', auth.requireAuth, require('./routes/reminders'));
+app.use('/api/cards', auth.requireAuth, require('./routes/cards'));
 app.use('/api/push', auth.requireAuth, require('./routes/push'));
 app.use('/api/search', auth.requireAuth, require('./routes/search'));
 app.use('/api/trash', auth.requireAuth, require('./routes/trash'));

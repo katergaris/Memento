@@ -1,45 +1,48 @@
 :root {
-  /* Palette "Bacheca" (direzione B, 2026-11): fondo lilla chiaro, inchiostro
-     viola scuro, viola per le azioni, giallo per "oggi", rosa per il ritardo.
-     Le variabili sono le stesse che ogni vista usava gia': cambiando solo il
-     valore, il contenuto di ogni sezione eredita il nuovo aspetto. */
-  --bg: #F4F1FB;
+  /* Palette "Inchiostro e lime" (Bacheca, 2026-11): fondo carta chiaro,
+     inchiostro quasi nero per i blocchi scuri, blu elettrico per le azioni,
+     lime per "oggi", corallo per il ritardo. Le variabili sono le stesse che
+     ogni vista usava gia': cambiando il valore cambia tutta l'interfaccia. */
+  --bg: #F2F3EE;
   --bg-2: #FFFFFF;
   --surface: #FFFFFF;
-  --surface-2: #F4F1FB;
-  --surface-hover: #EEEAF8;
-  --border: #DCD5EE;
-  --border-soft: #E8E3F5;
-  --ink: #1E1736;
-  --ink-2: #2C2350;
-  --accent: #5233E0;
-  --accent-soft: #6D4AFF;
-  --accent-dim: #8F78FF;
-  --accent-bg: #EDE7FF;
-  --accent-bg-strong: #DCD2FF;
-  --brand-blue: #3B5BDB;
-  --brand-yellow: #FFD34D;
-  --brand-pink: #FF8FA3;
-  --brand-lilac: #C8B8FF;
-  --text: #1E1736;
-  --text-muted: #5E5680;
-  --text-faint: #6E6690;
-  --moss: #2B7A3D;
-  --danger-soft: #B4123A;
-  --danger-bg: #FFE1E7;
-  /* Scadenze: passata = rosa (mai rosso "punitivo"), entro 3 giorni = giallo,
-     entro due settimane = lilla, lontana = neutro. */
-  --due-past-bg: #FFE1E7;  --due-past-text: #A3123A;
-  --due-soon-bg: #FFF1BF;  --due-soon-text: #7A5A00;
-  --due-near-bg: #EDE7FF;  --due-near-text: #4A2FD0;
-  --due-far-bg: #F4F1FB;   --due-far-text: #5E5680;
+  --surface-2: #F2F3EE;
+  --surface-hover: #E9EBE3;
+  --border: #D9DCD2;
+  --border-soft: #E5E7DF;
+  --ink: #121318;
+  --ink-2: #24262E;
+  --ink-dim: #8A8D97;
+  --accent: #2448E0;
+  --accent-soft: #2F5BFF;
+  --accent-dim: #6F8CFF;
+  --accent-bg: #E3E9FF;
+  --accent-bg-strong: #C9D6FF;
+  --brand-blue: #2F5BFF;
+  --brand-yellow: #C6F432;
+  --brand-lime: #C6F432;
+  --brand-pink: #FF8A7A;
+  --brand-lilac: #C9D6FF;
+  --track: #E2E4DC;
+  --text: #121318;
+  --text-muted: #5C5F58;
+  --text-faint: #6A6C66;
+  --moss: #3F6B12;
+  --danger-soft: #B4231A;
+  --danger-bg: #FFE3DE;
+  /* Scadenze: passata = corallo (mai rosso "punitivo"), entro 3 giorni =
+     lime, entro due settimane = blu tenue, lontana = neutro. */
+  --due-past-bg: #FFE3DE;  --due-past-text: #A32A17;
+  --due-soon-bg: #EEFBC6;  --due-soon-text: #4B5E00;
+  --due-near-bg: #E3E9FF;  --due-near-text: #2448E0;
+  --due-far-bg: #F2F3EE;   --due-far-text: #5C5F58;
   --radius-sm: 12px;
   --radius: 18px;
   --radius-lg: 24px;
   --font-ui: 'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-body: 'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --focus-ring: 0 0 0 3px rgba(109, 74, 255, 0.22);
+  --focus-ring: 0 0 0 3px rgba(47, 91, 255, 0.22);
 
   /* Nomi ereditati dal tema Windows 95 (branch "classico"), ancora usati da
      barre strumenti, pulsanti e intestazioni delle viste: qui diventano
@@ -47,19 +50,19 @@
   --win-face: #FFFFFF;
   --bevel-hi: #FFFFFF;
   --bevel-hi2: #FFFFFF;
-  --bevel-lo: #DCD5EE;
-  --bevel-lo2: #DCD5EE;
-  --titlebar-active: #1E1736;
-  --titlebar-active-2: #1E1736;
-  --titlebar-inactive: #6E6690;
+  --bevel-lo: #D9DCD2;
+  --bevel-lo2: #D9DCD2;
+  --titlebar-active: #121318;
+  --titlebar-active-2: #121318;
+  --titlebar-inactive: #6A6C66;
   --titlebar-text: #FFFFFF;
-  --sel-bg: #EDE7FF;
-  --sel-text: #4A2FD0;
+  --sel-bg: #E3E9FF;
+  --sel-text: #2448E0;
   --shadow-raised: 0 0 0 1px var(--border-soft);
   --shadow-sunken: none;
-  --shadow-frame: 0 18px 48px rgba(30, 23, 54, 0.20);
+  --shadow-frame: 0 18px 48px rgba(18, 19, 24, 0.20);
   --shadow-frame-drop: 0 0 0 transparent;
-  --shadow-card: 0 1px 2px rgba(30, 23, 54, 0.04);
+  --shadow-card: 0 1px 2px rgba(18, 19, 24, 0.04);
   --chrome-blur: none;
 
   --sidebar-w: 248px;
@@ -310,7 +313,7 @@ input:focus, textarea:focus, select:focus {
   height: 46px; padding: 0 18px; border-radius: 14px; box-shadow: none;
   background: var(--brand-yellow); color: var(--text); font-weight: 800; font-size: 15px;
 }
-.btn.btn-capture:hover { background: #FFC93C; }
+.btn.btn-capture:hover { background: #B5E61F; }
 
 .view-host { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 32px 40px; }
 .view { max-width: 1280px; }
@@ -345,11 +348,11 @@ input:focus, textarea:focus, select:focus {
     display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center;
     position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 90;
     height: var(--tabbar-h); padding: 0 6px; border-radius: 24px;
-    background: var(--ink); box-shadow: 0 12px 30px -10px rgba(30, 23, 54, .55);
+    background: var(--ink); box-shadow: 0 12px 30px -10px rgba(18, 19, 24, .55);
   }
   .tab {
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-    min-height: 52px; border: none; background: none; color: #A79FCB;
+    min-height: 52px; border: none; background: none; color: var(--ink-dim);
     font: inherit; font-size: 11px; font-weight: 700; text-decoration: none; cursor: pointer;
   }
   .tab svg { width: 23px; height: 23px; }
@@ -362,7 +365,7 @@ input:focus, textarea:focus, select:focus {
 
   .sections-sheet:not(.hidden) {
     display: flex; align-items: flex-end; position: fixed; inset: 0; z-index: 89;
-    background: rgba(30, 23, 54, 0.4);
+    background: rgba(18, 19, 24, 0.4);
     padding: 0 12px calc(var(--tabbar-h) + 22px + env(safe-area-inset-bottom, 0px));
   }
   .sheet-grid {
@@ -391,7 +394,7 @@ input:focus, textarea:focus, select:focus {
 /* Aperta sul posto: prende la forma del campo "Annota al volo" che sostituisce. */
 .quick-capture.qc-inline {
   position: static; transform: none; width: auto; margin-bottom: 20px;
-  box-shadow: 0 6px 20px rgba(109, 74, 255, 0.10); z-index: auto;
+  box-shadow: 0 6px 20px rgba(47, 91, 255, 0.10); z-index: auto;
 }
 @media (max-width: 760px) {
   .quick-capture.qc-inline { margin-bottom: 14px; }
@@ -444,8 +447,8 @@ input:focus, textarea:focus, select:focus {
 .focus-text small:empty { display: none; }
 .focus-empty { font-size: 15px; opacity: .8; padding: 4px 0; }
 .pill { font-style: normal; font-size: 12.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
-.pill-late { background: var(--brand-pink); color: #3B0A16; }
-.pill-today { background: var(--brand-yellow); color: #3A2C00; }
+.pill-late { background: var(--brand-pink); color: #3A0D06; }
+.pill-today { background: var(--brand-yellow); color: #1F2A00; }
 
 /* Azioni quadrate, sempre nello stesso posto */
 .row-acts { display: flex; gap: 6px; flex: none; }
@@ -479,16 +482,16 @@ input:focus, textarea:focus, select:focus {
 }
 .date-cell b { font-size: 18px; font-weight: 800; }
 .date-cell small { font-size: 11px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; margin-top: 2px; }
-.date-soon .date-cell { background: #FFF1BF; }
+.date-soon .date-cell { background: #EEFBC6; }
 .date-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .date-text b { font-weight: 700; font-size: 15.5px; overflow-wrap: anywhere; }
 .date-text small { color: var(--text-muted); font-size: 13px; font-weight: 500; }
 
 /* Progetti */
 .ticks { display: flex; gap: 4px; margin-top: 4px; }
-.ticks i { flex: 1; height: 8px; border-radius: 4px; background: #E6E0F5; }
+.ticks i { flex: 1; height: 8px; border-radius: 4px; background: var(--track); }
 .ticks i.on { background: var(--accent-soft); }
-.ticks-bar { flex: 1; height: 8px; border-radius: 4px; background: #E6E0F5; overflow: hidden; }
+.ticks-bar { flex: 1; height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
 .ticks-bar span { display: block; height: 100%; background: var(--accent-soft); border-radius: 4px; }
 .next-step:empty { display: none; }
 .next-step { border-top: 1px solid var(--border-soft); padding-top: 6px; margin-top: 2px; }
@@ -497,12 +500,12 @@ input:focus, textarea:focus, select:focus {
 
 /* Note come foglietti */
 .tile-note { cursor: pointer; min-height: 120px; }
-.tile-note .tile-kicker { color: rgba(30, 23, 54, .6); cursor: inherit; }
+.tile-note .tile-kicker { color: rgba(18, 19, 24, .55); cursor: inherit; }
 .note-text { font-size: 15.5px; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
 .note-tags { font-size: 13px; font-weight: 700; opacity: .65; margin-top: auto; }
 .note-tags:empty { display: none; }
 .tile-note:hover { filter: brightness(.97); }
-.note-yellow { background: #FFD34D; } .note-lilac { background: #C8B8FF; } .note-pink { background: #FFC2CD; } .note-sky { background: #BFD3FF; }
+.note-yellow { background: #E4F7A6; } .note-lilac { background: #C9D6FF; } .note-pink { background: #FFD3CA; } .note-sky { background: #FFE9A8; }
 
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
@@ -592,7 +595,7 @@ body.no-scroll { overflow: hidden; }
 .board-checklist { display: flex; flex-direction: column; gap: 6px; }
 .board-progress-row { display: flex; align-items: center; gap: 8px; }
 .board-progress {
-  flex: 1; height: 8px; background: #E6E0F5; border-radius: 4px; overflow: hidden;
+  flex: 1; height: 8px; background: var(--track); border-radius: 4px; overflow: hidden;
 }
 .board-progress-fill { height: 100%; background: var(--accent-soft); border-radius: 4px; }
 .board-progress-label { font-size: 0.76rem; color: var(--text-muted); font-family: var(--font-mono); white-space: nowrap; }
@@ -1018,13 +1021,13 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 }
 
 /* ---------- Vault a schede (direzione B) ---------- */
-.seg { display: flex; gap: 4px; background: #E8E3F6; border-radius: 16px; padding: 4px; margin-bottom: 14px; max-width: 560px; overflow-x: auto; scrollbar-width: none; }
+.seg { display: flex; gap: 4px; background: #E5E7DF; border-radius: 16px; padding: 4px; margin-bottom: 14px; max-width: 560px; overflow-x: auto; scrollbar-width: none; }
 .seg::-webkit-scrollbar { display: none; }
 .seg button {
   flex: 1 0 auto; border: none; background: none; padding: 9px 14px; border-radius: 12px; cursor: pointer;
   font: inherit; font-weight: 700; font-size: 14px; color: var(--text-muted); white-space: nowrap;
 }
-.seg button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(30, 23, 54, .08); }
+.seg button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(18, 19, 24, .08); }
 .vault-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
 .vcard {
   background: var(--surface); border-radius: 20px; padding: 12px 12px 12px 14px; display: flex; align-items: center; gap: 12px;
@@ -1067,7 +1070,72 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 .mode-tile b { font-size: 19px; font-weight: 800; }
 .mode-tile span { font-size: 14.5px; color: var(--text-muted); font-weight: 500; }
 .mode-tile-local { background: var(--ink); color: #fff; }
-.mode-tile-local span { color: #C9C2E6; }
+.mode-tile-local span { color: #B9BCC6; }
 .mode-tile:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 2px; }
 .mode-server { display: flex; flex-direction: column; gap: 10px; background: var(--surface); border-radius: var(--radius-lg); padding: 16px; }
 .mode-server input { width: 100%; height: 48px; }
+
+/* ---------- Sezioni visibili (interruttori) ---------- */
+.toggle-list { display: flex; flex-direction: column; }
+.toggle-row { display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid var(--border-soft); cursor: pointer; font-weight: 600; }
+.toggle-row:first-child { border-top: none; }
+.toggle-row span { flex: 1; }
+.toggle-row input {
+  appearance: none; -webkit-appearance: none; width: 46px; height: 28px; border-radius: 999px; padding: 0; margin: 0;
+  background: var(--track); border: none; position: relative; cursor: pointer; transition: background .15s ease; flex: none;
+}
+.toggle-row input::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(18, 19, 24, .25); transition: transform .15s ease;
+}
+.toggle-row input:checked { background: var(--ink); }
+.toggle-row input:checked::after { transform: translateX(18px); background: var(--brand-lime); }
+.toggle-row input:focus-visible { outline: 2px solid var(--accent-soft); outline-offset: 2px; }
+
+/* ---------- Vault: scelta del tipo ---------- */
+.kind-list { display: flex; flex-direction: column; gap: 8px; }
+.kind-btn { display: flex; align-items: center; gap: 14px; border: none; background: var(--surface-2); border-radius: 18px; padding: 14px; cursor: pointer; font: inherit; color: var(--text); text-align: left; }
+.kind-btn:hover { background: var(--accent-bg); }
+.kind-ic { width: 44px; height: 44px; border-radius: 14px; background: var(--surface); color: var(--accent); display: grid; place-items: center; flex: none; }
+.kind-text { display: flex; flex-direction: column; }
+.kind-text b { font-size: 16px; }
+.kind-text small { color: var(--text-muted); font-size: 13px; }
+
+/* ---------- Lettore di codici ---------- */
+.scanner-view { position: relative; border-radius: 18px; overflow: hidden; background: var(--ink); aspect-ratio: 4 / 3; }
+.scanner-view video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scanner-frame { position: absolute; inset: 22% 12%; border: 3px solid var(--brand-lime); border-radius: 16px; box-shadow: 0 0 0 999px rgba(18, 19, 24, .35); }
+.scanner-msg { min-height: 1.4em; margin: 10px 0 0; color: var(--text-muted); font-size: 14px; }
+
+/* ---------- Carte (portafoglio) ---------- */
+.group-title { margin: 6px 0 10px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-faint); }
+.wallet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 22px; }
+.wallet-card {
+  --card: #121318;
+  aspect-ratio: 1.586; border: none; border-radius: 20px; padding: 16px; cursor: pointer; font: inherit; text-align: left;
+  color: #fff; background: linear-gradient(135deg, color-mix(in srgb, var(--card) 100%, #fff 0%), color-mix(in srgb, var(--card) 72%, #000));
+  display: grid; grid-template-rows: auto 1fr auto; position: relative; overflow: hidden;
+  box-shadow: 0 10px 22px -14px color-mix(in srgb, var(--card) 80%, #000);
+}
+.wallet-card::after { content: ''; position: absolute; right: -30%; top: -40%; width: 80%; height: 120%; border-radius: 50%; background: rgba(255, 255, 255, .08); }
+.wc-initial { width: 38px; height: 38px; border-radius: 12px; background: rgba(255, 255, 255, .18); display: grid; place-items: center; font-weight: 800; font-size: 18px; }
+.wc-name { align-self: end; font-size: 18px; font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; }
+.wc-meta { font-size: 13px; font-weight: 600; opacity: .85; min-height: 1em; }
+.wallet-card:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 3px; }
+.card-open { display: flex; flex-direction: column; gap: 6px; }
+.card-code-box { background: #fff; border: 1px solid var(--border-soft); border-radius: 18px; padding: 16px; text-align: center; }
+.card-code svg { width: 100%; height: auto; max-height: 220px; display: block; margin: 0 auto; }
+.card-code.hidden + .card-number { font-size: 26px; }
+.card-number { margin: 8px 0 0; font: 700 18px var(--font-mono); letter-spacing: .08em; overflow-wrap: anywhere; cursor: copy; }
+.card-balance { font-size: 20px; font-weight: 800; }
+.seg-form { max-width: none; }
+.seg-form button.on { background: var(--surface); color: var(--ink); }
+.swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatch { width: 34px; height: 34px; border-radius: 11px; border: none; cursor: pointer; }
+.swatch.on { outline: 3px solid var(--accent-soft); outline-offset: 2px; }
+@media (max-width: 760px) {
+  .wallet-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .wallet-card { padding: 12px; border-radius: 16px; }
+  .wc-name { font-size: 15px; }
+  .wc-initial { width: 30px; height: 30px; font-size: 15px; border-radius: 10px; }
+}

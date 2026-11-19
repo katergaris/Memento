@@ -39,6 +39,9 @@ router.get('/', (req, res) => {
     .all(q, q)
     .forEach((r) => results.push({ type: 'dossier', id: r.id, label: r.title }));
 
+  db.prepare("SELECT id, name FROM cards WHERE deleted_at IS NULL AND (name LIKE ? ESCAPE '\\' OR number LIKE ? ESCAPE '\\' OR notes LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\')")
+    .all(q, q, q, q)
+    .forEach((r) => results.push({ type: 'card', id: r.id, label: r.name }));
   db.prepare("SELECT id, label FROM reminders WHERE deleted_at IS NULL AND (label LIKE ? ESCAPE '\\' OR notes LIKE ? ESCAPE '\\')")
     .all(q, q)
     .forEach((r) => results.push({ type: 'reminder', id: r.id, label: r.label }));
