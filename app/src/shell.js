@@ -420,6 +420,32 @@
     });
   }
 
+  // Indirizzi memento:// (scorciatoie sull'icona e widget): si eseguono
+  // appena l'app e' sbloccata.
+  let pendingLink = null;
+  function handleDeepLink(url) {
+    const m = String(url || '').match(/^memento:\/\/([a-z]+)/i);
+    if (!m) return;
+    pendingLink = m[1].toLowerCase();
+    runPendingLink();
+  }
+  function runPendingLink() {
+    const ui = window.MementoUI;
+    if (!pendingLink) return;
+    if (!ui || !ui.isReady()) { setTimeout(runPendingLink, 400); return; }
+    const what = pendingLink;
+    pendingLink = null;
+    if (what === 'nota') ui.openQuickCapture();
+    else if (what === 'carte') ui.render('cards');
+    else if (what === 'ricevi') ui.render('vault', { receive: true });
+  }
+  function wireDeepLinks() {
+    const App = plugin('App');
+    if (!App) return;
+    App.addListener('appUrlOpen', (e) => handleDeepLink(e.url));
+    if (App.getLaunchUrl) App.getLaunchUrl().then((r) => { if (r && r.url) handleDeepLink(r.url); }).catch(() => {});
+  }
+
   function loadApp() {
     const s = document.createElement('script');
     s.src = '/app.js';
@@ -433,6 +459,7 @@
     window.MementoBackend = watch(backend, mode === 'local' ? backend.engine : null);
     document.documentElement.dataset.appMode = mode;
     wireBackButton();
+    wireDeepLinks();
     loadApp();
   }
 

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_note">Nuova nota</string>
+    <string name="shortcut_cards">Carte</string>
+    <string name="shortcut_receive">Ricevi con QR</string>
+    <string name="widget_name">Memento</string>
+</resources>

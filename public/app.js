@@ -1152,6 +1152,7 @@
 
   async function render(view, opts = {}) {
     if (!views[view] || isHidden(view)) view = 'today';
+    if (window.__restoreBrightness) { window.__restoreBrightness(); window.__restoreBrightness = null; }
     // Indirizzo della sezione: un passo nuovo nella cronologia, tranne quando
     // ci si arriva proprio dalla cronologia (indietro/avanti) o all'avvio.
     // Una cartella aperta ha il suo indirizzo (#/dossiers/12): "indietro"
@@ -2427,6 +2428,7 @@
     `));
     wireBackToDossier(root, opts);
     if (engine) root.querySelector('#receive-qr').addEventListener('click', () => receiveWithQr());
+    if (engine && opts.receive) setTimeout(() => receiveWithQr(), 300);
 
     root.querySelector('#csv-input').addEventListener('change', async (e) => {
       const file = e.target.files[0];
@@ -3021,6 +3023,16 @@
       num.addEventListener('click', async () => { try { await navigator.clipboard.writeText(card.number); toast(tr('toast_copied')); } catch (_) { /* niente appunti */ } });
       const drawn = await renderCardCode(page.querySelector('.card-code'), card).catch(() => false);
       if (!drawn) page.querySelector('.card-code').classList.add('hidden');
+      // Luminosita' al massimo mentre la carta e' aperta: lo scanner della
+      // cassa la legge al primo colpo. Si ripristina lasciando la pagina.
+      const SB = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.ScreenBrightness;
+      if (SB) {
+        try {
+          const before = (await SB.getBrightness()).brightness;
+          await SB.setBrightness({ brightness: 1 });
+          window.__restoreBrightness = () => { SB.setBrightness({ brightness: before }).catch(() => {}); };
+        } catch (_) { /* luminosita' non disponibile */ }
+      }
 
       const facts = page.querySelector('.card-facts');
       const fact = (label, value, cls = '') => { const r = el(`<div class="vd-row"><span class="vd-label"></span><span class="vd-value ${cls}"></span><span class="vd-acts"></span></div>`); r.querySelector('.vd-label').textContent = label; r.querySelector('.vd-value').textContent = value; facts.appendChild(r); return r; };
@@ -4362,7 +4374,7 @@
     e.preventDefault();
     window.MementoBackend.download(a.getAttribute('href')).catch((err) => toast(err.message));
   });
-  window.MementoUI = { el, esc, tr, toast, openModal, closeModal, render, sectionsBlock, totpBlock, loadScript, askConfirm, askValue, haptic, themeBlock };
+  window.MementoUI = { el, esc, tr, toast, openModal, closeModal, render, sectionsBlock, totpBlock, loadScript, askConfirm, askValue, haptic, themeBlock, openQuickCapture, isReady: () => !appRoot.classList.contains('hidden') };
 
   // Molti handler fanno "await api(...)" senza try/catch: senza questa rete di
   // sicurezza un errore restava solo in console e per l'utente non succedeva nulla.

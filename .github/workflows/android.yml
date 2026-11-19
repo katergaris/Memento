@@ -50,15 +50,9 @@ jobs:
           npx capacitor-assets generate --android \
             --iconBackgroundColor '#121318' --iconBackgroundColorDark '#121318' \
             --splashBackgroundColor '#F2F3EE' --splashBackgroundColorDark '#121318'
-          # Server di casa raggiungibile anche in http (rete locale / Tailscale).
-          sed -i 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
-          # Permessi: fotocamera (QR e codici a barre), impronta, notifiche delle
-          # scadenze anche dopo il riavvio del telefono.
-          for P in CAMERA USE_BIOMETRIC POST_NOTIFICATIONS RECEIVE_BOOT_COMPLETED; do
-            sed -i "s#<application#<uses-permission android:name=\"android.permission.$P\" />\n    <application#" android/app/src/main/AndroidManifest.xml
-          done
-          # Attivita' principale con l'aggancio per l'accesso Google a Drive.
-          cp android-overrides/MainActivity.java android/app/src/main/java/io/github/katergaris/memento/MainActivity.java
+          # Permessi, indirizzi memento://, scorciatoie, widget, icona a tema,
+          # MainActivity con l'aggancio per Google: tutto in uno script.
+          node scripts/patch-android.js
           # Versione: numero progressivo della build e versione di package.json.
           VERSION=$(node -p "require('./package.json').version")
           sed -i "s/versionCode 1$/versionCode ${GITHUB_RUN_NUMBER}/; s/versionName \"1.0\"/versionName \"${VERSION}\"/" android/app/build.gradle
