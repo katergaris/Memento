@@ -3140,7 +3140,30 @@
 
     // Backup: uno .zip con database e documenti, generato dal server con una
     // copia coerente anche mentre l'app e' in uso (vedi server/routes/backup.js).
-    const backupBlock = el(`<div class="section-block"><h3>${esc(tr('section_backup'))}</h3><p class="card-sub">${esc(tr('backup_hint'))}</p><div class="card-actions" style="padding-top:10px"><a class="btn btn-primary" href="/api/backup" download>${esc(tr('btn_export_backup'))}</a></div></div>`);
+    const backupBlock = el(`<div class="section-block"><h3>${esc(tr('section_backup'))}</h3><p class="card-sub">${esc(tr('backup_hint'))}</p><div class="card-actions" style="padding-top:10px"><a class="btn btn-primary" href="/api/backup" download>${esc(tr('btn_export_backup'))}</a><button type="button" class="btn" data-export-app>${esc(tr('btn_export_for_app'))}</button></div></div>`);
+    // File .memento per l'app Android ("Sul telefono"): il server decifra il
+    // vault e ricifra tutto con la password scelta qui.
+    backupBlock.querySelector('[data-export-app]').addEventListener('click', () => {
+      const form = el(`<form class="modal-body" style="padding:0">
+        <div class="form-row"><label>${esc(tr('export_app_password'))}</label><input type="password" name="p1" required minlength="8" autocomplete="new-password" /></div>
+        <div class="form-row"><label>${esc(tr('local_password_repeat'))}</label><input type="password" name="p2" required minlength="8" autocomplete="new-password" /></div>
+        <div class="form-actions"><button type="button" class="btn btn-ghost" data-cancel>${esc(tr('btn_cancel'))}</button><button type="submit" class="btn btn-primary">${esc(tr('btn_export'))}</button></div></form>`);
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (form.p1.value !== form.p2.value) { toast(tr('local_password_mismatch')); return; }
+        toast(tr('local_exporting'));
+        const envelope = await api('/backup/app', { method: 'POST', body: JSON.stringify({ password: form.p1.value }) });
+        closeModal();
+        const blob = new Blob([JSON.stringify(envelope)], { type: 'application/json' });
+        const name = `memento-${new Date().toISOString().slice(0, 10)}.memento`;
+        if (window.MementoShell && window.MementoShell.saveFile) { await window.MementoShell.saveFile(blob, name); return; }
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+        setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      });
+      form.querySelector('[data-cancel]').addEventListener('click', closeModal);
+      openModal(tr('btn_export_for_app'), form);
+    });
     root.appendChild(backupBlock);
 
     const langBlock = el(`<div class="section-block"><h3>${esc(tr('settings_language'))}</h3><p class="card-sub">${esc(tr('settings_language_hint'))}</p></div>`);
