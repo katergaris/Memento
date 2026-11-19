@@ -20,3 +20,6 @@ risorse/
 
 # Skill di Claude: solo locali, non nel repository pubblico
 .claude/skills/
+# Appunti di lavoro di Claude: solo locali
+.claude/HANDOFF.md
+.claude/settings.json
