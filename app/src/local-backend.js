@@ -945,6 +945,70 @@
       await this.save();
       return { status: 'ok' };
     }
+    // ---------------- Passaggio diretto con QR ----------------
+    // Chi riceve mostra il suo QR (nome e chiave pubblica); chi passa la voce
+    // la cifra per quella chiave e mostra un secondo QR che solo il telefono
+    // di chi riceve sa aprire. Nessun server.
+    // Nome con cui il telefono si presenta a chi riceve o passa una voce.
+    identityName() { return (this.state.settings.identity && this.state.settings.identity.name) || ''; }
+    async setIdentityName(name) {
+      if (!this.state.settings.identity) await this.ensureIdentity('');
+      this.state.settings.identity.name = String(name || '').trim().slice(0, 60);
+      await this.save();
+    }
+    identityLabel() {
+      const ident = this.state.settings.identity;
+      return (ident && (ident.name || ident.email)) || 'Memento';
+    }
+    async identityQr() {
+      if (!this.state.settings.identity) await this.ensureIdentity('');
+      const raw = await MC.publicJwkToRaw(this.state.settings.identity.publicJwk);
+      return `MEMENTO-ID1:${raw}:${encodeURIComponent(this.identityLabel())}`;
+    }
+    async readIdentityQr(text) {
+      const m = String(text || '').match(/^MEMENTO-ID1:([A-Za-z0-9+/=]+):(.*)$/);
+      if (!m) fail(400, 'Non e\' il codice di un telefono Memento');
+      const label = decodeURIComponent(m[2]) || 'Memento';
+      const publicJwk = await MC.rawToPublicJwk(m[1]);
+      // Chiave scambiata di persona: vale anche come contatto verificato.
+      if (/^[^@\s]+@[^@\s]+$/.test(label)) await this.learnContact(label, publicJwk);
+      return { label, publicJwk };
+    }
+    async transferQr(entryId, recipient) {
+      const r = this.find('vault', entryId) || fail(404, 'Voce non trovata');
+      const key = MC.randomBytes(32);
+      const fields = {};
+      ['site', 'username', 'password', 'url', 'notes', 'tags', 'type', 'totp_secret', 'card_cvv', 'card_expiry'].forEach((k) => { if (r[k] != null && r[k] !== '') fields[k] = r[k]; });
+      const { iv, ct } = await MC.encryptBytes(await MC.importKey(MC.toB64(key)), new TextEncoder().encode(JSON.stringify(fields)));
+      const w = await MC.wrapFor(recipient.publicJwk, key);
+      const epk = await MC.publicJwkToRaw(w.epk);
+      const payload = [this.identityLabel(), epk, w.iv, w.ct, iv, ct].map(encodeURIComponent).join('|');
+      const text = `MEMENTO-V1:${payload}`;
+      if (text.length > 2600) fail(413, 'Voce troppo lunga per un QR: usa l\'esportazione');
+      return text;
+    }
+    async receiveTransferQr(text) {
+      const m = String(text || '').match(/^MEMENTO-V1:(.*)$/);
+      if (!m) fail(400, 'Non e\' il codice di una voce Memento');
+      const [from, epk, wiv, wct, iv, ct] = m[1].split('|').map(decodeURIComponent);
+      if (!this.state.settings.identity) fail(400, 'Mostra prima il tuo codice a chi ti passa la voce');
+      let fields;
+      try {
+        const key = await MC.unwrapWith(this.state.settings.identity.privateJwk, { epk: await MC.rawToPublicJwk(epk), iv: wiv, ct: wct });
+        fields = JSON.parse(new TextDecoder().decode(await MC.decryptBytes(await MC.importKey(MC.toB64(key)), iv, ct)));
+      } catch (_) {
+        fail(400, 'Questo codice e\' stato preparato per un altro telefono');
+      }
+      const VALID = ['password', 'note', 'card', 'code'];
+      const rec = this.insert('vault', {
+        site: fields.site || 'Voce ricevuta', username: fields.username || '', password: fields.password || '', url: fields.url || '',
+        notes: fields.notes || '', tags: Array.isArray(fields.tags) ? fields.tags : [], type: VALID.includes(fields.type) ? fields.type : 'password',
+        totp_secret: fields.totp_secret || null, card_cvv: fields.card_cvv || null, card_expiry: fields.card_expiry || null,
+      });
+      await this.save();
+      return { id: rec.id, site: rec.site, from };
+    }
+
     // Voci ricevute che non sono piu' accessibili (condivisione tolta).
     async dropMissingShares(accessibleIds) {
       const me = this.myEmail();

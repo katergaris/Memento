@@ -103,6 +103,17 @@
     return decryptBytes(await ecdhAes(priv, epk), wrapped.iv, wrapped.ct);
   }
 
+  // Chiave pubblica compatta (65 byte, base64) per i QR.
+  async function publicJwkToRaw(jwk) {
+    const k = await subtle.importKey('jwk', jwk, { name: 'ECDH', namedCurve: 'P-256' }, true, []);
+    return toB64(await subtle.exportKey('raw', k));
+  }
+  async function rawToPublicJwk(b64) {
+    const k = await subtle.importKey('raw', fromB64(b64), { name: 'ECDH', namedCurve: 'P-256' }, true, []);
+    const jwk = await subtle.exportKey('jwk', k);
+    return { kty: jwk.kty, crv: jwk.crv, x: jwk.x, y: jwk.y };
+  }
+
   async function sha256Hex(text) {
     const h = new Uint8Array(await subtle.digest('SHA-256', enc.encode(text)));
     return [...h].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -111,6 +122,6 @@
   return {
     ITERATIONS, toB64, fromB64, randomBytes, deriveKey, encryptBytes, decryptBytes,
     sealWithPassword, openWithPassword, sealWithKey, exportKey, importKey, sha256Hex,
-    generateIdentity, wrapFor, unwrapWith,
+    generateIdentity, wrapFor, unwrapWith, publicJwkToRaw, rawToPublicJwk,
   };
 });

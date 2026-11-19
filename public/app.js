@@ -2177,8 +2177,66 @@
     return null;
   }
 
+  // QR grande da far inquadrare (passaggio diretto tra telefoni).
+  async function showQr(title, text, caption, actions) {
+    await loadScript('/vendor/qrcode.js');
+    const code = window.qrcode(0, 'L');
+    code.addData(text, 'Byte');
+    code.make();
+    const wrap = el(`<div class="qr-show"><div class="qr-big">${code.createSvgTag({ cellSize: 4, margin: 3, scalable: true })}</div><p class="qr-caption"></p><div class="form-actions"></div></div>`);
+    wrap.querySelector('.qr-caption').textContent = caption || '';
+    (actions || []).forEach((b) => wrap.querySelector('.form-actions').appendChild(b));
+    openModal(title, wrap);
+    return wrap;
+  }
+
   views.vault = async (root, opts = {}) => {
     const highlightId = opts.highlight ? String(opts.highlight) : null;
+    const engine = window.MementoBackend && window.MementoBackend.engine;
+
+    // Il nome del telefono si chiede una volta: e' quello che vede l'altro.
+    function askPhoneName() {
+      if (engine.identityName()) return Promise.resolve(true);
+      return new Promise((resolve) => {
+        const form = el(`<form class="modal-body" style="padding:0"><div class="form-row"><label>${esc(tr('qr_name_label'))}</label><input type="text" name="name" required maxlength="60" placeholder="${esc(tr('qr_name_placeholder'))}" /></div>
+          <div class="form-actions"><button type="button" class="btn btn-ghost" data-cancel>${esc(tr('btn_cancel'))}</button><button type="submit" class="btn btn-primary">${esc(tr('btn_confirm'))}</button></div></form>`);
+        form.addEventListener('submit', async (e) => { e.preventDefault(); await engine.setIdentityName(form.name.value); closeModal(); resolve(true); });
+        form.querySelector('[data-cancel]').addEventListener('click', () => { closeModal(); resolve(false); });
+        openModal(tr('qr_name_title'), form);
+      });
+    }
+
+    // Ricevere: mostro il mio codice, poi inquadro la voce preparata per me.
+    async function receiveWithQr() {
+      if (!(await askPhoneName())) return;
+      const scanBtn = el(`<button type="button" class="btn btn-primary">${esc(tr('qr_scan_item'))}</button>`);
+      scanBtn.addEventListener('click', async () => {
+        closeModal();
+        const res = await scanCode();
+        if (!res) return;
+        try {
+          const got = await engine.receiveTransferQr(res.text);
+          toast(tr('qr_received', { what: got.site, from: got.from }));
+          render('vault', { highlight: got.id, fromHash: true });
+        } catch (err) { toast(err.message); }
+      });
+      await showQr(tr('qr_receive_title'), await engine.identityQr(), tr('qr_receive_hint'), [scanBtn]);
+    }
+    // Passare: inquadro il codice di chi riceve, poi mostro la voce cifrata per lui.
+    async function passWithQr(entry) {
+      closeModal();
+      if (!(await askPhoneName())) return;
+      toast(tr('qr_scan_recipient'));
+      const res = await scanCode();
+      if (!res) return;
+      try {
+        const who = await engine.readIdentityQr(res.text);
+        const text = await engine.transferQr(entry.id, who);
+        const done = el(`<button type="button" class="btn btn-primary">${esc(tr('qr_done'))}</button>`);
+        done.addEventListener('click', closeModal);
+        await showQr(entry.site, text, tr('qr_pass_hint', { who: who.label }), [done]);
+      } catch (err) { toast(err.message); }
+    }
     const entries = (await api('/vault')).filter(onlyFilter(opts));
     root.innerHTML = '';
     root.appendChild(el(`
@@ -2186,11 +2244,13 @@
         <h2>${esc(tr('nav_vault_title'))}</h2>
         <div class="view-header-actions">${backToDossierButtonHtml(opts)}
           <label class="btn btn-ghost" style="cursor:pointer">${esc(tr('btn_import_csv'))}<input type="file" id="csv-input" accept=".csv" class="hidden" /></label>
+          ${engine ? `<button class="btn" id="receive-qr">${esc(tr('qr_receive'))}</button>` : ''}
           <button class="btn btn-primary" id="new-vault">${esc(tr('btn_new_vault_entry'))}</button>
         </div>
       </div>
     `));
     wireBackToDossier(root, opts);
+    if (engine) root.querySelector('#receive-qr').addEventListener('click', () => receiveWithQr());
 
     root.querySelector('#csv-input').addEventListener('change', async (e) => {
       const file = e.target.files[0];
@@ -2372,6 +2432,12 @@
       if (actions.querySelector('[data-link]')) actions.querySelector('[data-link]').textContent = tr('btn_link_folder');
       actions.querySelector('[data-del]').textContent = received ? tr('share_leave') : tr('btn_delete');
       if (actions.querySelector('[data-edit]')) actions.querySelector('[data-edit]').textContent = tr('btn_edit');
+      if (engine && !received) {
+        const pass = el(`<button type="button" class="btn btn-ghost" data-pass-qr></button>`);
+        pass.textContent = tr('qr_pass');
+        pass.addEventListener('click', () => passWithQr(entry));
+        actions.querySelector('.form-actions-side').appendChild(pass);
+      }
       if (canShare) {
         actions.querySelector('[data-share]').textContent = tr('btn_share');
         actions.querySelector('[data-share]').addEventListener('click', () => { closeModal(); openShare(entry); });

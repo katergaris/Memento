@@ -295,47 +295,69 @@ async function syncShares(drive, be, email) {
 
 test('condivisione di una voce: invito, visualizzazione, modifica, revoca', async () => {
   const drive = { files: {}, identities: {} };
-  const io = (await fresh()).be;
-  const lei = (await fresh()).be;
-  assert.equal((await call(io, '/vault', 'POST', { site: 'x', password: 'y' })).status, 201);
-  const v = (await call(io, '/vault', 'POST', { site: 'Netflix', username: 'famiglia', password: 'segreta-1' })).data;
-  assert.equal((await call(io, `/vault/${v.id}/share`, 'POST', { email: 'lei@example.com' })).status, 400); // Drive non collegato
-  await syncShares(drive, io, 'io@example.com');
-  assert.equal((await call(io, `/vault/${v.id}/share`, 'POST', { email: 'non-valida' })).status, 400);
-  const shared = (await call(io, `/vault/${v.id}/share`, 'POST', { email: 'Lei@Example.com', role: 'reader' })).data;
-  assert.deepEqual(shared.share.members, [{ email: 'lei@example.com', role: 'reader' }]);
+  const utenteA = (await fresh()).be;
+  const utenteB = (await fresh()).be;
+  assert.equal((await call(utenteA, '/vault', 'POST', { site: 'x', password: 'y' })).status, 201);
+  const v = (await call(utenteA, '/vault', 'POST', { site: 'Netflix', username: 'famiglia', password: 'segreta-1' })).data;
+  assert.equal((await call(utenteA, `/vault/${v.id}/share`, 'POST', { email: 'b@example.com' })).status, 400); // Drive non collegato
+  await syncShares(drive, utenteA, 'a@example.com');
+  assert.equal((await call(utenteA, `/vault/${v.id}/share`, 'POST', { email: 'non-valida' })).status, 400);
+  const shared = (await call(utenteA, `/vault/${v.id}/share`, 'POST', { email: 'B@Example.com', role: 'reader' })).data;
+  assert.deepEqual(shared.share.members, [{ email: 'b@example.com', role: 'reader' }]);
 
-  // primo giro: lei non ha ancora pubblicato la chiave -> in attesa
-  await syncShares(drive, io, 'io@example.com');
+  // primo giro: B non ha ancora pubblicato la chiave -> in attesa
+  await syncShares(drive, utenteA, 'a@example.com');
   assert.ok(!JSON.stringify(drive.files).includes('segreta-1'));
-  await syncShares(drive, lei, 'lei@example.com');
-  assert.equal((await call(lei, '/vault')).data.length, 0);
-  // io imparo la sua chiave e riscrivo il file, lei ora la vede
-  await syncShares(drive, io, 'io@example.com');
-  await syncShares(drive, lei, 'lei@example.com');
-  const [got] = (await call(lei, '/vault')).data;
+  await syncShares(drive, utenteB, 'b@example.com');
+  assert.equal((await call(utenteB, '/vault')).data.length, 0);
+  // A impara la chiave di B e riscrive il file, B ora la vede
+  await syncShares(drive, utenteA, 'a@example.com');
+  await syncShares(drive, utenteB, 'b@example.com');
+  const [got] = (await call(utenteB, '/vault')).data;
   assert.equal(got.site, 'Netflix');
   assert.equal(got.share.role, 'reader');
-  assert.equal(got.share.owner, 'io@example.com');
-  assert.equal((await call(lei, `/vault/${got.id}/reveal`)).data.password, 'segreta-1');
-  assert.equal((await call(lei, `/vault/${got.id}`, 'PUT', { password: 'cambiata' })).status, 403);
-  assert.equal((await call(lei, `/vault/${got.id}/share`, 'POST', { email: 'altro@example.com' })).status, 403);
+  assert.equal(got.share.owner, 'a@example.com');
+  assert.equal((await call(utenteB, `/vault/${got.id}/reveal`)).data.password, 'segreta-1');
+  assert.equal((await call(utenteB, `/vault/${got.id}`, 'PUT', { password: 'cambiata' })).status, 403);
+  assert.equal((await call(utenteB, `/vault/${got.id}/share`, 'POST', { email: 'altro@example.com' })).status, 403);
 
-  // permesso di modifica: lei cambia, io ricevo
-  await call(io, `/vault/${v.id}/share`, 'POST', { email: 'lei@example.com', role: 'writer' });
-  await syncShares(drive, io, 'io@example.com');
-  await syncShares(drive, lei, 'lei@example.com');
-  assert.equal((await call(lei, '/vault')).data[0].share.role, 'writer');
+  // permesso di modifica: B cambia, A riceve
+  await call(utenteA, `/vault/${v.id}/share`, 'POST', { email: 'b@example.com', role: 'writer' });
+  await syncShares(drive, utenteA, 'a@example.com');
+  await syncShares(drive, utenteB, 'b@example.com');
+  assert.equal((await call(utenteB, '/vault')).data[0].share.role, 'writer');
   await new Promise((r) => setTimeout(r, 5));
-  assert.equal((await call(lei, `/vault/${got.id}`, 'PUT', { password: 'cambiata-da-lei' })).status, 200);
-  await syncShares(drive, lei, 'lei@example.com');
-  await syncShares(drive, io, 'io@example.com');
-  assert.equal((await call(io, `/vault/${v.id}/reveal`)).data.password, 'cambiata-da-lei');
+  assert.equal((await call(utenteB, `/vault/${got.id}`, 'PUT', { password: 'cambiata-da-lei' })).status, 200);
+  await syncShares(drive, utenteB, 'b@example.com');
+  await syncShares(drive, utenteA, 'a@example.com');
+  assert.equal((await call(utenteA, `/vault/${v.id}/reveal`)).data.password, 'cambiata-da-lei');
 
-  // revoca: Drive le toglie il file, la voce sparisce dal suo vault
-  await call(io, `/vault/${v.id}/share/lei@example.com`, 'DELETE');
-  await syncShares(drive, io, 'io@example.com');
-  assert.ok(!drive.files[Object.keys(drive.files)[0]].access.includes('lei@example.com'));
-  await syncShares(drive, lei, 'lei@example.com');
-  assert.equal((await call(lei, '/vault')).data.length, 0);
+  // revoca: Drive toglie il file a B, la voce sparisce dal suo vault
+  await call(utenteA, `/vault/${v.id}/share/b@example.com`, 'DELETE');
+  await syncShares(drive, utenteA, 'a@example.com');
+  assert.ok(!drive.files[Object.keys(drive.files)[0]].access.includes('b@example.com'));
+  await syncShares(drive, utenteB, 'b@example.com');
+  assert.equal((await call(utenteB, '/vault')).data.length, 0);
+});
+
+test('passaggio di una voce con QR tra due telefoni, senza server', async () => {
+  const a = (await fresh()).be;
+  const b = (await fresh()).be;
+  const c = (await fresh()).be;
+  const v = (await call(a, '/vault', 'POST', { site: 'Wi-Fi ufficio', password: 'rete-segreta', totp_secret: 'JBSWY3DPEHPK3PXP', notes: 'piano 2' })).data;
+  const qrB = await b.identityQr();
+  assert.match(qrB, /^MEMENTO-ID1:/);
+  await assert.rejects(a.readIdentityQr('ciao'), /codice di un telefono/);
+  const recipient = await a.readIdentityQr(qrB);
+  const qrVoce = await a.transferQr(v.id, recipient);
+  assert.ok(qrVoce.length < 2600);
+  assert.ok(!qrVoce.includes('rete-segreta'));
+  await c.identityQr();
+  await assert.rejects(c.receiveTransferQr(qrVoce), /altro telefono/);
+  const got = await b.receiveTransferQr(qrVoce);
+  assert.equal(got.site, 'Wi-Fi ufficio');
+  const [entry] = (await call(b, '/vault')).data;
+  assert.equal(entry.hasTotp, true);
+  assert.equal((await call(b, `/vault/${entry.id}/reveal`)).data.password, 'rete-segreta');
+  assert.equal(entry.notes, 'piano 2');
 });

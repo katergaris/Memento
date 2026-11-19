@@ -1172,3 +1172,10 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 .share-people small { color: var(--text-muted); font-weight: 500; font-size: 13px; }
 .share-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 .share-add input { flex: 1 1 200px; min-width: 0; }
+
+/* ---------- Passaggio con QR ---------- */
+.qr-show { display: flex; flex-direction: column; align-items: stretch; }
+.qr-big { background: #fff; border-radius: 18px; padding: 10px; border: 1px solid var(--border-soft); }
+.qr-big svg { width: 100%; height: auto; display: block; }
+.qr-caption { margin: 12px 0 0; font-size: 14px; color: var(--text-muted); text-align: center; }
+.qr-caption:empty { display: none; }
