@@ -856,6 +856,23 @@
     return a;
   }
 
+  // Il + del telefono, fuori da Oggi, crea una voce della sezione aperta
+  // (in Carte una carta, in Vault una voce...). Oggi, Cestino e
+  // Impostazioni tengono la cattura veloce.
+  const NEW_BUTTON = { cards: 'new-card', vault: 'new-vault', ideas: 'new-idea', projects: 'new-project', accounts: 'new-account', drive: 'new-doc', dossiers: 'new-dossier', reminders: 'new-reminder', calendar: 'new-reminder-cal' };
+  function newInCurrentView() {
+    const id = NEW_BUTTON[currentView];
+    if (!id) return false;
+    // Dentro una cartella: aggiungi a quella cartella.
+    const addHere = viewHost.querySelector('[data-add]');
+    if (currentView === 'dossiers' && addHere) { addHere.click(); return true; }
+    const btn = document.getElementById(id);
+    if (btn && !btn.classList.contains('hidden')) { btn.click(); return true; }
+    // Pagina di dettaglio (una carta, un progetto): elenco e poi "nuovo".
+    render(currentView).then(() => { const b = document.getElementById(id); if (b) b.click(); });
+    return true;
+  }
+
   function buildNavigation() {
     sidebarNav.innerHTML = '';
     sidebarSecondary.innerHTML = '';
@@ -884,10 +901,19 @@
       return b;
     };
     const favs = tabFavs();
+    // Fuori da Oggi il primo tasto e' sempre Oggi (se non e' gia' tra i
+    // preferiti): i preferiti scorrono di un posto, il terzo va in Altro.
+    const shown = favs.map((view, slot) => ({ view, slot }));
+    if (currentView && currentView !== 'today' && !favs.includes('today') && !isHidden('today')) {
+      shown.splice(0, 0, { view: 'today', slot: null });
+      shown.length = 3;
+    }
+    const shownViews = shown.map((x) => x.view);
     // Pressione lunga su un posto: scegli cosa metterci.
-    const favTab = (i) => {
-      const view = favs[i];
+    const favTab = (k) => {
+      const { view, slot: i } = shown[k];
       const a = view ? tab(view, VIEW_LABELS[view]) : el('<span class="tab"></span>');
+      if (i === null) return a;
       let timer = null;
       let fired = false;
       const cancel = () => { clearTimeout(timer); timer = null; };
@@ -899,12 +925,16 @@
     };
     tabbar.appendChild(favTab(0));
     tabbar.appendChild(favTab(1));
-    const capture = button('tab-capture', '', phIcon('plus', 18), () => { closeSectionsSheet(); if (quickCaptureEl.classList.contains('hidden')) openQuickCapture(); else closeQuickCapture(); });
+    const capture = button('tab-capture', '', phIcon('plus', 18), () => {
+      closeSectionsSheet();
+      if (!quickCaptureEl.classList.contains('hidden')) { closeQuickCapture(); return; }
+      if (!newInCurrentView()) openQuickCapture();
+    });
     capture.setAttribute('aria-label', tr('title_quick_capture'));
     tabbar.appendChild(capture);
     tabbar.appendChild(favTab(2));
     const more = button('tab', tr('tab_sections'), lineIcon('more'), () => {
-      if (sectionsSheet.classList.contains('hidden')) openSectionsSheet(); else closeSectionsSheet();
+      if (sectionsSheet.classList.contains('hidden') || sectionsSheet.classList.contains('closing')) openSectionsSheet(); else closeSectionsSheet();
     });
     more.setAttribute('aria-haspopup', 'dialog');
     tabbar.appendChild(more);
@@ -914,7 +944,7 @@
     sectionsSheet.innerHTML = '';
     const grid = el('<div class="sheet-grid"></div>');
     // Solo cio' che non e' gia' nella barra.
-    visibleSections().filter((s) => !NAV_SKIP.has(s.view) && !favs.includes(s.view)).forEach((s) => {
+    visibleSections().filter((s) => !NAV_SKIP.has(s.view) && !shownViews.includes(s.view)).forEach((s) => {
       const a = el(`<a class="sheet-tile" href="#/${s.view}" data-view="${s.view}">${lineIcon(s.view, 30)}<span></span></a>`);
       a.querySelector('span').textContent = s.label;
       grid.appendChild(a);
@@ -926,11 +956,18 @@
     sectionsSheet.appendChild(grid);
   }
 
-  function openSectionsSheet() { sectionsSheet.classList.remove('hidden'); }
+  // Apertura e chiusura con movimento (il pannello sale dalla barra).
+  let sheetTimer = null;
+  function openSectionsSheet() {
+    clearTimeout(sheetTimer);
+    sectionsSheet.classList.remove('hidden', 'closing');
+  }
   function closeSectionsSheet() {
-    const wasOpen = !sectionsSheet.classList.contains('hidden');
-    sectionsSheet.classList.add('hidden');
-    return wasOpen;
+    const wasOpen = !sectionsSheet.classList.contains('hidden') && !sectionsSheet.classList.contains('closing');
+    if (!wasOpen) return false;
+    sectionsSheet.classList.add('closing');
+    sheetTimer = setTimeout(() => sectionsSheet.classList.add('hidden'), 170);
+    return true;
   }
   sectionsSheet.addEventListener('click', (e) => { if (e.target === sectionsSheet) closeSectionsSheet(); });
 
@@ -1250,8 +1287,10 @@
     if (!opts.fromHash && location.hash !== hash) {
       if (opts.replace) history.replaceState(null, '', hash); else history.pushState(null, '', hash);
     }
+    const wasToday = !currentView || currentView === 'today';
     currentView = view;
     closeSectionsSheet();
+    if (wasToday !== (view === 'today')) buildNavigation();
     // Una finestra rimasta aperta apparterrebbe alla sezione di prima
     // (succedeva con "indietro" o toccando la barra in basso).
     closeModal();
@@ -3177,8 +3216,9 @@
             <span class="card-page-tools"><button type="button" class="btn btn-ghost btn-sm card-pin" data-pin></button><button type="button" class="btn btn-ghost btn-sm" data-edit>${esc(tr('btn_edit'))}</button></span>
           </div>
           <div class="card-visual">
+            <button type="button" class="cv-eye"></button>
             <div class="cv-top"></div>
-            <div class="cv-bottom"><div class="card-code"></div><p class="cv-number"></p></div>
+            <div class="cv-bottom"><div class="card-code"></div><p class="cv-number"><span class="cv-num-text"></span></p></div>
           </div>
           <div class="cv-actions">
             <button type="button" data-notes>${ICON_NOTES}<span>${esc(tr('card_notes'))}</span></button>
@@ -3201,8 +3241,21 @@
       } else {
         top.appendChild(el(`<span class="cv-name">${esc(card.name)}</span>`));
       }
-      const num = page.querySelector('.cv-number');
-      num.textContent = groupNumber(card.number) || '—';
+      // Numero coperto: si scopre solo con l'occhio (il codice resta leggibile
+      // dallo scanner della cassa). Toccando il numero si copia.
+      const num = page.querySelector('.cv-num-text');
+      const eye = page.querySelector('.cv-eye');
+      const grouped = groupNumber(card.number);
+      let shown = false;
+      const paintNum = () => {
+        num.textContent = !grouped ? '—' : shown ? grouped : grouped.replace(/\S/g, '•');
+        num.classList.toggle('covered', !shown && !!grouped);
+        eye.innerHTML = phIcon(shown ? 'eye-slash' : 'eye', 22);
+        eye.setAttribute('aria-label', tr(shown ? 'title_hide' : 'title_show'));
+      };
+      if (!grouped) eye.remove();
+      eye.addEventListener('click', () => { shown = !shown; paintNum(); haptic(); });
+      paintNum();
       num.addEventListener('click', async () => { try { await navigator.clipboard.writeText(card.number); toast(tr('toast_copied')); } catch (_) { /* niente appunti */ } });
       const drawn = await renderCardCode(page.querySelector('.card-code'), card).catch(() => false);
       if (!drawn) page.querySelector('.card-code').classList.add('hidden');

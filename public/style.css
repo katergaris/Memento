@@ -1413,3 +1413,25 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 .card-page-tools { display: inline-flex; align-items: center; gap: 2px; }
 .card-pin { padding: 8px 10px; }
 .card-pin.on { color: var(--coral); }
+
+/* Pannello Altro: sale dalla barra e si chiude scendendo */
+@keyframes sheet-up { from { opacity: 0; transform: translateY(28px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes sheet-down { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(20px) scale(.98); } }
+@keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+@media (max-width: 760px) {
+  .sections-sheet:not(.hidden) { animation: fade-in .2s ease both; }
+  .sections-sheet:not(.hidden) .sheet-grid { animation: sheet-up .26s cubic-bezier(.2, .9, .25, 1.05) both; transform-origin: 50% 100%; }
+  .sections-sheet.closing { animation: fade-out .17s ease both; }
+  .sections-sheet.closing .sheet-grid { animation: sheet-down .17s ease-in both; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sections-sheet:not(.hidden), .sections-sheet:not(.hidden) .sheet-grid, .sections-sheet.closing, .sections-sheet.closing .sheet-grid { animation-duration: 1ms; }
+}
+
+/* Numero della carta coperto, occhio per scoprirlo (angolo del logo:
+   non tocca il margine bianco del codice a barre) */
+.card-visual { position: relative; }
+.cv-num-text { overflow-wrap: anywhere; }
+.cv-num-text.covered { color: #8A8D97; }
+.cv-eye { position: absolute; top: 8px; right: 8px; width: 38px; height: 38px; border: none; border-radius: 12px; background: rgba(255, 255, 255, .88); box-shadow: 0 1px 4px rgba(18, 19, 24, .18); color: #121318; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1; }
+.cv-eye svg { width: 20px; height: 20px; }
