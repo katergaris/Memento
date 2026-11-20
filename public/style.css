@@ -1442,3 +1442,16 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 .cv-bottom .card-code[data-code="bar"] svg { width: 100%; max-width: none; height: min(150px, 100%); max-height: none; }
 .cv-bottom .cv-number { margin: 0; flex: none; }
 @media (min-width: 761px) { .cv-bottom { height: 290px; } }
+
+/* Vault: filtri con simbolo e azioni in alto come simboli */
+.seg-icons button { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 2px 7px; font-size: 11.5px; }
+.seg-icons button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.seg-icons button svg { width: 22px; height: 22px; }
+.seg-icons button.on svg { color: var(--accent); }
+.icon-action {
+  width: 44px; height: 44px; border: none; border-radius: 14px; background: var(--surface); color: var(--ink);
+  box-shadow: 0 0 0 1px var(--border); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex: none;
+}
+.icon-action:hover { background: var(--surface-hover); }
+.icon-action-primary { background: var(--accent-soft); color: #fff; box-shadow: none; }
+.icon-action-primary:hover { background: var(--accent); }
