@@ -132,6 +132,12 @@
 "color": "#FFFFFE"
 },
 {
+"id": "basic-fit",
+"name": "Basic-Fit",
+"category": "sport",
+"color": "#F17124"
+},
+{
 "id": "basko",
 "name": "Basko",
 "category": "supermercati",
@@ -768,6 +774,12 @@
 "color": "#171110"
 },
 {
+"id": "gecop",
+"name": "Gecop",
+"category": "supermercati",
+"color": "#E24637"
+},
+{
 "id": "geox",
 "name": "Geox",
 "category": "abbigliamento",
@@ -820,6 +832,12 @@
 "name": "Grancasa",
 "category": "casa",
 "color": "#D90101"
+},
+{
+"id": "grosmarket",
+"name": "GrosMarket",
+"category": "supermercati",
+"color": "#FF6702"
 },
 {
 "id": "guess",
@@ -1476,6 +1494,12 @@
 "color": "#575757"
 },
 {
+"id": "real",
+"name": "Real",
+"category": "abbigliamento",
+"color": "#E25326"
+},
+{
 "id": "replay",
 "name": "Replay",
 "category": "abbigliamento",
@@ -1636,6 +1660,12 @@
 "name": "Sodexo",
 "category": "servizi",
 "color": "#2A295C"
+},
+{
+"id": "sogegross",
+"name": "Sogegross",
+"category": "supermercati",
+"color": "#FC6734"
 },
 {
 "id": "sole-365",
