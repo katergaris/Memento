@@ -1,48 +1,64 @@
 <p align="center"><img src="brand/logo-1024.png" alt="Memento" width="420"></p>
 
-Spazio personale self-hosted per idee, progetti, password, abbonamenti e documenti, con **cartelle** che li collegano tra loro. Gira interamente sul tuo computer o server, dentro Docker: nessun dato lascia la tua macchina.
+Spazio personale per idee, progetti, password, carte fedeltà, spese ricorrenti e documenti, con **cartelle** che li collegano tra loro. Si usa in due modi, anche insieme:
 
-Gratuito e open source (licenza MIT). Pagina del progetto: **[phloppy.it/memento](https://www.phloppy.it/memento)**.
+- **sul tuo server**, dentro Docker (computer di casa, NAS, CasaOS): nessun dato lascia la tua macchina;
+- con l'**app Android**, collegata al server oppure con i dati **solo sul telefono**, cifrati, senza bisogno di un server.
+
+Gratuito e open source (licenza MIT). APK nelle **[Release](https://github.com/katergaris/Memento/releases)**.
 
 ## Come si presenta
 
-**Oggi** — cosa scade, i progetti in corso con le spunte toccabili sul posto, le note recenti e le cartelle:
+**Sul telefono** — Oggi, il pannello con tutte le sezioni, le carte fedeltà e la pagina di una carta (numero nascosto finché non tocchi l'occhio):
+
+<p>
+  <img src="docs/screenshots/telefono-oggi.png" alt="Oggi sul telefono" width="200">
+  <img src="docs/screenshots/telefono-altro.png" alt="Tutte le sezioni" width="200">
+  <img src="docs/screenshots/telefono-carte.png" alt="Carte fedeltà e regalo" width="200">
+  <img src="docs/screenshots/telefono-carta.png" alt="La pagina di una carta" width="200">
+</p>
+
+Vault con account, appunti protetti, codici 2FA e carte di pagamento; spese ricorrenti con i finanziamenti (rate pagate e quota da pagare); "Annota al volo" con `#tag` e `@cartella`:
+
+<p>
+  <img src="docs/screenshots/telefono-vault.png" alt="Vault" width="200">
+  <img src="docs/screenshots/telefono-spese.png" alt="Spese ricorrenti" width="200">
+  <img src="docs/screenshots/telefono-annota.png" alt="Annota al volo" width="200">
+</p>
+
+Tema chiaro e scuro, automatico come il telefono:
+
+<p>
+  <img src="docs/screenshots/telefono-oggi-scuro.png" alt="Oggi con il tema scuro" width="200">
+  <img src="docs/screenshots/telefono-carte-scuro.png" alt="Carte con il tema scuro" width="200">
+</p>
+
+**Su computer** — Oggi, una cartella con tutto quello che riguarda un tema, il Vault e le spese ricorrenti:
 
 ![La schermata Oggi su computer](docs/screenshots/desktop-oggi.png)
 
-**Una cartella** — tutto quello che riguarda un tema, diviso per tipo, con le sue scadenze in cima:
-
 ![La pagina di una cartella](docs/screenshots/desktop-cartella.png)
 
-**Progetti** — stato, scadenza e avanzamento visibili senza aprirli:
+![Il Vault](docs/screenshots/desktop-vault.png)
 
-![L'elenco dei progetti](docs/screenshots/desktop-progetti.png)
-
-**Sul telefono** — la schermata Oggi, "Annota al volo" che si apre dove lo tocchi (con i suggerimenti per `#tag` e `@cartella`), tutte le sezioni a un tocco:
-
-<p>
-  <img src="docs/screenshots/telefono-oggi.png" alt="Oggi sul telefono" width="260">
-  <img src="docs/screenshots/telefono-annota.png" alt="Annota al volo sul telefono" width="260">
-  <img src="docs/screenshots/telefono-sezioni.png" alt="Tutte le sezioni sul telefono" width="260">
-</p>
+![Le spese ricorrenti](docs/screenshots/desktop-spese.png)
 
 <sub>Dati di esempio.</sub>
 
 ## Cosa contiene
 
-- **Oggi** — la schermata d'ingresso: tutto quello che scade (promemoria, progetti, rinnovi, documenti) scritto come "domani", "tra 12 giorni", i progetti in corso con le spunte toccabili sul posto, le note recenti e le cartelle
+- **Oggi** — tutto quello che scade (scadenze, progetti, addebiti, rate, documenti) scritto come "domani", "tra 12 giorni", con le spunte toccabili sul posto, i progetti in corso, le note recenti e le cartelle
 - **Note** — libere, con tag, `#hashtag` e checklist spuntabile
-- **Cattura veloce** — "Annota" è sempre a un tocco (in alto su computer, il "+" giallo su telefono); `@` collega a una cartella, `#` aggiunge un tag, il pulsante "…" trasforma la nota in promemoria/progetto al momento del salvataggio
-- **Progetti** — stato (da fare / in corso / fatto), checklist, scadenza, persone/contatti e budget; ogni progetto è una scheda con avanzamento e scadenza visibili senza aprirla
-- **Vault password** — voci cifrate (AES-256-GCM), con **import da CSV**
-- **Abbonamenti** — account digitali o abbonamenti cartacei/fisici, con campi propri per ciascuno e data di rinnovo
-- **Drive** — upload documenti, organizzati in cartelle, con nome personalizzato, anteprima (immagini e PDF) e scadenza opzionale
-- **Cartelle** — collegano insieme note, progetti, voci del vault, abbonamenti, documenti e scadenze sullo stesso tema; aprendo una cartella vedi tutto il suo contenuto diviso per tipo, con le sue scadenze in cima
-- **Scadenze e Calendario** — elenco piatto o vista mensile, con notifiche push opzionali (anche ad app chiusa) quando una scadenza arriva a termine
-- **Ricerca globale** — cerca in tutte le sezioni insieme
-- **Cestino** — eliminazione soft con possibilità di ripristino
-- **Backup** — esporta un file .zip con database e documenti caricati
-- **Italiano e inglese** — si sceglie al primo avvio, si cambia da Sicurezza
+- **Annota al volo** — sempre a un tocco ("Annota" su computer, il "+" su telefono); `@` collega a una cartella, `#` aggiunge un tag. Sul telefono, fuori da Oggi, il "+" crea una voce della sezione aperta (una carta, una voce del vault, una spesa…)
+- **Progetti** — stato (da fare / in corso / fatto), checklist, scadenza, persone/contatti e budget
+- **Vault** — quattro tipi di voce cifrata (AES-256-GCM): **Account** (utente, password, codice 2FA), **Appunti** (IBAN, PIN, combinazioni), **Codici** (2FA e codici di recupero), **Carte** di pagamento; generatore di password e **import da CSV**
+- **Carte** — tessere fedeltà e carte regalo come in un portafoglio: codice a barre o QR da mostrare alla cassa (con lo schermo al massimo), lettura con la fotocamera, foto della tessera, saldo e scadenza delle carte regalo, carte fissate in alto con la puntina, logo del negozio
+- **Spese ricorrenti** — abbonamenti digitali, spese fisiche e **finanziamenti**: totale mensile e prossimo addebito; per un finanziamento (numero di rate, rata, prima rata) rate pagate e mancanti, quota da pagare e ultima rata
+- **Drive** — documenti con nome personalizzato, anteprima (immagini e PDF) e scadenza opzionale
+- **Cartelle** — collegano note, progetti, voci del vault, spese, documenti e scadenze sullo stesso tema
+- **Scadenze e Calendario** — elenco o vista mensile, con notifiche (push dal server, locali nell'app)
+- **Ricerca globale**, **Cestino** con ripristino, **Backup**
+- **Impostazioni** — tema chiaro/scuro/automatico, sezioni visibili, tasti della barra in basso, verifica in due passaggi, impronta, lingua (italiano e inglese)
 
 ## Requisiti
 
@@ -97,7 +113,7 @@ docker compose up -d --build
 **Da terminale** (SSH o l'app "Terminale" di CasaOS): CasaOS è basato su Debian con Docker già installato, quindi vale la stessa procedura descritta in "Avvio rapido":
 
 ```bash
-git clone https://github.com/katergaris/MindKeep.git memento
+git clone https://github.com/katergaris/Memento.git memento
 cd memento
 ./setup.sh
 ```
@@ -131,26 +147,36 @@ Il conteggio riparte a ogni utilizzo: con `SESSION_DAYS=7`, se apri Memento alme
 
 ## Dal telefono
 
-L'interfaccia è pensata prima di tutto per il telefono: al posto della barra laterale compare una **barra in basso** con Oggi, Note, il "+" per annotare, Vault e "Altro" (tutte le altre sezioni, più "Esci"). La ricerca si apre dalla lente in alto. Il tasto "indietro" del telefono torna alla sezione precedente.
+L'interfaccia è pensata prima di tutto per il telefono: al posto della barra laterale compare una **barra in basso** con tre sezioni a scelta (Impostazioni → Barra in basso, oppure tieni premuto un tasto), il "+" al centro e "Altro" con tutte le altre sezioni. Fuori da Oggi il primo tasto riporta sempre a Oggi. La ricerca si apre dalla lente in alto; il tasto "indietro" del telefono torna alla sezione precedente.
 
 Puoi anche **aggiungerlo alla schermata home** e usarlo come un'app, senza barra del browser: dal telefono apri l'indirizzo di Memento e scegli "Aggiungi a schermata Home" (Safari) o "Installa app" / "Aggiungi a schermata Home" (Chrome). Serve che il telefono raggiunga il server: stessa rete di casa, oppure una VPN.
 
 ## App Android
 
-Nella cartella `app/` c'è l'app Android (Capacitor) con la stessa interfaccia. Al primo avvio si sceglie come usarla:
+L'APK si scarica dalle **[Release](https://github.com/katergaris/Memento/releases)** (Android 7 o successivo). All'apertura l'app controlla se c'è una versione nuova e propone di installarla.
 
-- **Sul telefono**: i dati stanno solo nel telefono, in un archivio cifrato (AES-GCM, chiave ricavata dalla password principale). Funziona senza rete e senza server. Da Sicurezza → Dati si esporta un file `.memento` cifrato con una password (contiene anche i documenti) e lo si reimporta su un altro telefono.
+Al primo avvio si sceglie come usarla:
+
+- **Sul telefono**: i dati stanno solo nel telefono, in un archivio cifrato (AES-GCM, chiave ricavata dalla password principale). Funziona senza rete e senza server. Sblocco con l'impronta, notifiche delle scadenze, passaggio di una voce del vault a un altro telefono con un QR.
 - **Collegata al server**: l'app usa il tuo server Memento, come il browser.
 
 Si può cambiare modalità quando si vuole: i dati di ciascuna restano dove sono.
 
-L'APK lo costruisce GitHub Actions (`.github/workflows/android.yml`) a ogni modifica di `public/` o `app/`, e lo allega alla pagina dell'esecuzione. Con un tag `app-vX.Y.Z` lo pubblica anche nelle Release. Per firmarlo sempre con la stessa chiave (necessario per aggiornare l'app senza disinstallarla) servono i segreti del repository `ANDROID_KEYSTORE_B64` (il file PKCS12 in base64) e `ANDROID_KEYSTORE_PASSWORD`.
+### Copie dei dati con l'app "Sul telefono"
 
-Build locale: `cd app && npm ci && npm run build:www && npx cap add android && npx cap sync android`, poi Android Studio o `./gradlew assembleDebug` dentro `app/android`.
+- **File cifrato**: Impostazioni → Dati → "Esporta file cifrato" crea un file `.memento` (documenti compresi), protetto da una password, da reimportare su un altro telefono.
+- **Backup sul server di casa**: nelle Impostazioni del server (dal browser) "Backup dell'app Android" → "Collega un telefono" mostra un QR; nell'app, Impostazioni → "Backup sul server" → "Leggi il QR del server". Da quel momento l'app salva sul server una copia **cifrata con la password principale** (il server non la può leggere) dopo ogni modifica e ogni volta che torni nell'app. La copia finisce anche nel backup normale del server. Su un telefono nuovo: stessa password principale, stesso collegamento, e i dati vengono ripristinati.
+- **Dal server all'app**: Impostazioni del server → "Esporta per l'app" crea un file `.memento` con i dati del server, da importare nell'app.
+
+### Compilare l'APK
+
+L'APK lo costruisce GitHub Actions (`.github/workflows/android.yml`) a ogni modifica di `public/` o `app/`; con un tag `app-vX.Y.Z` lo pubblica nelle Release. Per firmarlo sempre con la stessa chiave (necessario per aggiornare l'app senza disinstallarla) servono i segreti del repository `ANDROID_KEYSTORE_B64` (il file PKCS12 in base64) e `ANDROID_KEYSTORE_PASSWORD`. La sincronizzazione con Google Drive compare solo se la build ha l'ID client Google (variabile del repository `GOOGLE_WEB_CLIENT_ID`).
+
+Build locale: `cd app && npm ci && npm run build:www && npx cap add android && node scripts/patch-android.js && npx cap sync android`, poi Android Studio o `./gradlew assembleDebug` dentro `app/android`.
 
 ## Verifica in due passaggi (Google Authenticator)
 
-Facoltativa, si attiva da **Sicurezza**. Una volta attiva, per entrare servono la password *e* un codice a 6 cifre generato dal telefono.
+Facoltativa, si attiva da **Impostazioni**. Una volta attiva, per entrare servono la password *e* un codice a 6 cifre generato dal telefono.
 
 1. Premi "Attiva con QR": Memento mostra un codice QR.
 2. Apri **Google Authenticator** (vanno bene anche Aegis, 1Password, Authy, Bitwarden: è lo standard TOTP, non un meccanismo proprietario di Google) e inquadralo. Se la fotocamera non collabora, nell'app scegli "Inserisci chiave di configurazione" e digita il segreto scritto sotto al QR.
@@ -168,16 +194,16 @@ docker compose exec memento node server/disable-2fa.js
 
 ## Impronta digitale / Face ID per il vault
 
-Facoltativa, si attiva da **Sicurezza** con "Aggiungi impronta su questo dispositivo". Una volta registrata almeno un'impronta per l'account, **rivelare una password del vault** (l'icona a occhio) chiede il tocco (impronta, Face ID o Windows Hello) invece di bastare la sola sessione aperta — utile soprattutto da telefono, dove la sessione resta spesso aperta a lungo.
+Facoltativa, si attiva da **Impostazioni** con "Aggiungi impronta su questo dispositivo". Una volta registrata almeno un'impronta per l'account, **rivelare una password del vault** (l'icona a occhio) chiede il tocco (impronta, Face ID o Windows Hello) invece di bastare la sola sessione aperta — utile soprattutto da telefono, dove la sessione resta spesso aperta a lungo.
 
 - È per dispositivo: registrala separatamente su ogni telefono/computer da cui vuoi il tocco per rivelare le password. Se non la registri su un dispositivo, lì il reveal continua a funzionare come prima (nessuna impronta = nessun blocco).
 - Usa WebAuthn (lo standard delle passkey): la chiave privata resta nel dispositivo, sul server viene salvata solo quella pubblica.
 - Richiede **HTTPS** (va bene anche `localhost` in sviluppo): i browser non espongono l'impronta su un semplice `http://`, incluso l'accesso via IP della rete locale senza certificato.
-- Per rimuoverla da **Sicurezza** serve la password dell'account, come per disattivare la verifica in due passaggi.
+- Per rimuoverla da **Impostazioni** serve la password dell'account, come per disattivare la verifica in due passaggi.
 
 ## Backup
 
-Da **Sicurezza**, "Esporta backup" scarica uno `.zip` con il database e tutti i documenti del Drive. Conservalo, insieme a una copia del file `.env`, in un posto sicuro e separato dal server.
+Da **Impostazioni**, "Esporta backup" scarica uno `.zip` con il database e tutti i documenti del Drive. Conservalo, insieme a una copia del file `.env`, in un posto sicuro e separato dal server.
 
 ## Import CSV nel vault
 
@@ -247,6 +273,7 @@ memento/
 │   ├── disable-2fa.js            # disattiva il 2FA da riga di comando (telefono perso)
 │   ├── session-store.js           # sessioni salvate su SQLite (sopravvivono ai riavvii)
 │   └── routes/                  # API REST per ogni sezione
+├── app/                          # app Android (Capacitor): modalità "Sul telefono" e collegata
 └── public/                       # frontend (HTML/CSS/JS, nessuna build richiesta)
     ├── manifest.webmanifest   # aggiunta alla schermata home del telefono
     └── icon-*.png              # icone dell'app

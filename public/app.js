@@ -1494,7 +1494,7 @@
       if (days === null) return;
       const amount = a.amount ? ` · ${fmtMoney(a.amount)}` : '';
       const iso = next instanceof Date ? `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}` : String(next);
-      deadlines.push({ kind: 'account', item: a, days, date: iso, title: tr('today_renewal_of', { name: a.service }), sub: tr('type_account') + amount });
+      deadlines.push({ kind: 'account', item: a, days, date: iso, title: tr(loanInfo(a) ? 'loan_installment_of' : 'today_renewal_of', { name: a.service }), sub: tr(loanInfo(a) ? 'account_type_loan' : 'type_account') + amount });
     });
     if (!isHidden('drive')) docs.filter((d) => d.expiry_date).forEach((d) => {
       const days = calendarDaysFromToday(d.expiry_date);
@@ -4141,7 +4141,7 @@
       mine.project.filter((p) => p.deadline && p.status !== 'fatto').forEach((p) => due.push({ days: calendarDaysFromToday(p.deadline), title: p.title, open: () => render('projects', { only: p.id, fromDossier: d.id }) }));
       mine.account.forEach((a) => {
         const next = nextChargeDate(a) || (!loanInfo(a) && a.renewal_date);
-        if (next) due.push({ days: calendarDaysFromToday(next), title: tr('today_renewal_of', { name: a.service }), open: () => render('accounts', { only: a.id, fromDossier: d.id }) });
+        if (next) due.push({ days: calendarDaysFromToday(next), title: tr(loanInfo(a) ? 'loan_installment_of' : 'today_renewal_of', { name: a.service }), open: () => render('accounts', { only: a.id, fromDossier: d.id }) });
       });
       mine.document.filter((x) => x.expiry_date).forEach((x) => due.push({ days: calendarDaysFromToday(x.expiry_date), title: x.display_name || x.original_name, open: () => openDocumentPreview(x) }));
       const dueSorted = due.filter((x) => x.days !== null).sort((a, b) => a.days - b.days);
