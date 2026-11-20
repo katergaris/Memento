@@ -1262,9 +1262,16 @@
     textarea.focus();
   }
 
+  // Come il + del telefono: fuori da Oggi crea una voce della sezione aperta.
   btnNuovo.addEventListener('click', () => {
-    if (quickCaptureEl.classList.contains('hidden')) openQuickCapture(); else closeQuickCapture();
+    if (!quickCaptureEl.classList.contains('hidden')) { closeQuickCapture(); return; }
+    if (!newInCurrentView()) openQuickCapture();
   });
+  const NEW_LABEL = { cards: 'btn_new_card', vault: 'btn_new_vault_entry', ideas: 'btn_new_idea', projects: 'btn_new_project', accounts: 'btn_new_account', drive: 'btn_upload_document', dossiers: 'btn_new_dossier', reminders: 'btn_new_reminder', calendar: 'btn_new_reminder' };
+  function paintNewButton(view) {
+    const label = btnNuovo.querySelector('span');
+    if (label) label.textContent = tr(NEW_LABEL[view] || 'btn_capture');
+  }
   document.addEventListener('click', (e) => {
     if (quickCaptureEl.classList.contains('hidden')) return;
     // Anche il "+" della barra in basso apre la cattura: con il motore del
@@ -1291,6 +1298,7 @@
     currentView = view;
     closeSectionsSheet();
     if (wasToday !== (view === 'today')) buildNavigation();
+    paintNewButton(view);
     // Una finestra rimasta aperta apparterrebbe alla sezione di prima
     // (succedeva con "indietro" o toccando la barra in basso).
     closeModal();
@@ -4134,6 +4142,8 @@
       });
       root.appendChild(head);
       viewTitle.textContent = d.title;
+      const newLabel = btnNuovo.querySelector('span');
+      if (newLabel) newLabel.textContent = tr('dossier_add_to', { title: d.title });
 
       // Scadenze della cartella, dalla piu' vicina.
       const due = [];

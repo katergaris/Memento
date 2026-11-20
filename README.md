@@ -49,7 +49,7 @@ Tema chiaro e scuro, automatico come il telefono:
 
 - **Oggi** — tutto quello che scade (scadenze, progetti, addebiti, rate, documenti) scritto come "domani", "tra 12 giorni", con le spunte toccabili sul posto, i progetti in corso, le note recenti e le cartelle
 - **Note** — libere, con tag, `#hashtag` e checklist spuntabile
-- **Annota al volo** — sempre a un tocco ("Annota" su computer, il "+" su telefono); `@` collega a una cartella, `#` aggiunge un tag. Sul telefono, fuori da Oggi, il "+" crea una voce della sezione aperta (una carta, una voce del vault, una spesa…)
+- **Annota al volo** — sempre a un tocco (il tasto in alto su computer, il "+" su telefono); `@` collega a una cartella, `#` aggiunge un tag. Fuori da Oggi lo stesso tasto crea una voce della sezione aperta (una carta, una voce del vault, una spesa…); dentro una cartella aggiunge a quella cartella
 - **Progetti** — stato (da fare / in corso / fatto), checklist, scadenza, persone/contatti e budget
 - **Vault** — quattro tipi di voce cifrata (AES-256-GCM): **Account** (utente, password, codice 2FA), **Appunti** (IBAN, PIN, combinazioni), **Codici** (2FA e codici di recupero), **Carte** di pagamento; generatore di password e **import da CSV**
 - **Carte** — tessere fedeltà e carte regalo come in un portafoglio: codice a barre o QR da mostrare alla cassa (con lo schermo al massimo), lettura con la fotocamera, foto della tessera, saldo e scadenza delle carte regalo, carte fissate in alto con la puntina, logo del negozio

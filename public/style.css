@@ -1463,7 +1463,6 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 /* Carte fissate: puntina sulla tessera */
 .wc-pin { position: absolute; right: 10px; top: 10px; width: 24px; height: 24px; border-radius: 50%; background: rgba(255, 255, 255, .92); color: var(--coral); display: grid; place-items: center; box-shadow: 0 1px 3px rgba(18, 19, 24, .2); z-index: 1; }
 
-/* Telefono: il + al centro della barra fa da "nuovo", i pulsanti in alto non servono */
-@media (max-width: 760px) {
-  #new-card, #new-vault, #new-idea, #new-project, #new-account, #new-doc, #new-dossier, #new-reminder, #new-reminder-cal, .view-dossiers [data-add] { display: none !important; }
-}
+/* Pulsanti "Nuovo…" delle sezioni: li sostituisce il + (barra in basso sul
+   telefono, tasto in alto su computer), che apre la stessa finestra. */
+#new-card, #new-vault, #new-idea, #new-project, #new-account, #new-doc, #new-dossier, #new-reminder, #new-reminder-cal, .view-dossiers [data-add] { display: none !important; }
