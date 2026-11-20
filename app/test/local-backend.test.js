@@ -411,7 +411,8 @@ test('passaggio di una cartella con un documento: file .memento e campi ripuliti
   await assert.rejects(c.receiveTransfer(file), /altro telefono/);
   const got = await b.receiveTransfer(file);
   assert.equal(got.type, 'dossier');
-  assert.equal(got.count, 3);
+  assert.equal(got.count, 1);
+  assert.equal(got.total, 3);
   const d2 = (await call(b, `/dossiers/${got.id}`)).data;
   assert.deepEqual(d2.items.map((x) => x.type).sort(), ['document', 'idea']);
   const doc2 = (await call(b, '/drive')).data[0];
@@ -450,6 +451,30 @@ test('una sola scansione: QR con la chiave, elemento piccolo dentro, grande dal 
   const got2 = await b.openOneScan(info, big.ct);
   assert.equal(got2.type, 'document');
   await assert.rejects(b.openOneScan({ ...info, key: btoa('x'.repeat(32)) }, big.ct), /non leggibile/);
+});
+
+test('selezione multipla: piu\' elementi in un solo passaggio, cartelle con il loro contenuto', async () => {
+  const a = (await fresh()).be;
+  const b = (await fresh()).be;
+  const v1 = (await call(a, '/vault', 'POST', { site: 'Banca', password: 'p1' })).data;
+  const v2 = (await call(a, '/vault', 'POST', { site: 'Posta', password: 'p2' })).data;
+  const d = (await call(a, '/dossiers', 'POST', { title: 'Auto' })).data;
+  const rem = (await call(a, '/reminders', 'POST', { label: 'Bollo', date: '2027-01-31' })).data;
+  await call(a, `/dossiers/${d.id}/links`, 'POST', { item_type: 'reminder', item_id: rem.id });
+  const sealed = await a.sealOneScan([{ type: 'vault', id: v1.id }, { type: 'dossier', id: d.id }, { type: 'vault', id: v2.id }]);
+  assert.equal(sealed.items, 4);
+  const { text, inline } = a.oneScanQrText(sealed, 'memento-abc123def4', { inlineMax: 5000 });
+  assert.equal(inline, true);
+  const got = await b.receiveTransfer(text);
+  assert.equal(got.count, 3);
+  assert.equal(got.total, 4);
+  assert.deepEqual((await call(b, '/vault')).data.map((x) => x.site).sort(), ['Banca', 'Posta']);
+  const [d2] = (await call(b, '/dossiers')).data;
+  assert.deepEqual(d2.items.map((x) => x.label), ['Bollo']);
+  // anche il file con password porta piu' elementi
+  const env = await a.sealTransferFile([{ type: 'vault', id: v1.id }, { type: 'vault', id: v2.id }], undefined, 'gatto');
+  const got2 = await b.openTransferFile(env, 'gatto');
+  assert.equal(got2.count, 2);
 });
 
 test('file da mandare a distanza con password', async () => {

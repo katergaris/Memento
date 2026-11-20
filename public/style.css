@@ -1470,3 +1470,17 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 /* Pulsanti "Nuovo…" delle sezioni: li sostituisce il + (barra in basso sul
    telefono, tasto in alto su computer), che apre la stessa finestra. */
 #new-card, #new-vault, #new-idea, #new-project, #new-account, #new-doc, #new-dossier, #new-reminder, #new-reminder-cal, .view-dossiers [data-add] { display: none !important; }
+
+/* Selezione multipla: pressione lunga su una voce, barra al posto di quella in basso. */
+[data-sel-type] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.is-selected { outline: 3px solid var(--coral); outline-offset: 2px; position: relative; }
+.is-selected::after { content: ''; position: absolute; top: -7px; left: -7px; width: 22px; height: 22px; border-radius: 50%; background: var(--coral) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath fill='white' d='M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z'/%3E%3C/svg%3E") center / 14px no-repeat; pointer-events: none; z-index: 2; }
+.select-bar { position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 1200; display: flex; align-items: center; gap: 6px; padding: 8px; border-radius: 22px; background: var(--block, #141B33); color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.25); animation: selbar-in .18s ease-out; }
+@media (min-width: 761px) { .select-bar { left: 50%; right: auto; transform: translateX(-50%); bottom: 24px; min-width: 420px; } }
+.select-bar .sel-count { flex: none; min-width: 32px; height: 32px; padding: 0 8px; border-radius: 16px; background: var(--coral); color: #fff; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; margin-right: auto; }
+.select-bar button { flex: none; background: transparent; border: none; color: inherit; display: inline-flex; align-items: center; gap: 6px; padding: 10px 10px; border-radius: 14px; font: inherit; font-weight: 600; cursor: pointer; min-height: 44px; }
+.select-bar button:hover { background: rgba(255,255,255,.1); }
+.select-bar .sel-danger { color: #FF8A7A; }
+@keyframes selbar-in { from { transform: translateY(20px); opacity: 0; } }
+@media (min-width: 761px) { @keyframes selbar-in { from { transform: translate(-50%, 20px); opacity: 0; } } }
+body.selecting .tabbar, body.selecting .header-search-btn { visibility: hidden; }

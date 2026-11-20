@@ -1098,10 +1098,25 @@
         for (const l of this.rows('links')) {
           if (l.deleted_at || String(l.dossier_id) !== String(rec.id) || l.item_type === 'dossier') continue;
           const item = TYPE_TABLE[l.item_type] && this.find(TYPE_TABLE[l.item_type], l.item_id);
-          if (item) { try { await add(l.item_type, item); } catch (_) { /* file mancante: si passa il resto */ } }
+          if (item) { try { await add(l.item_type, item); items[items.length - 1].dossier = 0; } catch (_) { /* file mancante: si passa il resto */ } }
         }
       }
-      return { v: 2, items };
+      return { v: 3, items };
+    }
+    // Piu' elementi insieme (selezione multipla): una cartella porta con se'
+    // il suo contenuto, collegato a lei con "dossier" = posizione nel pacchetto.
+    async transferPackageMany(list) {
+      const items = [];
+      for (const { type, id } of list) {
+        const sub = await this.transferPackage(type, id);
+        const base = items.length;
+        sub.items.forEach((it) => { if (it.dossier !== undefined) it.dossier += base; items.push(it); });
+      }
+      if (!items.length) fail(400, 'Nessun elemento');
+      return { v: 3, items };
+    }
+    pkgFor(typeOrList, id) {
+      return Array.isArray(typeOrList) ? this.transferPackageMany(typeOrList) : this.transferPackage(typeOrList, id);
     }
     // Busta cifrata per chi riceve (stringhe base64, va bene per QR, file e WebRTC).
     async sealTransfer(type, id, recipient) {
@@ -1160,11 +1175,13 @@
     async importTransfer(pkg, from) {
       const items = pkg && Array.isArray(pkg.items) ? pkg.items : [];
       const made = [];
+      const v3 = pkg && pkg.v >= 3;
+      const createdAt = [];
       let dossier = null;
       for (let i = 0; i < items.length; i++) {
         const it = items[i] || {};
         const t = TYPE_TABLE[it.type];
-        if (!t || (it.type === 'dossier' && i > 0)) continue;
+        if (!t || (!v3 && it.type === 'dossier' && i > 0)) continue;
         const data = cleanTransferData(t, it.data || {});
         if (it.type === 'document') {
           if (typeof it.file !== 'string') continue;
@@ -1173,13 +1190,19 @@
           data.size = bytes.length;
         }
         const rec = this.insert(t, data);
-        if (i === 0 && it.type === 'dossier') dossier = rec;
+        createdAt[i] = rec;
+        if (v3) {
+          const parent = Number.isInteger(it.dossier) ? createdAt[it.dossier] : null;
+          if (parent && items[it.dossier].type === 'dossier' && it.type !== 'dossier') this.insert('links', { dossier_id: parent.id, item_type: it.type, item_id: rec.id });
+        } else if (i === 0 && it.type === 'dossier') dossier = rec;
         else if (dossier) this.insert('links', { dossier_id: dossier.id, item_type: it.type, item_id: rec.id });
-        made.push({ type: it.type, id: rec.id, label: LABEL[it.type](rec) });
+        made.push({ type: it.type, id: rec.id, label: LABEL[it.type](rec), top: !(v3 && Number.isInteger(it.dossier)) });
       }
       if (!made.length) fail(400, 'Il codice non contiene elementi');
       await this.save();
-      return { ...made[0], site: made[0].label, from, count: made.length };
+      const top = made.filter((m) => m.top);
+      const first = top[0] || made[0];
+      return { type: first.type, id: first.id, label: first.label, site: first.label, from, count: Math.max(top.length, 1), total: made.length };
     }
     async receiveTransferV1(text) {
       const [from, epk, wiv, wct, iv, ct] = text.slice('MEMENTO-V1:'.length).split('|').map(decodeURIComponent);
@@ -1202,7 +1225,7 @@
     // Per gli elementi grandi il QR porta l'indirizzo PeerJS di chi manda e il
     // contenuto arriva dal collegamento diretto, cifrato con la stessa chiave.
     async sealOneScan(type, id) {
-      const pkg = await this.transferPackage(type, id);
+      const pkg = await this.pkgFor(type, id);
       const plain = new TextEncoder().encode(JSON.stringify(pkg));
       const packed = await deflate(plain);
       const rawKey = MC.randomBytes(32);
@@ -1235,7 +1258,7 @@
     // File da mandare a distanza, protetto da una password scelta da chi manda.
     async sealTransferFile(type, id, password) {
       if (!password || String(password).length < 4) fail(400, 'La password deve avere almeno 4 caratteri');
-      const pkg = await this.transferPackage(type, id);
+      const pkg = await this.pkgFor(type, id);
       return MC.sealWithPassword('memento-transfer-pw', String(password), { from: this.identityLabel(), pkg });
     }
     async openTransferFile(envelope, password) {

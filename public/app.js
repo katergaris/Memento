@@ -1282,6 +1282,8 @@
   const views = {}; // popolate piu' sotto
 
   async function render(view, opts = {}) {
+    // La selezione resta se la sezione si ridisegna, si azzera cambiando sezione.
+    if (view !== currentView) clearSelection();
     if (!views[view] || isHidden(view)) view = 'today';
     if (window.__restoreBrightness) { window.__restoreBrightness(); window.__restoreBrightness = null; }
     // Indirizzo della sezione: un passo nuovo nella cronologia, tranne quando
@@ -1763,6 +1765,7 @@
       list.forEach((r) => {
         const days = calendarDaysFromToday(r.date);
         const row = el(`<div class="date-row" tabindex="0" role="button"><span class="date-cell"><b></b><small></small></span><span class="date-text"><b></b><small></small></span></div>`);
+        tagSelectable(row, 'reminder', r.id, r.label);
         row.querySelector('.date-cell b').textContent = String(r.date).slice(8, 10);
         row.querySelector('.date-cell small').textContent = shortMonth(r.date);
         row.querySelector('.date-text b').textContent = r.label;
@@ -1979,6 +1982,7 @@
           <span class="note-tags"></span>
         </article>
       `);
+      tagSelectable(card, 'idea', idea.id, idea.title);
       card.querySelector('.note-title').textContent = idea.title;
       const body = (idea.body || '').trim();
       card.querySelector('.note-body').textContent = body && body !== idea.title ? (body.length > 220 ? body.slice(0, 220) + '…' : body) : '';
@@ -2135,6 +2139,7 @@
             <button type="button" class="icon-btn project-card-del" title="${esc(tr('btn_delete'))}" aria-label="${esc(tr('btn_delete'))}">${iconaLinea('cestino')}</button>
           </div>
         `);
+        tagSelectable(card, 'project', p.id, p.title);
         card.querySelector('.chip-status').textContent = statusInfo.label;
         card.querySelector('.project-card-title').textContent = p.title;
         card.querySelector('.progress-fill').style.width = total ? `${Math.round((done / total) * 100)}%` : '0%';
@@ -2825,6 +2830,99 @@
       }
     } catch (err) { toast(err.message); }
   }
+  // ---------- Selezione multipla ----------
+  // Pressione lunga su una voce di un elenco: si entra nella selezione, i tocchi
+  // successivi aggiungono o tolgono voci; la barra in basso condivide (un solo
+  // QR per tutte) o sposta nel cestino, con Annulla.
+  var selection = null; // "tipo:id" -> { type, id, label }
+  var selBar = null;
+  const SEL_API = { idea: '/ideas', project: '/projects', reminder: '/reminders', account: '/accounts', vault: '/vault', document: '/drive', dossier: '/dossiers', card: '/cards' };
+  function tagSelectable(node, type, id, label) {
+    node.dataset.selType = type;
+    node.dataset.selId = String(id);
+    node.dataset.selLabel = label || '';
+    if (selection && selection.has(`${type}:${id}`)) node.classList.add('is-selected');
+  }
+  const selCountText = (n) => (n === 1 ? tr('sel_count_one') : tr('sel_count', { n }));
+  function toggleSelected(node) {
+    if (!selection) selection = new Map();
+    const k = `${node.dataset.selType}:${node.dataset.selId}`;
+    if (selection.has(k)) { selection.delete(k); node.classList.remove('is-selected'); }
+    else { selection.set(k, { type: node.dataset.selType, id: Number(node.dataset.selId), label: node.dataset.selLabel }); node.classList.add('is-selected'); }
+    haptic('light');
+    if (!selection.size) clearSelection(); else paintSelBar();
+  }
+  function clearSelection() {
+    if (!selection) return;
+    selection = null;
+    document.querySelectorAll('.is-selected').forEach((n) => n.classList.remove('is-selected'));
+    document.body.classList.remove('selecting');
+    if (selBar) { selBar.remove(); selBar = null; }
+  }
+  function paintSelBar() {
+    document.body.classList.add('selecting');
+    if (!selBar) {
+      selBar = el(`<div class="select-bar" role="toolbar"><button type="button" class="sel-close" aria-label="${esc(tr('btn_cancel'))}">${phIcon('x', 20)}</button><span class="sel-count"></span>${transferEngine() ? `<button type="button" class="sel-act" data-share>${phIcon('share-network', 20)}<span>${esc(tr('btn_pass'))}</span></button>` : ''}<button type="button" class="sel-act sel-danger" data-del>${phIcon('trash', 20)}<span>${esc(tr('btn_delete'))}</span></button></div>`);
+      selBar.querySelector('.sel-close').addEventListener('click', clearSelection);
+      const share = selBar.querySelector('[data-share]');
+      if (share) share.addEventListener('click', () => {
+        const list = [...selection.values()];
+        clearSelection();
+        if (list.length === 1) passItem(list[0].type, list[0].id, list[0].label);
+        else passItem(list.map(({ type, id }) => ({ type, id })), undefined, tr('sel_items', { n: list.length }));
+      });
+      selBar.querySelector('[data-del]').addEventListener('click', deleteSelected);
+      document.body.appendChild(selBar);
+    }
+    const count = selBar.querySelector('.sel-count');
+    count.textContent = String(selection.size);
+    count.setAttribute('aria-label', selCountText(selection.size));
+  }
+  async function deleteSelected() {
+    const list = [...selection.values()];
+    // La barra sta sopra a tutto: durante la conferma si nasconde.
+    if (selBar) selBar.classList.add('hidden');
+    const ok = await askConfirm(list.length === 1 ? tr('sel_confirm_delete_one') : tr('sel_confirm_delete', { n: list.length }));
+    if (selBar) selBar.classList.remove('hidden');
+    if (!ok) return;
+    clearSelection();
+    for (const x of list) { try { await api(`${SEL_API[x.type]}/${x.id}`, { method: 'DELETE' }); } catch (_) { /* gia' eliminato */ } }
+    const view = currentView;
+    toast(list.length === 1 ? tr('toast_moved_trash') : tr('sel_deleted', { n: list.length }), {
+      action: tr('btn_undo'), duration: 8000,
+      onAction: async () => {
+        for (const x of list) { try { await api(`${SEL_API[x.type]}/${x.id}/restore`, { method: 'POST' }); } catch (_) { /* nulla */ } }
+        render(view);
+      },
+    });
+    render(view);
+  }
+  (function wireSelection() {
+    let timer = null;
+    let start = null;
+    let fired = false;
+    const target = (e) => (e.target && e.target.closest ? e.target.closest('[data-sel-type]') : null);
+    document.addEventListener('pointerdown', (e) => {
+      const n = target(e);
+      if (!n || e.button > 0) return;
+      fired = false;
+      start = { x: e.clientX, y: e.clientY };
+      clearTimeout(timer);
+      timer = setTimeout(() => { timer = null; fired = true; toggleSelected(n); }, 480);
+    });
+    document.addEventListener('pointermove', (e) => {
+      if (timer && start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) { clearTimeout(timer); timer = null; }
+    });
+    ['pointerup', 'pointercancel'].forEach((ev) => document.addEventListener(ev, () => { clearTimeout(timer); timer = null; }));
+    // Durante la selezione un tocco su una voce la aggiunge o la toglie, non la apre.
+    document.addEventListener('click', (e) => {
+      const n = target(e);
+      if (fired) { fired = false; if (n) { e.preventDefault(); e.stopPropagation(); } return; }
+      if (selection && selection.size && n) { e.preventDefault(); e.stopPropagation(); toggleSelected(n); }
+    }, true);
+    document.addEventListener('contextmenu', (e) => { if (target(e)) e.preventDefault(); });
+  })();
+
   // Icona "Condividi" delle schede (solo nell'app, modalita' "Sul telefono").
   function passButton(type, id, label) {
     if (!transferEngine()) return null;
@@ -3145,6 +3243,7 @@
             <span class="vright"></span>
           </div>
         `);
+        tagSelectable(card, 'vault', entry.id, entry.site);
         const logo = card.querySelector('.vlogo');
         logo.textContent = (entry.site || '?').trim().charAt(0).toUpperCase();
         logo.style.background = bg; logo.style.color = fg;
@@ -3169,29 +3268,10 @@
           });
           right.appendChild(copy);
         }
-        card.addEventListener('click', () => { if (card.dataset.longpress) { delete card.dataset.longpress; return; } openDetail(entry); });
+        card.addEventListener('click', () => openDetail(entry));
         card.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === card) openDetail(entry); });
-        // Pressione lunga: copia la password (o il codice 2FA) senza aprire.
-        let pressTimer = null;
-        card.addEventListener('pointerdown', () => {
-          pressTimer = setTimeout(async () => {
-            card.dataset.longpress = '1';
-            haptic('medium');
-            try {
-              if (entry.hasTotp && (entry.type === 'code' || tab === 'codes')) {
-                const t = await api(`/vault/${entry.id}/totp`);
-                await navigator.clipboard.writeText(t.code); toast(tr('toast_code_copied'));
-              } else if (entry.type !== 'note') {
-                const full = await revealFull(entry);
-                await navigator.clipboard.writeText(full.password || ''); toast(tr('toast_copied'));
-              }
-            } catch (err) { toast(err.message); }
-          }, 550);
-        });
-        ['pointerup', 'pointerleave', 'pointercancel', 'pointermove'].forEach((ev) => card.addEventListener(ev, (e) => {
-          if (ev === 'pointermove' && Math.abs(e.movementY || 0) < 3) return;
-          clearTimeout(pressTimer);
-        }));
+        // La pressione lunga avvia la selezione multipla (vedi wireSelection);
+        // la password si copia dal tasto a destra.
         if (highlightId && String(entry.id) === highlightId) card.classList.add('card-highlight');
         list.appendChild(card);
       });
@@ -3637,6 +3717,7 @@
         const tile = el(c.brand
           ? `<button type="button" class="wallet-card has-logo"><span class="wc-logo-box"><img class="wc-logo" alt="" loading="lazy" /></span><span class="wc-foot"><span class="wc-label"></span></span><span class="wc-meta"></span></button>`
           : `<button type="button" class="wallet-card"><span class="wc-initial"></span><span class="wc-name"></span><span class="wc-meta"></span></button>`);
+        tagSelectable(tile, 'card', c.id, c.name);
         tile.style.setProperty('--card', cardColor(c));
         if (isLightColor(cardColor(c))) tile.classList.add('on-light');
         if (c.brand) {
@@ -4036,6 +4117,7 @@
     withNext.forEach(({ a, next }) => {
       const [bg, fg] = [['#E3E9FF', '#2448E0'], ['#F3E8FF', '#7048E8'], ['#FCE4EE', '#B0285A'], ['#FFF0D6', '#A85A00'], ['#FFE4DC', '#B2401F']][[...a.service].reduce((x, c) => x + c.charCodeAt(0), 0) % 5];
       const row = el(`<div class="vcard" tabindex="0" role="button"><span class="vlogo"></span><span class="vtext"><b></b><small></small></span><span class="date-cell"><b></b><small></small></span></div>`);
+      tagSelectable(row, 'account', a.id, a.service);
       const logo = row.querySelector('.vlogo'); logo.textContent = a.service.trim().charAt(0).toUpperCase(); logo.style.background = bg; logo.style.color = fg;
       row.querySelector('.vtext b').textContent = a.service;
       const loan = loanInfo(a);
@@ -4184,6 +4266,7 @@
           </span>
         </div>
       `);
+      tagSelectable(row, 'document', d.id, d.display_name || d.original_name);
       if (previewable) row.querySelector('.entry-doc').addEventListener('click', () => openDocumentPreview(d));
       const passD = passButton('document', d.id, d.display_name || d.original_name);
       if (passD) row.querySelector('[data-del]').after(passD);
@@ -4281,6 +4364,7 @@
             </span>
           </a>
         `);
+        tagSelectable(card, 'dossier', d.id, d.title);
         card.querySelector('.dossier-card-title').textContent = d.title;
         card.querySelector('.dossier-card-sub').textContent = d.description || tr(n === 1 ? 'count_items_one' : 'count_items_other', { n });
         const types = card.querySelector('.dossier-card-types');

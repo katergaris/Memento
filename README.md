@@ -176,6 +176,8 @@ Note, progetti, scadenze, spese ricorrenti, voci del vault, carte, documenti e c
 2. Chi riceve: Impostazioni → "Da un altro telefono" → **Ricevi**, e inquadra quel QR. Una sola scansione.
 3. L'elemento arriva e va da solo nella sua sezione; l'avviso dice quale e la apre.
 
+Per mandarne più di uno insieme: tieni premuto su una voce di un elenco, tocca le altre e premi **Condividi** nella barra in basso (un solo QR per tutte). Dalla stessa barra **Elimina** sposta le voci scelte nel cestino, con Annulla.
+
 Gli elementi piccoli (una nota, una carta, un abbonamento) stanno tutti nel QR, cifrati con una chiave che è nel QR stesso: arrivano anche senza rete. Per quelli grandi (documenti, cartelle) il QR porta la chiave e l'indirizzo del telefono che manda, e il contenuto passa direttamente tra i due telefoni (WebRTC con [PeerJS](https://peerjs.com)); il server pubblico di PeerJS mette solo in contatto i due telefoni e non vede il contenuto. Chi inquadra il QR può leggere l'elemento, come quando si mostra una password sullo schermo. Per mandare qualcosa a distanza c'è "Manda come file": un file `.memento` protetto da una password che si dice all'altra persona, da aprire con "Apri file".
 
 ### Compilare l'APK
