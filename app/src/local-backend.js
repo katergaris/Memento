@@ -69,6 +69,34 @@
   // Prossima data di rinnovo (stessa logica di server/routes/search.js).
   const BILLING_STEP_MONTHS = { trimestrale: 3, semestrale: 6, annuale: 12 };
   function isoLocal(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+  // Finanziamento: prossima rata (oggi compreso) o null se le rate sono finite;
+  // stessa logica di loanNextDate in server/routes/search.js.
+  function loanNextDate(startDate, frequency, installments) {
+    const start = new Date(`${String(startDate).slice(0, 10)}T00:00:00`);
+    if (Number.isNaN(start.getTime()) || !installments) return undefined;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const stepMonths = { mensile: 1, trimestrale: 3, semestrale: 6, annuale: 12 }[frequency] || 1;
+    for (let i = 0; i < installments; i++) {
+      let d;
+      if (frequency === 'settimanale') { d = new Date(start); d.setDate(d.getDate() + 7 * i); }
+      else {
+        const total = start.getFullYear() * 12 + start.getMonth() + stepMonths * i;
+        const y = Math.floor(total / 12), m = total % 12;
+        d = new Date(y, m, Math.min(start.getDate(), new Date(y, m + 1, 0).getDate()));
+      }
+      if (d >= today) return isoLocal(d);
+    }
+    return null;
+  }
+  // Finanziamento senza giorno di addebito: quello della prima rata.
+  function renewalFromStart(type, startDate, frequency, day, month) {
+    if (type !== 'finanziamento' || day != null || !startDate) return [day, month];
+    const d = new Date(`${String(startDate).slice(0, 10)}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return [day, month];
+    if (frequency === 'settimanale') return [((d.getDay() + 6) % 7) + 1, null];
+    if (frequency === 'mensile' || !frequency) return [d.getDate(), null];
+    return [d.getDate(), d.getMonth() + 1];
+  }
   function nextOccurrence(day, month, frequency) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     if (frequency === 'settimanale') {
@@ -628,7 +656,8 @@
     }
 
     accounts(method, id, sub, body, h) {
-      const VALID_TYPES = ['digitale', 'cartaceo'];
+      const VALID_TYPES = ['digitale', 'cartaceo', 'finanziamento'];
+      const inst = (raw) => { if (raw === undefined) return undefined; if (raw === null || raw === '') return null; const n = parseInt(raw, 10); return Number.isInteger(n) && n >= 1 && n <= 1200 ? n : null; };
       const VALID_BILLING = ['settimanale', 'mensile', 'trimestrale', 'semestrale', 'annuale', 'una_tantum'];
       const amountOf = (raw) => (raw === undefined ? undefined : raw === null || raw === '' ? null : (Number.isFinite(Number(raw)) ? Number(raw) : null));
       const dm = (raw, max) => { if (raw === undefined) return undefined; if (raw === null || raw === '') return null; const n = parseInt(raw, 10); return Number.isInteger(n) && n >= 1 && n <= max ? n : null; };
@@ -643,10 +672,12 @@
         const billing = VALID_BILLING.includes(body.billing_frequency) ? body.billing_frequency : '';
         const v = vid(body.vault_entry_id);
         if (v != null && !this.find('vault', v)) fail(404, 'Voce Vault da collegare non trovata');
+        const type = VALID_TYPES.includes(body.type) ? body.type : 'digitale';
+        const [rd, rm] = renewalFromStart(type, body.start_date, billing, dm(body.renewal_day, billing === 'settimanale' ? 7 : 31) ?? null, dm(body.renewal_month, 12) ?? null);
         return h.mutate(() => h.created(ser(this.insert('accounts', {
-          service: body.service, type: VALID_TYPES.includes(body.type) ? body.type : 'digitale', email: body.email || '', plan: body.plan || '',
+          service: body.service, type, email: body.email || '', plan: body.plan || '',
           location: body.location || '', payment_method: body.payment_method || '', start_date: body.start_date || null,
-          renewal_date: null, renewal_day: dm(body.renewal_day, billing === 'settimanale' ? 7 : 31) ?? null, renewal_month: dm(body.renewal_month, 12) ?? null,
+          renewal_date: null, renewal_day: rd, renewal_month: rm, installments: type === 'finanziamento' ? (inst(body.installments) ?? null) : null,
           notes: body.notes || '', tags: body.tags || [], billing_frequency: billing, amount: amountOf(body.amount) ?? null, vault_entry_id: v ?? null,
         }))));
       }
@@ -663,6 +694,12 @@
         const m = dm(body.renewal_month, 12); if (body.renewal_month !== undefined) f.renewal_month = m;
         const v = vid(body.vault_entry_id);
         if (v !== undefined) { if (v != null && !this.find('vault', v)) fail(404, 'Voce Vault da collegare non trovata'); f.vault_entry_id = v; }
+        const type = f.type || r.type;
+        const n = inst(body.installments);
+        f.installments = type !== 'finanziamento' ? null : (n !== undefined ? n : (r.installments ?? null));
+        const start = f.start_date !== undefined ? f.start_date : r.start_date;
+        const [rd, rm] = renewalFromStart(type, start, billing, f.renewal_day !== undefined ? f.renewal_day : r.renewal_day, f.renewal_month !== undefined ? f.renewal_month : r.renewal_month);
+        f.renewal_day = rd; f.renewal_month = rm;
         return ser(this.touch(r, f));
       });
       if (id && method === 'DELETE') return h.softDelete('accounts');
@@ -1066,9 +1103,10 @@
       const end = new Date(); end.setHours(0, 0, 0, 0); end.setDate(end.getDate() + Math.min(Math.max(days, 0), 3650));
       const endStr = isoLocal(end);
       const out = [];
-      this.live('accounts').filter((r) => r.renewal_day != null).forEach((r) => {
-        const date = nextOccurrence(r.renewal_day, r.renewal_month, r.billing_frequency);
-        if (date <= endStr) out.push({ id: r.id, label: r.service, date, type: 'account' });
+      this.live('accounts').forEach((r) => {
+        const loan = r.type === 'finanziamento' && r.installments && r.start_date ? loanNextDate(r.start_date, r.billing_frequency, r.installments) : undefined;
+        const date = loan !== undefined ? loan : (r.renewal_day != null ? nextOccurrence(r.renewal_day, r.renewal_month, r.billing_frequency) : null);
+        if (date && date <= endStr) out.push({ id: r.id, label: r.service, date, type: 'account' });
       });
       this.live('documents').filter((r) => r.expiry_date && r.expiry_date.slice(0, 10) <= endStr).forEach((r) => out.push({ id: r.id, label: r.display_name || r.original_name, date: r.expiry_date, type: 'document' }));
       this.live('reminders').filter((r) => r.date.slice(0, 10) <= endStr).forEach((r) => out.push({ id: r.id, label: r.label, date: r.date, type: 'reminder' }));

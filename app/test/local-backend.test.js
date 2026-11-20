@@ -371,3 +371,16 @@ test('foto della tessera: al massimo due, solo immagini, non nell\'elenco', asyn
   assert.equal((await call(be, '/cards')).data[0].photos, undefined);
   assert.deepEqual((await call(be, `/cards/${c.id}`)).data.photos, [foto, foto]);
 });
+
+test('finanziamento: rate salvate e niente scadenze dopo l\'ultima rata', async () => {
+  const { be } = await fresh();
+  const old = new Date(); old.setFullYear(old.getFullYear() - 2);
+  const start = `${old.getFullYear()}-${String(old.getMonth() + 1).padStart(2, '0')}-05`;
+  const done = await call(be, '/accounts', 'POST', { service: 'Divano', type: 'finanziamento', billing_frequency: 'mensile', amount: 50, start_date: start, installments: 10 });
+  assert.equal(done.data.installments, 10);
+  assert.equal(done.data.renewal_day, 5);
+  const running = await call(be, '/accounts', 'POST', { service: 'Auto', type: 'finanziamento', billing_frequency: 'mensile', amount: 200, start_date: start, installments: 60 });
+  const up = (await call(be, '/search/reminders/upcoming?days=40')).data.filter((x) => x.type === 'account').map((x) => x.id);
+  assert.ok(up.includes(running.data.id));
+  assert.ok(!up.includes(done.data.id));
+});

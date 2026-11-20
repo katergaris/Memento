@@ -1488,7 +1488,7 @@
       if (days !== null) deadlines.push({ kind: 'project', item: p, days, date: p.deadline, title: p.title, sub: tr('type_project') });
     });
     if (!isHidden('accounts')) accounts.forEach((a) => {
-      const next = nextRenewalDate(a.renewal_day, a.renewal_month, a.billing_frequency) || (a.renewal_date ? a.renewal_date : null);
+      const next = nextChargeDate(a) || (!loanInfo(a) && a.renewal_date ? a.renewal_date : null);
       if (!next) return;
       const days = calendarDaysFromToday(next);
       if (days === null) return;
@@ -2712,13 +2712,12 @@
     // Schede in alto: Codici mostra i codici 2FA gia' in chiaro (si sceglie
     // la scheda apposta), le altre filtrano per tipo.
     const TABS = [
-      { key: 'all', label: tr('vault_tab_all'), icon: 'squares-four', test: () => true },
       { key: 'password', label: tr('vault_kind_account'), icon: 'user', test: (x) => x.type === 'password' },
       { key: 'note', label: tr('vault_kind_note'), icon: 'notepad', test: (x) => x.type === 'note' },
       { key: 'codes', label: tr('vault_kind_code'), icon: 'password', test: (x) => x.type === 'code' || x.hasTotp },
       { key: 'card', label: tr('vault_kind_card'), icon: 'credit-card', test: (x) => x.type === 'card' },
     ];
-    let tab = sessionStorage.getItem('memento-vault-tab') || 'all';
+    let tab = sessionStorage.getItem('memento-vault-tab') || 'password';
     // Ordinamento (preferenza del dispositivo): predefinito alfabetico.
     const SORTS = {
       az: (a, b) => a.site.localeCompare(b.site, undefined, { sensitivity: 'base' }),
@@ -2728,7 +2727,13 @@
     };
     let sort = localStorage.getItem('memento-vault-sort') || 'az';
     if (!SORTS[sort]) sort = 'az';
-    if (!TABS.some((t) => t.key === tab)) tab = 'all';
+    if (!TABS.some((t) => t.key === tab)) tab = 'password';
+    // Voce aperta dalla ricerca o da una cartella: la scheda del suo tipo.
+    if (highlightId) {
+      const target = entries.find((x) => String(x.id) === highlightId);
+      const t = target && TABS.find((x) => x.key !== 'codes' && x.test(target));
+      if (t) tab = t.key;
+    }
 
     const seg = el('<div class="seg seg-icons" role="tablist"></div>');
     const sortBar = el(`<div class="sort-bar"><label><span>${esc(tr('sort_label'))}</span><select>
@@ -3224,7 +3229,7 @@
             <span class="card-page-tools"><button type="button" class="btn btn-ghost btn-sm card-pin" data-pin></button><button type="button" class="btn btn-ghost btn-sm" data-edit>${esc(tr('btn_edit'))}</button></span>
           </div>
           <div class="card-visual">
-            <button type="button" class="cv-eye"></button>
+            <button type="button" class="cv-copy hidden"></button><button type="button" class="cv-eye"></button>
             <div class="cv-top"></div>
             <div class="cv-bottom"><div class="card-code"></div><p class="cv-number"><span class="cv-num-text"></span></p></div>
           </div>
@@ -3261,8 +3266,14 @@
       const drawn = await renderCardCode(page.querySelector('.card-code'), card).catch(() => false);
       if (!drawn) page.querySelector('.card-code').classList.add('hidden');
       let shown = !drawn;
+      const copyBtn = page.querySelector('.cv-copy');
+      copyBtn.innerHTML = phIcon('copy', 20);
+      copyBtn.setAttribute('aria-label', tr('btn_copy'));
+      copyBtn.title = tr('btn_copy');
+      copyBtn.addEventListener('click', async () => { try { await navigator.clipboard.writeText(card.number); toast(tr('toast_copied')); haptic(); } catch (_) { /* niente appunti */ } });
       const paintNum = () => {
         numRow.classList.toggle('hidden', !shown);
+        copyBtn.classList.toggle('hidden', !shown || !grouped);
         eye.innerHTML = phIcon(shown ? 'eye-slash' : 'eye', 22);
         eye.setAttribute('aria-label', tr(shown ? 'title_hide' : 'title_show'));
       };
@@ -3406,13 +3417,13 @@
       const b = brandForName(brands, c.name);
       if (b) { c.brand = b.id; if (!c.color) c.color = b.color; }
     });
+    // Le fissate restano nel loro gruppo, in cima e con la puntina.
     const pins = pinnedIds();
-    const groups = [['pinned', tr('cards_pinned')], ['fedelta', tr('card_kind_loyalty_pl')], ['regalo', tr('card_kind_gift_pl')]];
+    const groups = [['fedelta', tr('card_kind_loyalty_pl')], ['regalo', tr('card_kind_gift_pl')]];
     groups.forEach(([kind, title]) => {
       const used = usedMap();
-      const list = kind === 'pinned'
-        ? pins.map((id) => cards.find((c) => String(c.id) === id)).filter(Boolean)
-        : cards.filter((c) => c.kind === kind && !pins.includes(String(c.id))).sort((a, b) => (used[b.id] || 0) - (used[a.id] || 0) || a.name.localeCompare(b.name));
+      const pinRank = (c) => { const i = pins.indexOf(String(c.id)); return i < 0 ? Infinity : i; };
+      const list = cards.filter((c) => c.kind === kind).sort((a, b) => (pinRank(a) - pinRank(b)) || (used[b.id] || 0) - (used[a.id] || 0) || a.name.localeCompare(b.name));
       if (!list.length) return;
       root.appendChild(el(`<h3 class="group-title">${esc(title)}</h3>`));
       const grid = el('<div class="wallet-grid"></div>');
@@ -3428,6 +3439,7 @@
           tile.querySelector('.wc-label').textContent = c.name;
         }
         tile.setAttribute('aria-label', c.name);
+        if (pins.includes(String(c.id))) { tile.classList.add('pinned'); tile.appendChild(el(`<span class="wc-pin" aria-hidden="true">${phIcon('push-pin-fill', 14)}</span>`)); }
         if (c.brand) {
           const img = tile.querySelector('.wc-logo');
           img.src = brandSrc(c.brand);
@@ -3513,6 +3525,39 @@
     return candidate;
   }
 
+  // Finanziamento: piano delle rate dalla prima rata, cadenza e numero di
+  // rate. Restituisce rate pagate (scadute fino a ieri compreso), mancanti,
+  // quota residua, prossima e ultima rata.
+  function loanInfo(a) {
+    if (a.type !== 'finanziamento' || !a.installments || !a.start_date) return null;
+    const start = new Date(`${String(a.start_date).slice(0, 10)}T00:00:00`);
+    if (Number.isNaN(start.getTime())) return null;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const step = { mensile: 1, trimestrale: 3, semestrale: 6, annuale: 12 }[a.billing_frequency] || 1;
+    const dateAt = (i) => {
+      if (a.billing_frequency === 'settimanale') { const d = new Date(start); d.setDate(d.getDate() + 7 * i); return d; }
+      const total = start.getFullYear() * 12 + start.getMonth() + step * i;
+      const y = Math.floor(total / 12), m = total % 12;
+      return new Date(y, m, Math.min(start.getDate(), new Date(y, m + 1, 0).getDate()));
+    };
+    let paid = 0;
+    while (paid < a.installments && dateAt(paid) < today) paid++;
+    const remaining = a.installments - paid;
+    return {
+      total: a.installments, paid, remaining,
+      residual: a.amount != null ? remaining * Number(a.amount) : null,
+      next: remaining ? dateAt(paid) : null,
+      end: dateAt(a.installments - 1),
+    };
+  }
+  // Prossimo addebito di una spesa ricorrente (per un finanziamento la
+  // prossima rata, niente dopo l'ultima).
+  function nextChargeDate(a) {
+    const loan = loanInfo(a);
+    if (loan) return loan.next;
+    return nextRenewalDate(a.renewal_day, a.renewal_month, a.billing_frequency);
+  }
+
   function accountModal(existing) {
     const form = el(`
       <form class="modal-body" style="padding:0">
@@ -3521,6 +3566,7 @@
           <select name="type">
             <option value="digitale">${esc(tr('account_type_digital'))}</option>
             <option value="cartaceo">${esc(tr('account_type_paper'))}</option>
+            <option value="finanziamento">${esc(tr('account_type_loan'))}</option>
           </select>
         </div>
         <div data-type-fields="digitale">
@@ -3531,13 +3577,16 @@
           <div class="form-row"><label>${esc(tr('field_location'))}</label><input type="text" name="location" placeholder="${esc(tr('field_location_placeholder'))}" /></div>
           <div class="form-row"><label>${esc(tr('field_payment_method'))}</label><input type="text" name="payment_method" placeholder="${esc(tr('field_payment_method_placeholder'))}" /></div>
         </div>
+        <div data-type-fields="finanziamento">
+          <div class="form-row"><label>${esc(tr('field_installments'))}</label><input type="number" name="installments" min="1" max="1200" step="1" inputmode="numeric" /></div>
+        </div>
         <div class="form-row"><label>${esc(tr('field_billing_frequency'))}</label>
           <select name="billing_frequency">
             ${Object.entries(BILLING_LABELS).map(([v, label]) => `<option value="${v}">${esc(label)}</option>`).join('')}
           </select>
         </div>
-        <div class="form-row"><label>${esc(tr('field_amount'))}</label><input type="number" name="amount" step="0.01" min="0" placeholder="${esc(tr('field_amount_placeholder'))}" /></div>
-        <div class="form-row"><label>${esc(tr('field_start_date_optional'))}</label><input type="date" name="start_date" /></div>
+        <div class="form-row"><label data-amount-label>${esc(tr('field_amount'))}</label><input type="number" name="amount" step="0.01" min="0" placeholder="${esc(tr('field_amount_placeholder'))}" /></div>
+        <div class="form-row"><label data-start-label>${esc(tr('field_start_date_optional'))}</label><input type="date" name="start_date" /></div>
         <div data-billing-fields="settimanale" class="form-row">
           <label>${esc(tr('renewal_weekday_label'))}</label>
           <select name="renewal_weekday">
@@ -3573,17 +3622,29 @@
         </div>
       </form>
     `);
+    // Finanziamento: rata, prima rata obbligatoria, giorno di addebito
+    // ricavato dalla prima rata (i selettori del rinnovo non servono).
     function syncTypeFields() {
+      const loan = form.type.value === 'finanziamento';
       form.querySelectorAll('[data-type-fields]').forEach((group) => {
         group.classList.toggle('hidden', group.dataset.typeFields !== form.type.value);
       });
+      form.querySelector('[data-amount-label]').textContent = tr(loan ? 'field_installment_amount' : 'field_amount');
+      form.querySelector('[data-start-label]').textContent = tr(loan ? 'field_first_installment' : 'field_start_date_optional');
+      form.start_date.required = loan;
+      form.installments.required = loan;
+      syncBillingFields();
     }
     function syncBillingFields() {
+      const loan = form.type.value === 'finanziamento';
       form.querySelectorAll('[data-billing-fields]').forEach((group) => {
-        group.classList.toggle('hidden', !group.dataset.billingFields.split(' ').includes(form.billing_frequency.value));
+        group.classList.toggle('hidden', loan || !group.dataset.billingFields.split(' ').includes(form.billing_frequency.value));
       });
     }
-    form.type.addEventListener('change', syncTypeFields);
+    form.type.addEventListener('change', () => {
+      if (form.type.value === 'finanziamento' && !form.billing_frequency.value) form.billing_frequency.value = 'mensile';
+      syncTypeFields();
+    });
     form.billing_frequency.addEventListener('change', syncBillingFields);
     if (existing) {
       form.service.value = existing.service;
@@ -3595,6 +3656,7 @@
       form.billing_frequency.value = existing.billing_frequency || '';
       form.amount.value = existing.amount != null ? existing.amount : '';
       form.start_date.value = existing.start_date ? existing.start_date.slice(0, 10) : '';
+      form.installments.value = existing.installments || '';
       // "day" ha un significato diverso a seconda della frequenza: si ripopola
       // solo il campo che corrisponde a quella gia' salvata.
       if (existing.billing_frequency === 'settimanale') form.renewal_weekday.value = existing.renewal_day || '';
@@ -3680,7 +3742,8 @@
         billing_frequency: form.billing_frequency.value,
         amount: form.amount.value === '' ? null : form.amount.value,
         start_date: form.start_date.value || null,
-        ...renewalPayload(form),
+        installments: form.type.value === 'finanziamento' ? (form.installments.value || null) : null,
+        ...(form.type.value === 'finanziamento' ? { renewal_day: null, renewal_month: null } : renewalPayload(form)),
         notes: form.notes.value,
         tags: parseTags(form),
       };
@@ -3705,10 +3768,11 @@
     // In cima quanto si spende al mese (cadenze riportate a un mese) e il
     // prossimo rinnovo; sotto le righe, dalla scadenza piu' vicina.
     const MONTHLY = { settimanale: 52 / 12, mensile: 1, trimestrale: 1 / 3, semestrale: 1 / 6, annuale: 1 / 12 };
-    const withNext = accounts.map((a) => ({ a, next: nextRenewalDate(a.renewal_day, a.renewal_month, a.billing_frequency) }));
+    const withNext = accounts.map((a) => ({ a, next: nextChargeDate(a) }));
     withNext.sort((x, y) => (x.next ? x.next.getTime() : Infinity) - (y.next ? y.next.getTime() : Infinity));
     if (!opts.only) {
-      const monthly = accounts.reduce((sum, a) => sum + (a.amount != null && MONTHLY[a.billing_frequency] ? Number(a.amount) * MONTHLY[a.billing_frequency] : 0), 0);
+      const active = (a) => { const l = loanInfo(a); return !l || l.remaining > 0; };
+      const monthly = accounts.filter(active).reduce((sum, a) => sum + (a.amount != null && MONTHLY[a.billing_frequency] ? Number(a.amount) * MONTHLY[a.billing_frequency] : 0), 0);
       const soon = withNext.find((x) => x.next);
       const head = el(`<section class="tile tile-focus acc-summary"><div class="focus-head"><span class="focus-num"></span><span class="focus-label"></span></div><p class="acc-next"></p></section>`);
       head.querySelector('.focus-num').textContent = fmtMoney(monthly);
@@ -3720,11 +3784,18 @@
     const openDetail = (a, next) => {
       const wrap = el('<div class="vault-detail"></div>');
       const fact = (label, value) => { if (!value) return; const r = el('<div class="vd-row"><span class="vd-label"></span><span class="vd-value"></span></div>'); r.querySelector('.vd-label').textContent = label; r.querySelector('.vd-value').textContent = value; wrap.appendChild(r); };
-      fact(tr('field_amount'), [a.amount != null ? fmtMoney(a.amount) : '', a.billing_frequency ? (BILLING_LABELS[a.billing_frequency] || a.billing_frequency) : ''].filter(Boolean).join(' · '));
-      fact(tr('accounts_renewal'), next ? `${next.getDate()} ${MONTH_LABELS[next.getMonth()]} · ${relativeDayLabel(calendarDaysFromToday(next))}` : '');
+      const loan = loanInfo(a);
+      fact(tr(loan ? 'field_installment_amount' : 'field_amount'), [a.amount != null ? fmtMoney(a.amount) : '', a.billing_frequency ? (BILLING_LABELS[a.billing_frequency] || a.billing_frequency) : ''].filter(Boolean).join(' · '));
+      fact(tr(loan ? 'loan_next' : 'accounts_renewal'), next ? `${next.getDate()} ${MONTH_LABELS[next.getMonth()]} · ${relativeDayLabel(calendarDaysFromToday(next))}` : '');
+      if (loan) {
+        fact(tr('loan_paid'), tr('loan_of', { n: loan.paid, total: loan.total }));
+        fact(tr('loan_remaining'), loan.remaining ? String(loan.remaining) : tr('loan_done'));
+        if (loan.residual != null && loan.remaining) fact(tr('loan_residual'), fmtMoney(loan.residual));
+        fact(tr('loan_end'), fmtDate(`${loan.end.getFullYear()}-${String(loan.end.getMonth() + 1).padStart(2, '0')}-${String(loan.end.getDate()).padStart(2, '0')}`));
+      }
       if (a.type === 'cartaceo') { fact(tr('field_location'), a.location); fact(tr('field_payment_method'), a.payment_method); }
-      else { fact(tr('field_email'), a.email); fact(tr('field_plan'), a.plan); }
-      fact(tr('accounts_since'), a.start_date ? fmtDate(a.start_date) : '');
+      else if (a.type !== 'finanziamento') { fact(tr('field_email'), a.email); fact(tr('field_plan'), a.plan); }
+      fact(tr(loan ? 'field_first_installment' : 'accounts_since'), a.start_date ? fmtDate(a.start_date) : '');
       if (a.vaultEntry) fact(tr('accounts_credentials'), a.vaultEntry.site + (a.vaultEntry.username ? ' · ' + a.vaultEntry.username : ''));
       fact(tr('field_notes'), a.notes);
       const actions = el(`<div class="form-actions"><span class="form-actions-side"><button type="button" class="btn btn-ghost" data-link></button><button type="button" class="btn btn-ghost" data-vault></button><button type="button" class="btn btn-ghost btn-danger" data-del></button></span><button type="button" class="btn btn-primary" data-edit></button></div>`);
@@ -3761,7 +3832,10 @@
       const row = el(`<div class="vcard" tabindex="0" role="button"><span class="vlogo"></span><span class="vtext"><b></b><small></small></span><span class="date-cell"><b></b><small></small></span></div>`);
       const logo = row.querySelector('.vlogo'); logo.textContent = a.service.trim().charAt(0).toUpperCase(); logo.style.background = bg; logo.style.color = fg;
       row.querySelector('.vtext b').textContent = a.service;
-      row.querySelector('.vtext small').textContent = [a.amount != null ? fmtMoney(a.amount) : '', a.billing_frequency ? (BILLING_LABELS[a.billing_frequency] || '') : ''].filter(Boolean).join(' · ') || (a.type === 'cartaceo' ? tr('account_type_paper') : tr('account_type_digital'));
+      const loan = loanInfo(a);
+      row.querySelector('.vtext small').textContent = loan
+        ? (loan.remaining ? [tr('loan_row', { n: loan.paid, total: loan.total }), loan.residual != null ? tr('loan_row_residual', { amount: fmtMoney(loan.residual) }) : ''].filter(Boolean).join(' · ') : tr('loan_done'))
+        : [a.amount != null ? fmtMoney(a.amount) : '', a.billing_frequency ? (BILLING_LABELS[a.billing_frequency] || '') : ''].filter(Boolean).join(' · ') || (a.type === 'cartaceo' ? tr('account_type_paper') : tr('account_type_digital'));
       const cell = row.querySelector('.date-cell');
       if (next) { cell.querySelector('b').textContent = next.getDate(); cell.querySelector('small').textContent = MONTH_LABELS[next.getMonth()].slice(0, 3); if (calendarDaysFromToday(next) <= 3) row.classList.add('date-soon'); }
       else cell.classList.add('hidden');
@@ -4066,7 +4140,7 @@
       mine.reminder.forEach((r) => due.push({ days: calendarDaysFromToday(r.date), title: r.label, open: () => render('reminders', { only: r.id, fromDossier: d.id }) }));
       mine.project.filter((p) => p.deadline && p.status !== 'fatto').forEach((p) => due.push({ days: calendarDaysFromToday(p.deadline), title: p.title, open: () => render('projects', { only: p.id, fromDossier: d.id }) }));
       mine.account.forEach((a) => {
-        const next = nextRenewalDate(a.renewal_day, a.renewal_month, a.billing_frequency) || a.renewal_date;
+        const next = nextChargeDate(a) || (!loanInfo(a) && a.renewal_date);
         if (next) due.push({ days: calendarDaysFromToday(next), title: tr('today_renewal_of', { name: a.service }), open: () => render('accounts', { only: a.id, fromDossier: d.id }) });
       });
       mine.document.filter((x) => x.expiry_date).forEach((x) => due.push({ days: calendarDaysFromToday(x.expiry_date), title: x.display_name || x.original_name, open: () => openDocumentPreview(x) }));

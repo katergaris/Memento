@@ -127,3 +127,26 @@ test('collegare una voce Vault inesistente viene rifiutato (404), non salvato si
     assert.equal(res.status, 404);
   });
 });
+
+test('finanziamento: numero di rate, giorno di addebito dalla prima rata, niente scadenze dopo l\'ultima', async () => {
+  const { loanNextDate } = require('./routes/search');
+  await withServer(async (base) => {
+    const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const start = new Date(); start.setHours(0, 0, 0, 0); start.setMonth(start.getMonth() - 3); start.setDate(10);
+    const created = await fetch(base, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ service: 'Auto', type: 'finanziamento', billing_frequency: 'mensile', amount: '200', start_date: iso(start), installments: '12' }),
+    }).then((r) => r.json());
+    assert.equal(created.type, 'finanziamento');
+    assert.equal(created.installments, 12);
+    assert.equal(created.renewal_day, 10);
+    // Le rate non vengono salvate su una spesa che non e' un finanziamento.
+    const updated = await fetch(`${base}/${created.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'digitale' }) }).then((r) => r.json());
+    assert.equal(updated.installments, null);
+  });
+  const old = new Date(); old.setFullYear(old.getFullYear() - 2);
+  const isoOld = `${old.getFullYear()}-${String(old.getMonth() + 1).padStart(2, '0')}-01`;
+  assert.equal(loanNextDate(isoOld, 'mensile', 6), null);
+  assert.match(loanNextDate(isoOld, 'mensile', 60), /^\d{4}-\d{2}-01$/);
+});
