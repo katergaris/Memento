@@ -2856,7 +2856,14 @@
       { type: 'code', label: tr('vault_kind_code'), sub: tr('vault_kind_code_sub'), icon: 'password' },
       { type: 'card', label: tr('vault_kind_card'), sub: tr('vault_kind_card_sub'), icon: 'credit-card' },
     ];
+    // "Nuova voce" crea il tipo della scheda aperta (Account, Appunti, Codici,
+    // Carte). Solo con il Vault vuoto, senza schede, si sceglie il tipo.
     root.querySelector('#new-vault').addEventListener('click', () => {
+      if (entries.length) {
+        const open = sessionStorage.getItem('memento-vault-tab') || 'password';
+        newEntry(open === 'codes' ? 'code' : (['password', 'note', 'card'].includes(open) ? open : 'password'));
+        return;
+      }
       const wrap = el('<div class="kind-list"></div>');
       VAULT_KINDS.forEach((k) => {
         const b = el(`<button type="button" class="kind-btn"><span class="kind-ic">${phIcon(k.icon, 24)}</span><span class="kind-text"><b></b><small></small></span></button>`);
