@@ -25,7 +25,7 @@ copyDir(path.join(OVR, 'res'), path.join(AND, 'res'));
 // 3. Manifest
 const manifestPath = path.join(AND, 'AndroidManifest.xml');
 let m = fs.readFileSync(manifestPath, 'utf8');
-const perms = ['CAMERA', 'USE_BIOMETRIC', 'POST_NOTIFICATIONS', 'RECEIVE_BOOT_COMPLETED'];
+const perms = ['CAMERA', 'USE_BIOMETRIC', 'POST_NOTIFICATIONS', 'RECEIVE_BOOT_COMPLETED', 'REQUEST_INSTALL_PACKAGES'];
 for (const p of perms) {
   const tag = `<uses-permission android:name="android.permission.${p}" />`;
   if (!m.includes(tag)) m = m.replace('<application', `${tag}\n    <application`);
@@ -51,6 +51,16 @@ if (!m.includes('MementoWidget')) {
     </application>`);
 }
 fs.writeFileSync(manifestPath, m);
+// La cartella degli aggiornamenti (cache/update) deve essere condivisibile
+// con l'installatore tramite il FileProvider di Capacitor.
+{
+  const fp = path.join(AND, 'res', 'xml', 'file_paths.xml');
+  if (!m.includes('androidx.core.content.FileProvider')) throw new Error('FileProvider assente dal manifest');
+  let x = fs.existsSync(fp) ? fs.readFileSync(fp, 'utf8') : '<?xml version="1.0" encoding="utf-8"?>\n<paths xmlns:android="http://schemas.android.com/apk/res/android">\n</paths>\n';
+  if (!x.includes('name="update"')) x = x.replace('</paths>', '    <cache-path name="update" path="update/" />\n</paths>');
+  fs.mkdirSync(path.dirname(fp), { recursive: true });
+  fs.writeFileSync(fp, x);
+}
 
 // 4. Icona a tema (Android 13+): strato monocromatico = il simbolo
 for (const f of ['ic_launcher.xml', 'ic_launcher_round.xml']) {

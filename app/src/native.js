@@ -325,5 +325,115 @@
     },
   };
 
-  window.MementoNative = { Notify, Bio, Sync };
+  // ==================================================================
+  // AGGIORNAMENTI: all'apertura confronta la versione installata con le
+  // release "app-v*" di GitHub; se c'e' di meglio propone di installarla.
+  // ==================================================================
+  const UPDATE_KEY = 'memento-update';
+  const RELEASES = 'https://api.github.com/repos/katergaris/Memento/releases?per_page=20';
+  const cmpVer = (a, b) => {
+    const pa = String(a).split(/[.-]/).map((x) => parseInt(x, 10) || 0);
+    const pb = String(b).split(/[.-]/).map((x) => parseInt(x, 10) || 0);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+      if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
+    }
+    return 0;
+  };
+  const Update = {
+    available: () => !!plugin('ApkUpdater'),
+    async current() {
+      const App = plugin('App');
+      try { return (await App.getInfo()).version; } catch (_) { return null; }
+    },
+    // Ultima release con un APK allegato: { version, url, notes }.
+    async latest() {
+      const r = await fetch(RELEASES, { headers: { Accept: 'application/vnd.github+json' } });
+      if (!r.ok) throw new Error(tr('update_check_failed'));
+      const list = await r.json();
+      let best = null;
+      for (const rel of list) {
+        const m = /^app-v(\d+\.\d+\.\d+)$/.exec(rel.tag_name || '');
+        const apk = (rel.assets || []).find((a) => /\.apk$/i.test(a.name));
+        if (!m || rel.draft || !apk) continue;
+        if (!best || cmpVer(m[1], best.version) > 0) best = { version: m[1], url: apk.browser_download_url, size: apk.size };
+      }
+      return best;
+    },
+    // Nuova versione rispetto a quella installata, oppure null.
+    async check() {
+      const [cur, last] = await Promise.all([Update.current(), Update.latest()]);
+      return cur && last && cmpVer(last.version, cur) > 0 ? last : null;
+    },
+    async install(rel, onProgress) {
+      const U = plugin('ApkUpdater');
+      if (!(await U.canInstall()).value) {
+        await U.openInstallSettings();
+        throw Object.assign(new Error(tr('update_allow_install')), { needPermission: true });
+      }
+      const h = await U.addListener('progress', (e) => onProgress && onProgress(e.percent));
+      try { await U.downloadAndInstall({ url: rel.url }); } finally { h.remove(); }
+    },
+    // Riquadro con versione, avanzamento e tasti.
+    offer(ui, rel) {
+      const mb = rel.size ? ` · ${(rel.size / 1048576).toFixed(1)} MB` : '';
+      const body = ui.el(`<div class="modal-body" style="padding:0">
+        <p class="update-version">${esc(tr('update_version', { v: rel.version }))}${esc(mb)}</p>
+        <div class="update-bar hidden"><span></span></div>
+        <div class="form-actions"><button type="button" class="btn btn-ghost" data-later>${esc(tr('update_later'))}</button>
+        <button type="button" class="btn btn-primary" data-go>${esc(tr('update_install'))}</button></div></div>`);
+      const bar = body.querySelector('.update-bar');
+      const go = body.querySelector('[data-go]');
+      body.querySelector('[data-later]').addEventListener('click', () => {
+        setPref(UPDATE_KEY, { later: rel.version, at: Date.now() });
+        ui.closeModal();
+      });
+      go.addEventListener('click', async () => {
+        go.disabled = true;
+        bar.classList.remove('hidden');
+        try {
+          await Update.install(rel, (p) => { bar.firstElementChild.style.width = `${p}%`; go.textContent = `${p}%`; });
+          ui.closeModal();
+        } catch (e) {
+          ui.toast(e.message);
+          go.disabled = false;
+          go.textContent = e.needPermission ? tr('update_retry') : tr('update_install');
+          bar.classList.add('hidden');
+        }
+      });
+      ui.openModal(tr('update_title'), body);
+    },
+    // All'apertura: una volta, dopo lo sblocco. "Piu' tardi" vale un giorno.
+    async onStart() {
+      if (!Update.available()) return;
+      let rel;
+      try { rel = await Update.check(); } catch (_) { return; }
+      if (!rel) return;
+      const p = pref(UPDATE_KEY, {});
+      if (p.later === rel.version && Date.now() - (p.at || 0) < 24 * 3600 * 1000) return;
+      const show = () => {
+        const ui = window.MementoUI;
+        if (!ui || !ui.isReady() || document.querySelector('.modal-backdrop')) { setTimeout(show, 800); return; }
+        Update.offer(ui, rel);
+      };
+      show();
+    },
+    // Blocco in Sicurezza: versione installata e controllo a mano.
+    block(ui) {
+      const b = ui.el(`<div class="section-block"><h3>${esc(tr('update_section'))}</h3><p class="card-sub" data-ver></p>
+        <div class="card-actions" style="padding-top:10px"><button type="button" class="btn" data-check>${esc(tr('update_check'))}</button></div></div>`);
+      Update.current().then((v) => { b.querySelector('[data-ver]').textContent = tr('update_installed', { v: v || '?' }); });
+      const btn = b.querySelector('[data-check]');
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+          const rel = await Update.check();
+          if (rel) Update.offer(ui, rel); else ui.toast(tr('update_none'));
+        } catch (e) { ui.toast(e.message); }
+        btn.disabled = false;
+      });
+      return b;
+    },
+  };
+
+  window.MementoNative = { Notify, Bio, Sync, Update };
 })();

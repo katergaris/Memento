@@ -130,6 +130,7 @@
       },
       async extendSettings(root2, ui) {
         root2.appendChild(notifyBlock(ui, this));
+        if (window.MementoNative && window.MementoNative.Update.available()) root2.appendChild(window.MementoNative.Update.block(ui));
         root2.appendChild(await bioBlock(ui, null));
         root2.appendChild(appBlock(ui, tr('app_mode_server_on', { url: root })));
       },
@@ -209,6 +210,7 @@
         root.appendChild(ui.totpBlock(info));
         root.appendChild(await bioBlock(ui, be));
         root.appendChild(notifyBlock(ui, this));
+        if (window.MementoNative && window.MementoNative.Update.available()) root.appendChild(window.MementoNative.Update.block(ui));
 
         const pw = ui.el(`<div class="section-block"><h3>${esc(tr('local_password_title'))}</h3>
           <div class="card-actions" style="padding-top:4px"><button type="button" class="btn" data-change>${esc(tr('local_change_password'))}</button>
@@ -461,6 +463,7 @@
     wireBackButton();
     wireDeepLinks();
     loadApp();
+    if (window.MementoNative) window.MementoNative.Update.onStart();
   }
 
   // La scelta della lingua viene prima di tutto (stessa schermata del server).
