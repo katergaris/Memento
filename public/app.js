@@ -594,6 +594,14 @@
 
   // Dichiarazione (non costante) perche' viene usata anche dal foglio del
   // telefono, costruito prima di questo punto del file.
+  // "Esci" sta in fondo alle Impostazioni (server e app "Sul telefono").
+  function logoutBlock() {
+    const block = el(`<div class="section-block"><button type="button" class="btn btn-danger" data-logout>${lineIcon('esci', 20)}<span></span></button></div>`);
+    block.querySelector('span').textContent = tr('btn_logout');
+    block.querySelector('[data-logout]').addEventListener('click', logout);
+    return block;
+  }
+
   async function logout() {
     try {
       await api('/auth/logout', { method: 'POST' });
@@ -880,10 +888,6 @@
       const quiet = SETTINGS_VIEWS.has(s.view);
       (quiet ? sidebarSecondary : sidebarNav).appendChild(navLink(s, quiet ? 'nav-link-quiet' : ''));
     });
-    const esci = el(`<button type="button" class="nav-link nav-link-quiet">${appIcon('esci', 30)}<span class="nav-label"></span></button>`);
-    esci.querySelector('.nav-label').textContent = tr('btn_logout');
-    esci.addEventListener('click', logout);
-    sidebarSecondary.appendChild(esci);
 
     // Telefono: tre preferiti (Oggi, Note, Vault se non scelti), + (cattura),
     // Altro (tutto il resto). Se Oggi non e' tra i preferiti, fuori da Oggi
@@ -947,10 +951,6 @@
       a.querySelector('span').textContent = s.label;
       grid.appendChild(a);
     });
-    const esciTile = el(`<button type="button" class="sheet-tile">${lineIcon('esci', 30)}<span></span></button>`);
-    esciTile.querySelector('span').textContent = tr('btn_logout');
-    esciTile.addEventListener('click', logout);
-    grid.appendChild(esciTile);
     sectionsSheet.appendChild(grid);
   }
 
@@ -4812,6 +4812,7 @@
     // Solo con la verifica in due passaggi attiva serve sapere come uscirne.
     if (info.totpEnabled) root.appendChild(help);
     if (window.MementoBackend && window.MementoBackend.extendSettings) await window.MementoBackend.extendSettings(root, window.MementoUI);
+    root.appendChild(logoutBlock());
   };
 
   // ---------------- Global search ----------------
@@ -4928,7 +4929,7 @@
     e.preventDefault();
     window.MementoBackend.download(a.getAttribute('href')).catch((err) => toast(err.message));
   });
-  window.MementoUI = { receive: () => receiveFlow(), el, esc, tr, toast, openModal, closeModal, render, sectionsBlock, totpBlock, loadScript, askConfirm, askValue, haptic, themeBlock, openQuickCapture, showQr, scanCode, isReady: () => !appRoot.classList.contains('hidden') };
+  window.MementoUI = { receive: () => receiveFlow(), logoutBlock, el, esc, tr, toast, openModal, closeModal, render, sectionsBlock, totpBlock, loadScript, askConfirm, askValue, haptic, themeBlock, openQuickCapture, showQr, scanCode, isReady: () => !appRoot.classList.contains('hidden') };
 
   // Molti handler fanno "await api(...)" senza try/catch: senza questa rete di
   // sicurezza un errore restava solo in console e per l'utente non succedeva nulla.

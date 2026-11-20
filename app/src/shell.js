@@ -228,15 +228,14 @@
         if (window.MementoNative && window.MementoNative.Update.available()) root.appendChild(window.MementoNative.Update.block(ui));
 
         const pw = ui.el(`<div class="section-block"><h3>${esc(tr('local_password_title'))}</h3>
-          <div class="card-actions" style="padding-top:4px"><button type="button" class="btn" data-change>${esc(tr('local_change_password'))}</button>
-          <button type="button" class="btn" data-lock>${esc(tr('local_lock_now'))}</button></div></div>`);
+          <div class="card-actions" style="padding-top:4px"><button type="button" class="btn" data-change>${esc(tr('local_change_password'))}</button></div></div>`);
         pw.querySelector('[data-change]').addEventListener('click', () => changePasswordFlow(ui));
-        pw.querySelector('[data-lock]').addEventListener('click', () => { be.lock(); location.reload(); });
         root.appendChild(pw);
 
         root.appendChild(ui.themeBlock());
         root.appendChild(ui.sectionsBlock());
         root.appendChild(appBlock(ui, tr('app_mode_local_on')));
+        root.appendChild(ui.logoutBlock());
         return true;
       },
     };
