@@ -1,0 +1,98 @@
+name: App Android
+
+# Costruisce l'APK di Memento (Capacitor) a ogni push che tocca l'interfaccia
+# o l'app. Con un tag "app-v*" pubblica anche una Release con l'APK.
+#
+# Firma: se ci sono i segreti ANDROID_KEYSTORE_B64 e ANDROID_KEYSTORE_PASSWORD
+# l'APK e' firmato sempre con la stessa chiave (gli aggiornamenti si
+# installano sopra senza perdere i dati). Senza segreti esce un APK di prova
+# firmato con una chiave usa e getta: non aggiornabile.
+on:
+  push:
+    branches: [main, app-android]
+    paths: ['public/**', 'app/**', '.github/workflows/android.yml']
+    tags: ['app-v*']
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Dipendenze e cartella web
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          npm ci
+          node scripts/build-www.js
+
+      - name: Progetto Android
+        run: |
+          npx cap add android
+          npx capacitor-assets generate --android \
+            --iconBackgroundColor '#141B33' --iconBackgroundColorDark '#141B33' \
+            --splashBackgroundColor '#F2F3EE' --splashBackgroundColorDark '#141B33'
+          # Permessi, indirizzi memento://, scorciatoie, widget, icona a tema,
+          # MainActivity con l'aggancio per Google: tutto in uno script.
+          node scripts/patch-android.js
+          # Versione: numero progressivo della build e versione di package.json.
+          VERSION=$(node -p "require('./package.json').version")
+          sed -i "s/versionCode 1$/versionCode ${GITHUB_RUN_NUMBER}/; s/versionName \"1.0\"/versionName \"${VERSION}\"/" android/app/build.gradle
+          npx cap sync android
+
+      - name: Compila
+        working-directory: app/android
+        run: ./gradlew --no-daemon assembleRelease
+
+      - name: Firma
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          IN=android/app/build/outputs/apk/release/app-release-unsigned.apk
+          "$BT/zipalign" -f -p 4 "$IN" aligned.apk
+          if [ -n "$KS_B64" ] && [ -n "$KS_PASS" ]; then
+            echo "$KS_B64" | base64 -d > release.p12
+            "$BT/apksigner" sign --ks release.p12 --ks-type PKCS12 --ks-pass env:KS_PASS --out memento.apk aligned.apk
+            echo "SIGNED=release" >> "$GITHUB_ENV"
+          else
+            keytool -genkeypair -keystore test.p12 -storetype PKCS12 -storepass memento-test -alias test \
+              -keyalg RSA -keysize 2048 -validity 365 -dname "CN=Memento test"
+            "$BT/apksigner" sign --ks test.p12 --ks-type PKCS12 --ks-pass pass:memento-test --out memento.apk aligned.apk
+            echo "SIGNED=test" >> "$GITHUB_ENV"
+          fi
+          "$BT/apksigner" verify memento.apk
+          VERSION=$(node -p "require('./package.json').version")
+          mv memento.apk "memento-${VERSION}-${GITHUB_RUN_NUMBER}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: memento-apk-${{ env.SIGNED }}
+          path: app/memento-*.apk
+          retention-days: 30
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/app-v') && env.SIGNED == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/memento-*.apk
+          prerelease: true

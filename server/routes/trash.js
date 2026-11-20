@@ -14,6 +14,7 @@ const RESOURCES = {
   document: { table: 'documents', label: (r) => r.display_name || r.original_name },
   dossier: { table: 'dossiers', label: (r) => r.title },
   reminder: { table: 'reminders', label: (r) => r.label },
+  card: { table: 'cards', label: (r) => r.name },
 };
 
 router.get('/', (req, res) => {

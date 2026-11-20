@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Scorciatoie tenendo premuta l'icona dell'app: aprono indirizzi memento://
+     che l'app gestisce all'avvio (app/src/shell.js, handleDeepLink). -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="nuova_nota" android:enabled="true"
+        android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/shortcut_note">
+        <intent android:action="android.intent.action.VIEW" android:data="memento://nota"
+            android:targetPackage="io.github.katergaris.memento"
+            android:targetClass="io.github.katergaris.memento.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="carte" android:enabled="true"
+        android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/shortcut_cards">
+        <intent android:action="android.intent.action.VIEW" android:data="memento://carte"
+            android:targetPackage="io.github.katergaris.memento"
+            android:targetClass="io.github.katergaris.memento.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="ricevi" android:enabled="true"
+        android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/shortcut_receive">
+        <intent android:action="android.intent.action.VIEW" android:data="memento://ricevi"
+            android:targetPackage="io.github.katergaris.memento"
+            android:targetClass="io.github.katergaris.memento.MainActivity" />
+    </shortcut>
+</shortcuts>

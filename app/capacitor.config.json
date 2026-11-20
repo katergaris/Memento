@@ -1,0 +1,14 @@
+{
+  "appId": "io.github.katergaris.memento",
+  "appName": "Memento",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": true
+  },
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "CapacitorHttp": { "enabled": true }
+  }
+}

@@ -39,6 +39,9 @@ router.get('/', (req, res) => {
     .all(q, q)
     .forEach((r) => results.push({ type: 'dossier', id: r.id, label: r.title }));
 
+  db.prepare("SELECT id, name FROM cards WHERE deleted_at IS NULL AND (name LIKE ? ESCAPE '\\' OR number LIKE ? ESCAPE '\\' OR notes LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\')")
+    .all(q, q, q, q)
+    .forEach((r) => results.push({ type: 'card', id: r.id, label: r.name }));
   db.prepare("SELECT id, label FROM reminders WHERE deleted_at IS NULL AND (label LIKE ? ESCAPE '\\' OR notes LIKE ? ESCAPE '\\')")
     .all(q, q)
     .forEach((r) => results.push({ type: 'reminder', id: r.id, label: r.label }));
@@ -87,6 +90,27 @@ function nextOccurrence(day, month, frequency) {
   return candidate.toISOString().slice(0, 10);
 }
 
+// Finanziamento: prossima rata da pagare (oggi compreso) o null se le rate
+// sono finite. Le date si ricalcolano dalla prima rata, come sopra.
+function loanNextDate(startDate, frequency, installments) {
+  const start = new Date(`${String(startDate).slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || !installments) return undefined;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const stepMonths = { mensile: 1, trimestrale: 3, semestrale: 6, annuale: 12 }[frequency] || 1;
+  for (let i = 0; i < installments; i++) {
+    let d;
+    if (frequency === 'settimanale') { d = new Date(start); d.setDate(d.getDate() + 7 * i); }
+    else {
+      const total = start.getFullYear() * 12 + start.getMonth() + stepMonths * i;
+      const y = Math.floor(total / 12), m = total % 12;
+      d = new Date(y, m, Math.min(start.getDate(), new Date(y, m + 1, 0).getDate()));
+    }
+    if (d >= today) return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  return null;
+}
+
 // Elementi con scadenza vicina (account e documenti), usati per i promemoria
 router.get('/reminders/upcoming', (req, res) => {
   const parsed = parseInt(req.query.days, 10);
@@ -103,10 +127,15 @@ router.get('/reminders/upcoming', (req, res) => {
     // renewal_month resta NULL per le cadenze settimanale/mensile (non serve,
     // solo il giorno conta): non va richiesto anche lui, altrimenti quelle
     // non comparirebbero mai qui.
-    .prepare('SELECT id, service AS label, renewal_day, renewal_month, billing_frequency FROM accounts WHERE deleted_at IS NULL AND renewal_day IS NOT NULL')
+    .prepare('SELECT id, service AS label, renewal_day, renewal_month, billing_frequency, type AS kind, installments, start_date FROM accounts WHERE deleted_at IS NULL AND (renewal_day IS NOT NULL OR (type = \'finanziamento\' AND installments IS NOT NULL AND start_date IS NOT NULL))')
     .all()
-    .map((r) => ({ id: r.id, label: r.label, date: nextOccurrence(r.renewal_day, r.renewal_month, r.billing_frequency), type: 'account' }))
-    .filter((r) => r.date <= windowEndStr)
+    .map((r) => {
+      // Finanziamento: la prossima rata vera, niente dopo l'ultima.
+      const loan = r.kind === 'finanziamento' && r.installments && r.start_date ? loanNextDate(r.start_date, r.billing_frequency, r.installments) : undefined;
+      const date = loan !== undefined ? loan : (r.renewal_day != null ? nextOccurrence(r.renewal_day, r.renewal_month, r.billing_frequency) : null);
+      return { id: r.id, label: r.label, date, type: 'account' };
+    })
+    .filter((r) => r.date && r.date <= windowEndStr)
     .sort((a, b) => (a.date > b.date ? 1 : -1));
 
   const documents = db
@@ -134,3 +163,4 @@ router.get('/reminders/upcoming', (req, res) => {
 });
 
 module.exports = router;
+module.exports.loanNextDate = loanNextDate;

@@ -11,3 +11,15 @@ uploads/*
 
 # Bozze del logo (concept, varianti, anteprima): i file definitivi sono in brand/
 logos/
+
+# Studio dell interfaccia e bozze (documenti di lavoro, non pubblici)
+docs/studio-interfaccia/
+
+# Materiale sorgente (foto, dataset dei loghi): non va nel repository
+risorse/
+
+# Skill di Claude: solo locali, non nel repository pubblico
+.claude/skills/
+# Appunti di lavoro di Claude: solo locali
+.claude/HANDOFF.md
+.claude/settings.json
