@@ -1518,6 +1518,12 @@
 "color": "#B00A03"
 },
 {
+"id": "roadhouse",
+"name": "Roadhouse",
+"category": "ristoranti",
+"color": "#CB2127"
+},
+{
 "id": "salmoiraghi-vigano",
 "name": "Salmoiraghi & Viganò",
 "category": "ottica",
