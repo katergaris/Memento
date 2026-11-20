@@ -712,7 +712,7 @@
     const favs = tabFavs();
     const grid = el('<div class="fav-grid"></div>');
     favCandidates().forEach((view) => {
-      const b = el(`<button type="button" class="fav-pick${favs[slot] === view ? ' active' : ''}">${appIcon(view, 48)}<span></span></button>`);
+      const b = el(`<button type="button" class="fav-pick${favs[slot] === view ? ' active' : ''}">${lineIcon(view, 30)}<span></span></button>`);
       b.querySelector('span').textContent = VIEW_LABELS[view];
       b.addEventListener('click', () => { setTabFav(slot, view); closeModal(); haptic(); if (onDone) onDone(); });
       grid.appendChild(b);
@@ -911,11 +911,11 @@
     sectionsSheet.innerHTML = '';
     const grid = el('<div class="sheet-grid"></div>');
     visibleSections().filter((s) => !NAV_SKIP.has(s.view)).forEach((s) => {
-      const a = el(`<a class="sheet-tile" href="#/${s.view}" data-view="${s.view}">${appIcon(s.view, 52)}<span></span></a>`);
+      const a = el(`<a class="sheet-tile" href="#/${s.view}" data-view="${s.view}">${lineIcon(s.view, 30)}<span></span></a>`);
       a.querySelector('span').textContent = s.label;
       grid.appendChild(a);
     });
-    const esciTile = el(`<button type="button" class="sheet-tile">${appIcon('esci', 52)}<span></span></button>`);
+    const esciTile = el(`<button type="button" class="sheet-tile">${lineIcon('esci', 30)}<span></span></button>`);
     esciTile.querySelector('span').textContent = tr('btn_logout');
     esciTile.addEventListener('click', logout);
     grid.appendChild(esciTile);

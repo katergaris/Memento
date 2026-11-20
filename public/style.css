@@ -372,16 +372,19 @@ input:focus, textarea:focus, select:focus {
     background: rgba(18, 19, 24, 0.4);
     padding: 0 12px calc(var(--tabbar-h) + 22px + env(safe-area-inset-bottom, 0px));
   }
+  /* Pannello "Altro": stesso blu notte della barra, simboli a tratto */
   .sheet-grid {
-    width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px 6px;
-    padding: 20px 12px 18px; background: var(--surface); border-radius: 24px;
+    width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px 6px;
+    padding: 24px 12px 22px; background: var(--block); border-radius: 24px;
+    box-shadow: 0 12px 30px -10px rgba(18, 19, 24, .55);
   }
   .sheet-tile {
-    display: flex; flex-direction: column; align-items: center; gap: 6px; border: none; background: none;
-    color: var(--text); font: inherit; font-size: 12px; font-weight: 700; text-decoration: none; text-align: center; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 8px; border: none; background: none; padding: 0; min-width: 0;
+    color: var(--ink-dim); font: inherit; font-size: 12px; font-weight: 700; text-decoration: none; text-align: center; cursor: pointer;
   }
-  .sheet-tile .app-tile { border-radius: 16px; }
-  .sheet-tile.active span { color: var(--accent); }
+  .sheet-tile svg { width: 30px; height: 30px; flex: none; }
+  .sheet-tile span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sheet-tile.active { color: #fff; }
 }
 
 /* ---------- Cattura veloce: riquadro galleggiante sopra tutto ---------- */
@@ -1311,7 +1314,7 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 }
 :root[data-theme="dark"] .seg { background: #1E1F25; }
 :root[data-theme="dark"] .toast { background: #2C2E36; color: #fff; }
-:root[data-theme="dark"] .tabbar { box-shadow: 0 0 0 1px #2A2C33, 0 12px 30px -10px rgba(0, 0, 0, .8); }
+:root[data-theme="dark"] .tabbar, :root[data-theme="dark"] .sheet-grid { box-shadow: 0 0 0 1px #2A2C33, 0 12px 30px -10px rgba(0, 0, 0, .8); }
 :root[data-theme="dark"] .date-soon .date-cell { background: #3A2019; color: #FFB39E; }
 :root[data-theme="dark"] .tile-focus { box-shadow: 0 0 0 1px #30323A; }
 :root[data-theme="dark"] .wallet-card.on-light { box-shadow: none; }
@@ -1397,6 +1400,7 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
   display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 2px; border: none; border-radius: 16px;
   background: none; color: var(--text); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; min-width: 0;
 }
+.fav-pick svg { width: 30px; height: 30px; }
 .fav-pick span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fav-pick.active { background: var(--accent-bg); color: var(--accent); }
 
