@@ -435,5 +435,112 @@
     },
   };
 
-  window.MementoNative = { Notify, Bio, Sync, Update };
+  // ==================================================================
+  // COPIA SUL SERVER DI CASA: stessa copia cifrata di Google Drive (file
+  // principale + un file per documento), salvata sul server Memento con la
+  // chiave creata nelle sue Impostazioni. Il server non la puo' leggere.
+  // ==================================================================
+  const SERVER_KEY = 'memento-server-backup';
+  const SERVER_MAIN = 'memento-cloud.json';
+  let serverRunning = null;
+  const ServerSync = {
+    settings: () => pref(SERVER_KEY, { url: '', token: '', last: null, error: '' }),
+    connected: () => { const s = ServerSync.settings(); return !!(s.url && s.token); },
+    // Codice mostrato dal server: "MEMENTO-BK1 <indirizzo> <chiave>".
+    parseCode(text) {
+      const m = /^MEMENTO-BK1\s+(https?:\/\/\S+)\s+([A-Za-z0-9_-]{16,})$/.exec(String(text || '').trim());
+      if (!m) throw new Error(tr('srvbk_code_invalid'));
+      return { url: m[1].replace(/\/+$/, ''), token: m[2] };
+    },
+    async api(method, name, body) {
+      const s = ServerSync.settings();
+      const res = await fetch(`${s.url}/api/app-store/phone/files${name ? `/${encodeURIComponent(name)}` : ''}`, {
+        method, headers: { Authorization: `Bearer ${s.token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (res.status === 401) throw new Error(tr('srvbk_key_invalid'));
+      if (!res.ok) throw new Error(tr('srvbk_http', { status: res.status }));
+      return res;
+    },
+    // Unisce la copia del server con il telefono e carica la versione unita.
+    // password serve solo la prima volta (o se la copia ha un'altra password).
+    async run(engine, password) {
+      if (serverRunning) return serverRunning;
+      serverRunning = (async () => {
+        const names = new Set((await (await ServerSync.api('GET')).json()).map((f) => f.name));
+        if (names.has(SERVER_MAIN)) {
+          const payload = await engine.openCloudEnvelope(await (await ServerSync.api('GET', SERVER_MAIN)).json(), password);
+          await engine.mergeRemote(payload.state);
+          for (const name of payload.files || []) {
+            if (await engine.hasFile(name) || !names.has(`file-${name}.json`)) continue;
+            await engine.importCloudFile(name, await (await ServerSync.api('GET', `file-${name}.json`)).json());
+          }
+        } else if (!engine.cloudReady) {
+          if (!password) { const e = new Error(tr('sync_need_password')); e.passwordRequired = true; throw e; }
+          await engine.setupCloudKey(password);
+        }
+        const envelope = await engine.cloudEnvelope();
+        for (const d of engine.rows('documents')) {
+          if (d.deleted_at || !d.stored_name || names.has(`file-${d.stored_name}.json`)) continue;
+          const enc = await engine.cloudFile(d.stored_name);
+          if (enc) await ServerSync.api('PUT', `file-${d.stored_name}.json`, enc);
+        }
+        await ServerSync.api('PUT', SERVER_MAIN, envelope);
+        setPref(SERVER_KEY, { ...ServerSync.settings(), last: new Date().toISOString(), error: '' });
+      })();
+      try { return await serverRunning; } catch (e) {
+        if (!e.passwordRequired && !(e.data && e.data.passwordRequired)) setPref(SERVER_KEY, { ...ServerSync.settings(), error: e.message });
+        throw e;
+      } finally { serverRunning = null; }
+    },
+    async auto(engine) {
+      if (!ServerSync.connected() || !engine.cloudReady) return;
+      try { await ServerSync.run(engine); } catch (_) { /* resta l'errore nello stato */ }
+    },
+    disconnect() { setPref(SERVER_KEY, { url: '', token: '', last: null, error: '' }); },
+    block(ui, engine) {
+      const b = ui.el(`<div class="section-block"><h3>${esc(tr('srvbk_title'))}</h3><p class="card-sub" data-state></p>
+        <div class="card-actions" style="padding-top:10px" data-actions></div></div>`);
+      const state = b.querySelector('[data-state]');
+      const actions = b.querySelector('[data-actions]');
+      const btn = (label, primary, fn) => { const x = ui.el(`<button type="button" class="btn${primary ? ' btn-primary' : ''}"></button>`); x.textContent = label; x.addEventListener('click', fn); actions.appendChild(x); return x; };
+      const askPassword = () => new Promise((resolve) => {
+        const form = ui.el(`<form class="modal-body" style="padding:0">
+          <div class="form-row"><label>${esc(tr('local_password_current'))}</label><input type="password" name="p" required autocomplete="current-password" /></div>
+          <div class="form-actions"><button type="button" class="btn btn-ghost" data-cancel>${esc(tr('btn_cancel'))}</button><button type="submit" class="btn btn-primary">${esc(tr('btn_confirm'))}</button></div></form>`);
+        form.addEventListener('submit', (e) => { e.preventDefault(); ui.closeModal(); resolve(form.p.value); });
+        form.querySelector('[data-cancel]').addEventListener('click', () => { ui.closeModal(); resolve(null); });
+        ui.openModal(tr('sync_title_password'), form);
+      });
+      const go = async (password) => {
+        state.textContent = tr('sync_running');
+        try { await ServerSync.run(engine, password); ui.toast(tr('srvbk_done')); } catch (e) {
+          if (e.passwordRequired || (e.data && e.data.passwordRequired)) { const p = await askPassword(); if (p) return go(p); } else ui.toast(e.message);
+        }
+        paint();
+      };
+      const connect = async (text) => {
+        try { const c = ServerSync.parseCode(text); setPref(SERVER_KEY, { ...ServerSync.settings(), ...c, error: '' }); } catch (e) { ui.toast(e.message); return; }
+        await go();
+      };
+      const paint = () => {
+        const s = ServerSync.settings();
+        actions.innerHTML = '';
+        if (!ServerSync.connected()) {
+          state.textContent = '';
+          btn(tr('srvbk_scan'), true, async () => { const r = await ui.scanCode(); if (r) connect(r.text); });
+          btn(tr('srvbk_paste'), false, async () => { const v = await ui.askValue(tr('srvbk_paste'), { label: tr('srvbk_code_label') }); if (v) connect(v); });
+          return;
+        }
+        let host = s.url; try { host = new URL(s.url).host; } catch (_) { /* resta l'indirizzo */ }
+        state.textContent = s.error ? tr('sync_error', { msg: s.error }) : s.last ? tr('srvbk_last', { host, when: new Date(s.last).toLocaleString(window.MementoI18n.getLang() === 'en' ? 'en-GB' : 'it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }) : host;
+        btn(tr('srvbk_now'), true, () => go());
+        btn(tr('sync_disconnect'), false, () => { ServerSync.disconnect(); paint(); });
+      };
+      paint();
+      return b;
+    },
+  };
+
+  window.MementoNative = { Notify, Bio, Sync, Update, ServerSync };
 })();

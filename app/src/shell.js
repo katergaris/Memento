@@ -79,7 +79,7 @@
     if (!N) return;
     clearTimeout(afterChanges.t1); clearTimeout(afterChanges.t2);
     afterChanges.t1 = setTimeout(() => N.Notify.reschedule(be).catch(() => {}), 3000);
-    if (engine) afterChanges.t2 = setTimeout(() => N.Sync.auto(engine), 30000);
+    if (engine) afterChanges.t2 = setTimeout(() => { N.Sync.auto(engine); N.ServerSync.auto(engine); }, 30000);
   }
   function watch(be, engine) {
     const inner = be.request;
@@ -212,6 +212,8 @@
           root.appendChild(sync);
           window.MementoNative.Sync.renderPanel(sync, ui, be);
         }
+
+        if (window.MementoNative) root.appendChild(window.MementoNative.ServerSync.block(ui, be));
 
         const info = await (await be.request('/security')).json();
         root.appendChild(ui.totpBlock(info));
@@ -425,7 +427,7 @@
       const be = window.MementoBackend;
       if (!be || be.mode !== 'local') return;
       if (!isActive) { hiddenAt = Date.now(); return; }
-      if (window.MementoNative && be.engine.unlocked) window.MementoNative.Sync.auto(be.engine);
+      if (window.MementoNative && be.engine.unlocked) { window.MementoNative.Sync.auto(be.engine); window.MementoNative.ServerSync.auto(be.engine); }
       if (hiddenAt && Date.now() - hiddenAt > 5 * 60 * 1000 && be.engine.unlocked) { be.engine.lock(); location.reload(); }
     });
   }

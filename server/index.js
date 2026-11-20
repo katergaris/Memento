@@ -45,6 +45,11 @@ function sessionMaxAge() {
 
 const SESSION_MAX_AGE = sessionMaxAge();
 
+// Copia dell'app Android sul server: rotte con chiave propria e limite piu'
+// alto, prima del parser generale e della sessione.
+const appStore = require('./routes/app-store');
+app.use('/api/app-store/phone', appStore.phone);
+
 // 4 MB: le foto delle tessere (due immagini ridimensionate) viaggiano in JSON.
 app.use(express.json({ limit: '4mb' }));
 app.use(
@@ -180,6 +185,7 @@ app.use('/api/search', auth.requireAuth, require('./routes/search'));
 app.use('/api/trash', auth.requireAuth, require('./routes/trash'));
 app.use('/api/backup', auth.requireAuth, require('./routes/backup'));
 app.use('/api/security', auth.requireAuth, require('./routes/security'));
+app.use('/api/app-store', auth.requireAuth, appStore.settings);
 
 // Una rotta /api inesistente deve rispondere 404 JSON: senza questo finiva nel
 // catch-all qui sotto e il client riceveva la index.html con status 200.

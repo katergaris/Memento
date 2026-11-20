@@ -4576,6 +4576,38 @@
     });
     root.appendChild(backupBlock);
 
+    // Backup dell'app Android ("Sul telefono"): il telefono salva qui la sua
+    // copia cifrata con la chiave creata da questo blocco.
+    if (!window.MementoBackend) {
+      const appBlock = el(`<div class="section-block"><h3>${esc(tr('srvbk_server_title'))}</h3><p class="card-sub" data-state></p>
+        <div class="card-actions" style="padding-top:10px"><button type="button" class="btn btn-primary" data-link>${esc(tr('srvbk_link_phone'))}</button><button type="button" class="btn" data-unlink>${esc(tr('srvbk_unlink_all'))}</button></div></div>`);
+      const paintApp = async () => {
+        try {
+          const st = await api('/app-store/status');
+          appBlock.querySelector('[data-state]').textContent = st.phones || st.files
+            ? tr('srvbk_server_status', { phones: st.phones, when: st.last ? fmtDate(st.last) : '—' })
+            : tr('srvbk_server_none');
+          appBlock.querySelector('[data-unlink]').classList.toggle('hidden', !st.phones);
+        } catch (_) { appBlock.querySelector('[data-state]').textContent = ''; }
+      };
+      appBlock.querySelector('[data-link]').addEventListener('click', async () => {
+        const { token } = await api('/app-store/keys', { method: 'POST' });
+        const code = `MEMENTO-BK1 ${location.origin} ${token}`;
+        const copy = el(`<button type="button" class="btn">${esc(tr('srvbk_copy_code'))}</button>`);
+        copy.addEventListener('click', async () => { try { await navigator.clipboard.writeText(code); toast(tr('toast_copied')); } catch (_) { toast(tr('err_copy_failed')); } });
+        const done = el(`<button type="button" class="btn btn-primary">${esc(tr('qr_done'))}</button>`);
+        done.addEventListener('click', () => { closeModal(); paintApp(); });
+        await showQr(tr('srvbk_link_phone'), code, '', [copy, done]);
+      });
+      appBlock.querySelector('[data-unlink]').addEventListener('click', async () => {
+        if (!(await askConfirm(tr('srvbk_unlink_confirm')))) return;
+        await api('/app-store/keys', { method: 'DELETE' });
+        paintApp();
+      });
+      paintApp();
+      root.appendChild(appBlock);
+    }
+
     const langBlock = el(`<div class="section-block"><h3>${esc(tr('settings_language'))}</h3><p class="card-sub">${esc(tr('settings_language_hint'))}</p></div>`);
     const langRow = el('<div class="card-actions" style="padding-top:10px"></div>');
     [['it', 'Italiano'], ['en', 'English']].forEach(([code, label]) => {
@@ -4711,7 +4743,7 @@
     e.preventDefault();
     window.MementoBackend.download(a.getAttribute('href')).catch((err) => toast(err.message));
   });
-  window.MementoUI = { el, esc, tr, toast, openModal, closeModal, render, sectionsBlock, totpBlock, loadScript, askConfirm, askValue, haptic, themeBlock, openQuickCapture, isReady: () => !appRoot.classList.contains('hidden') };
+  window.MementoUI = { el, esc, tr, toast, openModal, closeModal, render, sectionsBlock, totpBlock, loadScript, askConfirm, askValue, haptic, themeBlock, openQuickCapture, showQr, scanCode, isReady: () => !appRoot.classList.contains('hidden') };
 
   // Molti handler fanno "await api(...)" senza try/catch: senza questa rete di
   // sicurezza un errore restava solo in console e per l'utente non succedeva nulla.
