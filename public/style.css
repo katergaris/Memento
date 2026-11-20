@@ -1455,3 +1455,6 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 .icon-action:hover { background: var(--surface-hover); }
 .icon-action-primary { background: var(--accent-soft); color: #fff; box-shadow: none; }
 .icon-action-primary:hover { background: var(--accent); }
+
+/* Testi facoltativi vuoti: niente spazio */
+.card-sub:empty, .auth-sub:empty { display: none; }

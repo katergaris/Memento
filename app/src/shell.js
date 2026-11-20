@@ -141,16 +141,20 @@
   function localBackend() {
     const storage = idbStorage();
     const be = new window.MementoLocalBackend.LocalBackend(storage, {
-      version: 'app',
+      version: 'app', build: '',
       confirmReveal: () => (window.MementoNative ? window.MementoNative.Bio.confirmVault() : true),
     });
+    // Versione mostrata in fondo alla schermata di accesso: quella dell'APK.
+    const AppPlugin = plugin('App');
+    if (AppPlugin && AppPlugin.getInfo) AppPlugin.getInfo().then((i) => { be.hooks.version = i.version; }).catch(() => {});
     const today = () => new Date().toISOString().slice(0, 10);
     return {
       mode: 'local',
       engine: be,
       request: (path, opts) => be.request(path, opts),
-      // Condivisione di voci del vault (passa da Google Drive).
-      canShare: true,
+      // Condivisione di voci del vault (passa da Google Drive): solo se la
+      // build ha l'accesso a Google.
+      get canShare() { return !!(window.MementoNative && window.MementoNative.Sync.configured()); },
       syncNow() {
         const N = window.MementoNative;
         if (!N || !N.Sync.settings().on) { window.MementoUI.toast(tr('share_need_drive')); return; }
@@ -199,12 +203,15 @@
         data.querySelector('[data-import]').addEventListener('click', () => importFlow(ui).catch((e) => ui.toast(e.message)));
         root.appendChild(data);
 
-        const sync = ui.el(`<div class="section-block"><h3>${esc(tr('local_sync_title'))}</h3>
-          <p class="card-sub" data-sync-state></p>
-          <div class="card-actions" style="padding-top:10px" data-sync-actions></div></div>`);
-        root.appendChild(sync);
-        if (window.MementoNative) window.MementoNative.Sync.renderPanel(sync, ui, be);
-        else sync.querySelector('[data-sync-state]').textContent = tr('sync_not_configured');
+        // Sincronizzazione con Google Drive: solo se la build ha l'accesso a
+        // Google (variabile GOOGLE_WEB_CLIENT_ID), altrimenti non si mostra.
+        if (window.MementoNative && window.MementoNative.Sync.configured()) {
+          const sync = ui.el(`<div class="section-block"><h3>${esc(tr('local_sync_title'))}</h3>
+            <p class="card-sub" data-sync-state></p>
+            <div class="card-actions" style="padding-top:10px" data-sync-actions></div></div>`);
+          root.appendChild(sync);
+          window.MementoNative.Sync.renderPanel(sync, ui, be);
+        }
 
         const info = await (await be.request('/security')).json();
         root.appendChild(ui.totpBlock(info));
@@ -293,7 +300,7 @@
     const N = window.MementoNative;
     const block = ui.el(`<div class="section-block"><h3>${esc(tr('notify_title'))}</h3><div class="toggle-list"></div></div>`);
     const list = block.querySelector('.toggle-list');
-    if (!N || !N.Notify.available()) { list.appendChild(ui.el(`<p class="card-sub">${esc(tr('notify_unavailable'))}</p>`)); return block; }
+    if (!N || !N.Notify.available()) return document.createDocumentFragment();
     const s = N.Notify.settings();
     const hourRow = ui.el(`<label class="toggle-row"><span>${esc(tr('notify_hour'))}</span><select>${Array.from({ length: 24 }, (_, h) => `<option value="${h}">${String(h).padStart(2, '0')}:00</option>`).join('')}</select></label>`);
     hourRow.querySelector('select').value = String(s.hour);
@@ -311,7 +318,8 @@
     const N = window.MementoNative;
     const block = ui.el(`<div class="section-block"><h3>${esc(tr('bio_title'))}</h3><div class="toggle-list"></div></div>`);
     const list = block.querySelector('.toggle-list');
-    if (!N || !(await N.Bio.available())) { list.appendChild(ui.el(`<p class="card-sub">${esc(tr('bio_unavailable'))}</p>`)); return block; }
+    // Senza impronta configurata sul telefono il blocco non serve.
+    if (!N || !(await N.Bio.available())) return document.createDocumentFragment();
     const s = N.Bio.settings();
     if (engine) {
       list.appendChild(toggleRow(ui, tr('bio_unlock'), s.unlock, async (on) => {

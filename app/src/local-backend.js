@@ -451,7 +451,7 @@
       const created = (x) => ({ __status: 201, body: x });
       const [res, id, sub, a3, a4] = parts;
 
-      if (res === 'health') return { status: 'ok', version: this.hooks.version || 'app', build: 'telefono' };
+      if (res === 'health') return { status: 'ok', version: this.hooks.version || 'app', build: this.hooks.build || '' };
       if (res === 'auth') {
         if (id === 'status') return { setupNeeded: !(await this.hasArchive()), authenticated: this.unlocked, local: true };
         if (id === 'setup' && method === 'POST') { await this.setup(body.username, body.password); return { ok: true }; }
