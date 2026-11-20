@@ -2400,6 +2400,7 @@
       // La libreria allinea il disegno a sinistra (xMinYMin): al centro.
       const svg = target.querySelector('svg');
       if (svg) svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+      target.dataset.code = 'qr';
       return true;
     }
     await loadScript('/vendor/jsbarcode.min.js');
@@ -2412,6 +2413,11 @@
       // sbagliata): meglio un Code 128 leggibile che niente.
       window.JsBarcode(svgEl, number, { format: 'CODE128', displayValue: false, height: 90, margin: 8, width: 2.2 });
     }
+    // Codice a barre: si allunga in altezza per riempire la tessera (le
+    // barre restano proporzionate in larghezza, la cassa lo legge uguale).
+    if (!svgEl.getAttribute('viewBox')) svgEl.setAttribute('viewBox', `0 0 ${parseFloat(svgEl.getAttribute('width'))} ${parseFloat(svgEl.getAttribute('height'))}`);
+    svgEl.setAttribute('preserveAspectRatio', 'none');
+    target.dataset.code = 'bar';
     return true;
   }
 
@@ -3241,24 +3247,26 @@
       } else {
         top.appendChild(el(`<span class="cv-name">${esc(card.name)}</span>`));
       }
-      // Numero coperto: si scopre solo con l'occhio (il codice resta leggibile
-      // dallo scanner della cassa). Toccando il numero si copia.
+      // Numero nascosto del tutto: compare solo con l'occhio (il codice resta
+      // leggibile dallo scanner della cassa). Toccando il numero si copia.
+      // Senza codice disegnabile il numero e' l'unica cosa: resta visibile.
       const num = page.querySelector('.cv-num-text');
+      const numRow = page.querySelector('.cv-number');
       const eye = page.querySelector('.cv-eye');
       const grouped = groupNumber(card.number);
-      let shown = false;
+      num.textContent = grouped || '—';
+      num.addEventListener('click', async () => { try { await navigator.clipboard.writeText(card.number); toast(tr('toast_copied')); } catch (_) { /* niente appunti */ } });
+      const drawn = await renderCardCode(page.querySelector('.card-code'), card).catch(() => false);
+      if (!drawn) page.querySelector('.card-code').classList.add('hidden');
+      let shown = !drawn;
       const paintNum = () => {
-        num.textContent = !grouped ? '—' : shown ? grouped : grouped.replace(/\S/g, '•');
-        num.classList.toggle('covered', !shown && !!grouped);
+        numRow.classList.toggle('hidden', !shown);
         eye.innerHTML = phIcon(shown ? 'eye-slash' : 'eye', 22);
         eye.setAttribute('aria-label', tr(shown ? 'title_hide' : 'title_show'));
       };
       if (!grouped) eye.remove();
       eye.addEventListener('click', () => { shown = !shown; paintNum(); haptic(); });
       paintNum();
-      num.addEventListener('click', async () => { try { await navigator.clipboard.writeText(card.number); toast(tr('toast_copied')); } catch (_) { /* niente appunti */ } });
-      const drawn = await renderCardCode(page.querySelector('.card-code'), card).catch(() => false);
-      if (!drawn) page.querySelector('.card-code').classList.add('hidden');
       // Luminosita' al massimo mentre la carta e' aperta: lo scanner della
       // cassa la legge al primo colpo. Si ripristina lasciando la pagina.
       const SB = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.ScreenBrightness;
