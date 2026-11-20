@@ -411,7 +411,7 @@
           <span class="preview-title"></span>
           <div style="display:flex;gap:8px;align-items:center">
             <a class="btn btn-sm" href="/api/drive/${doc.id}/download">${esc(tr('btn_download'))}</a>
-            <button type="button" class="preview-close" aria-label="${esc(tr('btn_close'))}">✕</button>
+            <button type="button" class="preview-close" aria-label="${esc(tr('btn_close'))}">${phIcon('x', 18)}</button>
           </div>
         </div>
       </div>
@@ -635,27 +635,26 @@
     return t ? `<svg width="${size}" height="${size}" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">${t.line}</svg>` : '';
   }
 
-  // Icone vettoriali "pulite" (tratto, non pixel-art): usate solo per il
-  // tasto di ricerca del telefono, l'unico punto in cui il blocco a 8 bit era
-  // stato segnalato illeggibile a quella dimensione (22px). Il resto della
-  // navigazione resta nello stile retro a blocchi.
-  const VECTOR_ICONS = {
-    cerca: '<circle cx="11" cy="11" r="6.5"/><path d="M15.8 15.8L20.5 20.5"/>',
-    chiudi: '<path d="M6 6l12 12M18 6L6 18"/>',
-    occhio: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
-    'occhio-off': '<path d="M3 3l18 18"/><path d="M10.6 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-4 4.9M6.3 6.5C3.4 8.3 2 12 2 12s3.6 7 10 7c1.4 0 2.7-.3 3.8-.8"/><path d="M9.5 9.7a3 3 0 0 0 4.2 4.2"/>',
-    matita: '<path d="M4 20l.9-4L16 4.9a1.6 1.6 0 0 1 2.3 0l.8.8a1.6 1.6 0 0 1 0 2.3L8 19.1z"/><path d="M14.5 7.5l2 2"/>',
-    cartellaLinea: '<path d="M3 7a1.8 1.8 0 0 1 1.8-1.8h4l2 2h8.4A1.8 1.8 0 0 1 21 9v8.2A1.8 1.8 0 0 1 19.2 19H4.8A1.8 1.8 0 0 1 3 17.2z"/>',
-    cestino: '<path d="M4.5 7h15M9.5 7V4.5h5V7M7 7l1 12.5a1.5 1.5 0 0 0 1.5 1.4h7a1.5 1.5 0 0 0 1.5-1.4L18 7"/><path d="M10.2 11v6M13.8 11v6"/>',
-    codice: '<rect x="2" y="5.5" width="20" height="13" rx="1"/><text x="6" y="15" font-size="9.5" font-family="var(--font-mono, monospace)" font-weight="700" stroke="none" fill="currentColor">01</text>',
-    immagine: '<rect x="3" y="4" width="18" height="15" rx="1"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M3 15l5-4.5 4 3.5 3-2.5 6 5"/>',
-    musica: '<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>',
-    video: '<rect x="2.5" y="5" width="19" height="14" rx="1"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor" stroke="none"/>',
-    documento: '<path d="M6 2.5h8l4 4v15H6z"/><path d="M14 2.5v4h4"/><path d="M8.5 12h7M8.5 15.5h5"/>',
+  // Simboli d'interfaccia: stessa famiglia della barra in basso (Phosphor).
+  // Peso "bold" per i tasti piccoli (fino a 20px), "regular" per i grandi,
+  // cosi' il tratto resta simile a ogni dimensione.
+  const PI = {"magnifying-glass":["<path d=\"M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z\"/>","<path d=\"M232.49,215.51,185,168a92.12,92.12,0,1,0-17,17l47.53,47.54a12,12,0,0,0,17-17ZM44,112a68,68,0,1,1,68,68A68.07,68.07,0,0,1,44,112Z\"/>"],"x":["<path d=\"M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z\"/>","<path d=\"M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z\"/>"],"eye":["<path d=\"M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z\"/>","<path d=\"M251,123.13c-.37-.81-9.13-20.26-28.48-39.61C196.63,57.67,164,44,128,44S59.37,57.67,33.51,83.52C14.16,102.87,5.4,122.32,5,123.13a12.08,12.08,0,0,0,0,9.75c.37.82,9.13,20.26,28.49,39.61C59.37,198.34,92,212,128,212s68.63-13.66,94.48-39.51c19.36-19.35,28.12-38.79,28.49-39.61A12.08,12.08,0,0,0,251,123.13Zm-46.06,33C183.47,177.27,157.59,188,128,188s-55.47-10.73-76.91-31.88A130.36,130.36,0,0,1,29.52,128,130.45,130.45,0,0,1,51.09,99.89C72.54,78.73,98.41,68,128,68s55.46,10.73,76.91,31.89A130.36,130.36,0,0,1,226.48,128,130.45,130.45,0,0,1,204.91,156.12ZM128,84a44,44,0,1,0,44,44A44.05,44.05,0,0,0,128,84Zm0,64a20,20,0,1,1,20-20A20,20,0,0,1,128,148Z\"/>"],"eye-slash":["<path d=\"M53.92,34.62A8,8,0,1,0,42.08,45.38L61.32,66.55C25,88.84,9.38,123.2,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208a127.11,127.11,0,0,0,52.07-10.83l22,24.21a8,8,0,1,0,11.84-10.76Zm47.33,75.84,41.67,45.85a32,32,0,0,1-41.67-45.85ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.16,133.16,0,0,1,25,128c4.69-8.79,19.66-33.39,47.35-49.38l18,19.75a48,48,0,0,0,63.66,70l14.73,16.2A112,112,0,0,1,128,192Zm6-95.43a8,8,0,0,1,3-15.72,48.16,48.16,0,0,1,38.77,42.64,8,8,0,0,1-7.22,8.71,6.39,6.39,0,0,1-.75,0,8,8,0,0,1-8-7.26A32.09,32.09,0,0,0,134,96.57Zm113.28,34.69c-.42.94-10.55,23.37-33.36,43.8a8,8,0,1,1-10.67-11.92A132.77,132.77,0,0,0,231.05,128a133.15,133.15,0,0,0-23.12-30.77C185.67,75.19,158.78,64,128,64a118.37,118.37,0,0,0-19.36,1.57A8,8,0,1,1,106,49.79,134,134,0,0,1,128,48c34.88,0,66.57,13.26,91.66,38.35,18.83,18.83,27.3,37.62,27.65,38.41A8,8,0,0,1,247.31,131.26Z\"/>","<path d=\"M56.88,31.93A12,12,0,1,0,39.12,48.07l16,17.65C20.67,88.66,5.72,121.58,5,123.13a12.08,12.08,0,0,0,0,9.75c.37.82,9.13,20.26,28.49,39.61C59.37,198.34,92,212,128,212a131.34,131.34,0,0,0,51-10l20.09,22.1a12,12,0,0,0,17.76-16.14ZM128,188c-29.59,0-55.47-10.73-76.91-31.88A130.69,130.69,0,0,1,29.52,128c5.27-9.31,18.79-29.9,42-44.29l90.09,99.11A109.33,109.33,0,0,1,128,188Zm123-55.12c-.36.81-9,20-28,39.16a12,12,0,1,1-17-16.9A130.48,130.48,0,0,0,226.48,128a130.36,130.36,0,0,0-21.57-28.12C183.46,78.73,157.59,68,128,68c-3.35,0-6.7.14-10,.42a12,12,0,1,1-2-23.91c3.93-.34,8-.51,12-.51,36,0,68.63,13.67,94.49,39.52,19.35,19.35,28.11,38.8,28.48,39.61A12.08,12.08,0,0,1,251,132.88Z\"/>"],"pencil-simple":["<path d=\"M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68,147.31,64l24-24L216,84.68Z\"/>","<path d=\"M230.14,70.54,185.46,25.85a20,20,0,0,0-28.29,0L33.86,149.17A19.85,19.85,0,0,0,28,163.31V208a20,20,0,0,0,20,20H92.69a19.86,19.86,0,0,0,14.14-5.86L230.14,98.82a20,20,0,0,0,0-28.28ZM91,204H52V165l84-84,39,39ZM192,103,153,64l18.34-18.34,39,39Z\"/>"],"folder":["<path d=\"M216,72H131.31L104,44.69A15.86,15.86,0,0,0,92.69,40H40A16,16,0,0,0,24,56V200.62A15.4,15.4,0,0,0,39.38,216H216.89A15.13,15.13,0,0,0,232,200.89V88A16,16,0,0,0,216,72ZM40,56H92.69l16,16H40ZM216,200H40V88H216Z\"/>","<path d=\"M216,68H133.39l-26-29.29a20,20,0,0,0-15-6.71H40A20,20,0,0,0,20,52V200.62A19.41,19.41,0,0,0,39.38,220H216.89A19.13,19.13,0,0,0,236,200.89V88A20,20,0,0,0,216,68ZM44,56H90.61l10.67,12H44ZM212,196H44V92H212Z\"/>"],"trash":["<path d=\"M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z\"/>","<path d=\"M216,48H180V36A28,28,0,0,0,152,8H104A28,28,0,0,0,76,36V48H40a12,12,0,0,0,0,24h4V208a20,20,0,0,0,20,20H192a20,20,0,0,0,20-20V72h4a12,12,0,0,0,0-24ZM100,36a4,4,0,0,1,4-4h48a4,4,0,0,1,4,4V48H100Zm88,168H68V72H188ZM116,104v64a12,12,0,0,1-24,0V104a12,12,0,0,1,24,0Zm48,0v64a12,12,0,0,1-24,0V104a12,12,0,0,1,24,0Z\"/>"],"image":["<path d=\"M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,16V158.75l-26.07-26.06a16,16,0,0,0-22.63,0l-20,20-44-44a16,16,0,0,0-22.62,0L40,149.37V56ZM40,172l52-52,80,80H40Zm176,28H194.63l-36-36,20-20L216,181.38V200ZM144,100a12,12,0,1,1,12,12A12,12,0,0,1,144,100Z\"/>","<path d=\"M144,96a16,16,0,1,1,16,16A16,16,0,0,1,144,96Zm92-40V200a20,20,0,0,1-20,20H40a20,20,0,0,1-20-20V56A20,20,0,0,1,40,36H216A20,20,0,0,1,236,56ZM44,60v79.72l33.86-33.86a20,20,0,0,1,28.28,0L147.31,147l17.18-17.17a20,20,0,0,1,28.28,0L212,149.09V60Zm0,136H162.34L92,125.66l-48,48Zm168,0V183l-33.37-33.37L164.28,164l32,32Z\"/>"],"music-note":["<path d=\"M210.3,56.34l-80-24A8,8,0,0,0,120,40V148.26A48,48,0,1,0,136,184V98.75l69.7,20.91A8,8,0,0,0,216,112V64A8,8,0,0,0,210.3,56.34ZM88,216a32,32,0,1,1,32-32A32,32,0,0,1,88,216ZM200,101.25l-64-19.2V50.75L200,70Z\"/>","<path d=\"M211.45,52.51l-80-24A12,12,0,0,0,116,40V140.22A52,52,0,1,0,140,184V104.13l64.55,19.36A12,12,0,0,0,220,112V64A12,12,0,0,0,211.45,52.51ZM88,212a28,28,0,1,1,28-28A28,28,0,0,1,88,212ZM196,95.87l-56-16.8V56.13l56,16.8Z\"/>"],"video":["<path d=\"M164.44,105.34l-48-32A8,8,0,0,0,104,80v64a8,8,0,0,0,12.44,6.66l48-32a8,8,0,0,0,0-13.32ZM120,129.05V95l25.58,17ZM216,40H40A16,16,0,0,0,24,56V168a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,128H40V56H216V168Zm16,40a8,8,0,0,1-8,8H32a8,8,0,0,1,0-16H224A8,8,0,0,1,232,208Z\"/>","<path d=\"M216,36H40A20,20,0,0,0,20,56V160a20,20,0,0,0,20,20H216a20,20,0,0,0,20-20V56A20,20,0,0,0,216,36Zm-4,120H44V60H212Zm24,52a12,12,0,0,1-12,12H32a12,12,0,0,1,0-24H224A12,12,0,0,1,236,208ZM104,128V88a12,12,0,0,1,18.36-10.18l32,20a12,12,0,0,1,0,20.36l-32,20A12,12,0,0,1,104,128Z\"/>"],"file-text":["<path d=\"M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-32-80a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,136Zm0,32a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,168Z\"/>","<path d=\"M216.49,79.52l-56-56A12,12,0,0,0,152,20H56A20,20,0,0,0,36,40V216a20,20,0,0,0,20,20H200a20,20,0,0,0,20-20V88A12,12,0,0,0,216.49,79.52ZM160,57l23,23H160ZM60,212V44h76V92a12,12,0,0,0,12,12h48V212Zm112-80a12,12,0,0,1-12,12H96a12,12,0,0,1,0-24h64A12,12,0,0,1,172,132Zm0,40a12,12,0,0,1-12,12H96a12,12,0,0,1,0-24h64A12,12,0,0,1,172,172Z\"/>"],"plus":["<path d=\"M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z\"/>","<path d=\"M228,128a12,12,0,0,1-12,12H140v76a12,12,0,0,1-24,0V140H40a12,12,0,0,1,0-24h76V40a12,12,0,0,1,24,0v76h76A12,12,0,0,1,228,128Z\"/>"],"check":["<path d=\"M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z\"/>","<path d=\"M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z\"/>"],"clock-clockwise":["<path d=\"M136,80v43.47l36.12,21.67a8,8,0,0,1-8.24,13.72l-40-24A8,8,0,0,1,120,128V80a8,8,0,0,1,16,0Zm88-24a8,8,0,0,0-8,8V82c-6.35-7.36-12.83-14.45-20.12-21.83a96,96,0,1,0-2,137.7,8,8,0,0,0-11-11.64A80,80,0,1,1,184.54,71.4C192.68,79.64,199.81,87.58,207,96H184a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V64A8,8,0,0,0,224,56Z\"/>","<path d=\"M140,80v41.21l34.17,20.5a12,12,0,1,1-12.34,20.58l-40-24A12,12,0,0,1,116,128V80a12,12,0,0,1,24,0Zm84-28a12,12,0,0,0-12,12v7.37c-4.21-4.67-8.58-9.31-13.29-14.08a100,100,0,1,0-2.07,143.44,12,12,0,0,0-16.48-17.46,76,76,0,1,1,1.53-109.06C187.61,80.2,193,86,198.23,92H184a12,12,0,0,0,0,24h40a12,12,0,0,0,12-12V64A12,12,0,0,0,224,52Z\"/>"],"copy":["<path d=\"M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z\"/>","<path d=\"M216,28H88A12,12,0,0,0,76,40V76H40A12,12,0,0,0,28,88V216a12,12,0,0,0,12,12H168a12,12,0,0,0,12-12V180h36a12,12,0,0,0,12-12V40A12,12,0,0,0,216,28ZM156,204H52V100H156Zm48-48H180V88a12,12,0,0,0-12-12H100V52H204Z\"/>"],"caret-right":["<path d=\"M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z\"/>","<path d=\"M184.49,136.49l-80,80a12,12,0,0,1-17-17L159,128,87.51,56.49a12,12,0,1,1,17-17l80,80A12,12,0,0,1,184.49,136.49Z\"/>"],"note":["<path d=\"M88,96a8,8,0,0,1,8-8h64a8,8,0,0,1,0,16H96A8,8,0,0,1,88,96Zm8,40h64a8,8,0,0,0,0-16H96a8,8,0,0,0,0,16Zm32,16H96a8,8,0,0,0,0,16h32a8,8,0,0,0,0-16ZM224,48V156.69A15.86,15.86,0,0,1,219.31,168L168,219.31A15.86,15.86,0,0,1,156.69,224H48a16,16,0,0,1-16-16V48A16,16,0,0,1,48,32H208A16,16,0,0,1,224,48ZM48,208H152V160a8,8,0,0,1,8-8h48V48H48Zm120-40v28.7L196.69,168Z\"/>","<path d=\"M84,108A12,12,0,0,1,96,96h64a12,12,0,0,1,0,24H96A12,12,0,0,1,84,108Zm32,28H96a12,12,0,0,0,0,24h20a12,12,0,0,0,0-24ZM228,48V156.69a19.86,19.86,0,0,1-5.86,14.14l-51.31,51.31A19.86,19.86,0,0,1,156.69,228H48a20,20,0,0,1-20-20V48A20,20,0,0,1,48,28H208A20,20,0,0,1,228,48ZM52,204h92V156a12,12,0,0,1,12-12h48V52H52Zm139-36H168v23Z\"/>"],"camera":["<path d=\"M208,56H180.28L166.65,35.56A8,8,0,0,0,160,32H96a8,8,0,0,0-6.65,3.56L75.71,56H48A24,24,0,0,0,24,80V192a24,24,0,0,0,24,24H208a24,24,0,0,0,24-24V80A24,24,0,0,0,208,56Zm8,136a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V80a8,8,0,0,1,8-8H80a8,8,0,0,0,6.66-3.56L100.28,48h55.43l13.63,20.44A8,8,0,0,0,176,72h32a8,8,0,0,1,8,8ZM128,88a44,44,0,1,0,44,44A44.05,44.05,0,0,0,128,88Zm0,72a28,28,0,1,1,28-28A28,28,0,0,1,128,160Z\"/>","<path d=\"M208,52H182.42L170,33.34A12,12,0,0,0,160,28H96a12,12,0,0,0-10,5.34L73.57,52H48A28,28,0,0,0,20,80V192a28,28,0,0,0,28,28H208a28,28,0,0,0,28-28V80A28,28,0,0,0,208,52Zm4,140a4,4,0,0,1-4,4H48a4,4,0,0,1-4-4V80a4,4,0,0,1,4-4H80a12,12,0,0,0,10-5.34L102.42,52h51.15L166,70.66A12,12,0,0,0,176,76h32a4,4,0,0,1,4,4ZM128,84a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,84Zm0,72a24,24,0,1,1,24-24A24,24,0,0,1,128,156Z\"/>"],"share-network":["<path d=\"M176,160a39.89,39.89,0,0,0-28.62,12.09l-46.1-29.63a39.8,39.8,0,0,0,0-28.92l46.1-29.63a40,40,0,1,0-8.66-13.45l-46.1,29.63a40,40,0,1,0,0,55.82l46.1,29.63A40,40,0,1,0,176,160Zm0-128a24,24,0,1,1-24,24A24,24,0,0,1,176,32ZM64,152a24,24,0,1,1,24-24A24,24,0,0,1,64,152Zm112,72a24,24,0,1,1,24-24A24,24,0,0,1,176,224Z\"/>","<path d=\"M176,156a43.78,43.78,0,0,0-29.09,11L106.1,140.8a44.07,44.07,0,0,0,0-25.6L146.91,89a43.83,43.83,0,1,0-13-20.17L93.09,95a44,44,0,1,0,0,65.94L133.9,187.2A44,44,0,1,0,176,156Zm0-120a20,20,0,1,1-20,20A20,20,0,0,1,176,36ZM64,148a20,20,0,1,1,20-20A20,20,0,0,1,64,148Zm112,72a20,20,0,1,1,20-20A20,20,0,0,1,176,220Z\"/>"],"user":["<path d=\"M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z\"/>","<path d=\"M234.38,210a123.36,123.36,0,0,0-60.78-53.23,76,76,0,1,0-91.2,0A123.36,123.36,0,0,0,21.62,210a12,12,0,1,0,20.77,12c18.12-31.32,50.12-50,85.61-50s67.49,18.69,85.61,50a12,12,0,0,0,20.77-12ZM76,96a52,52,0,1,1,52,52A52.06,52.06,0,0,1,76,96Z\"/>"],"password":["<path d=\"M48,56V200a8,8,0,0,1-16,0V56a8,8,0,0,1,16,0Zm92,54.5L120,117V96a8,8,0,0,0-16,0v21L84,110.5a8,8,0,0,0-5,15.22l20,6.49-12.34,17a8,8,0,1,0,12.94,9.4l12.34-17,12.34,17a8,8,0,1,0,12.94-9.4l-12.34-17,20-6.49A8,8,0,0,0,140,110.5ZM246,115.64A8,8,0,0,0,236,110.5L216,117V96a8,8,0,0,0-16,0v21l-20-6.49a8,8,0,0,0-4.95,15.22l20,6.49-12.34,17a8,8,0,1,0,12.94,9.4l12.34-17,12.34,17a8,8,0,1,0,12.94-9.4l-12.34-17,20-6.49A8,8,0,0,0,246,115.64Z\"/>","<path d=\"M48,56V200a12,12,0,0,1-24,0V56a12,12,0,0,1,24,0Zm86.73,50.7L120,111.48V96a12,12,0,0,0-24,0v15.48L81.27,106.7a12,12,0,1,0-7.41,22.82l14.72,4.79-9.1,12.52A12,12,0,1,0,98.9,160.94l9.1-12.52,9.1,12.52a12,12,0,1,0,19.42-14.11l-9.1-12.52,14.72-4.79a12,12,0,1,0-7.41-22.82Zm115.12,7.7a12,12,0,0,0-15.12-7.7L220,111.48V96a12,12,0,0,0-24,0v15.48l-14.73-4.78a12,12,0,1,0-7.41,22.82l14.72,4.79-9.1,12.52a12,12,0,1,0,19.42,14.11l9.1-12.52,9.1,12.52a12,12,0,1,0,19.42-14.11l-9.1-12.52,14.72-4.79A12,12,0,0,0,249.85,114.4Z\"/>"],"credit-card":["<path d=\"M224,48H32A16,16,0,0,0,16,64V192a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48Zm0,16V88H32V64Zm0,128H32V104H224v88Zm-16-24a8,8,0,0,1-8,8H168a8,8,0,0,1,0-16h32A8,8,0,0,1,208,168Zm-64,0a8,8,0,0,1-8,8H120a8,8,0,0,1,0-16h16A8,8,0,0,1,144,168Z\"/>","<path d=\"M224,44H32A20,20,0,0,0,12,64V192a20,20,0,0,0,20,20H224a20,20,0,0,0,20-20V64A20,20,0,0,0,224,44Zm-4,24V88H36V68ZM36,188V112H220v76Zm172-24a12,12,0,0,1-12,12H164a12,12,0,0,1,0-24h32A12,12,0,0,1,208,164Zm-68,0a12,12,0,0,1-12,12H116a12,12,0,0,1,0-24h12A12,12,0,0,1,140,164Z\"/>"],"arrow-left":["<path d=\"M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z\"/>","<path d=\"M228,128a12,12,0,0,1-12,12H69l51.52,51.51a12,12,0,0,1-17,17l-72-72a12,12,0,0,1,0-17l72-72a12,12,0,0,1,17,17L69,116H216A12,12,0,0,1,228,128Z\"/>"],"arrow-right":["<path d=\"M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z\"/>","<path d=\"M224.49,136.49l-72,72a12,12,0,0,1-17-17L187,140H40a12,12,0,0,1,0-24H187L135.51,64.48a12,12,0,0,1,17-17l72,72A12,12,0,0,1,224.49,136.49Z\"/>"],"dots-six":["<path d=\"M72,92A12,12,0,1,1,60,80,12,12,0,0,1,72,92Zm56-12a12,12,0,1,0,12,12A12,12,0,0,0,128,80Zm68,24a12,12,0,1,0-12-12A12,12,0,0,0,196,104ZM60,152a12,12,0,1,0,12,12A12,12,0,0,0,60,152Zm68,0a12,12,0,1,0,12,12A12,12,0,0,0,128,152Zm68,0a12,12,0,1,0,12,12A12,12,0,0,0,196,152Z\"/>","<path d=\"M76,92A16,16,0,1,1,60,76,16,16,0,0,1,76,92Zm52-16a16,16,0,1,0,16,16A16,16,0,0,0,128,76Zm68,32a16,16,0,1,0-16-16A16,16,0,0,0,196,108ZM60,148a16,16,0,1,0,16,16A16,16,0,0,0,60,148Zm68,0a16,16,0,1,0,16,16A16,16,0,0,0,128,148Zm68,0a16,16,0,1,0,16,16A16,16,0,0,0,196,148Z\"/>"],"notepad":["<path d=\"M168,128a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,128Zm-8,24H96a8,8,0,0,0,0,16h64a8,8,0,0,0,0-16ZM216,40V200a32,32,0,0,1-32,32H72a32,32,0,0,1-32-32V40a8,8,0,0,1,8-8H72V24a8,8,0,0,1,16,0v8h32V24a8,8,0,0,1,16,0v8h32V24a8,8,0,0,1,16,0v8h24A8,8,0,0,1,216,40Zm-16,8H184v8a8,8,0,0,1-16,0V48H136v8a8,8,0,0,1-16,0V48H88v8a8,8,0,0,1-16,0V48H56V200a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16Z\"/>","<path d=\"M172,124a12,12,0,0,1-12,12H96a12,12,0,0,1,0-24h64A12,12,0,0,1,172,124Zm-12,28H96a12,12,0,0,0,0,24h64a12,12,0,0,0,0-24ZM220,40V200a36,36,0,0,1-36,36H72a36,36,0,0,1-36-36V40A12,12,0,0,1,48,28H72V24a12,12,0,0,1,24,0v4h20V24a12,12,0,0,1,24,0v4h20V24a12,12,0,0,1,24,0v4h24A12,12,0,0,1,220,40ZM196,52H184v4a12,12,0,0,1-24,0V52H140v4a12,12,0,0,1-24,0V52H96v4a12,12,0,0,1-24,0V52H60V200a12,12,0,0,0,12,12H184a12,12,0,0,0,12-12Z\"/>"],"code":["<path d=\"M69.12,94.15,28.5,128l40.62,33.85a8,8,0,1,1-10.24,12.29l-48-40a8,8,0,0,1,0-12.29l48-40a8,8,0,0,1,10.24,12.3Zm176,27.7-48-40a8,8,0,1,0-10.24,12.3L227.5,128l-40.62,33.85a8,8,0,1,0,10.24,12.29l48-40a8,8,0,0,0,0-12.29ZM162.73,32.48a8,8,0,0,0-10.25,4.79l-64,176a8,8,0,0,0,4.79,10.26A8.14,8.14,0,0,0,96,224a8,8,0,0,0,7.52-5.27l64-176A8,8,0,0,0,162.73,32.48Z\"/>","<path d=\"M71.68,97.22,34.74,128l36.94,30.78a12,12,0,1,1-15.36,18.44l-48-40a12,12,0,0,1,0-18.44l48-40A12,12,0,0,1,71.68,97.22Zm176,21.56-48-40a12,12,0,1,0-15.36,18.44L221.26,128l-36.94,30.78a12,12,0,1,0,15.36,18.44l48-40a12,12,0,0,0,0-18.44ZM164.1,28.72a12,12,0,0,0-15.38,7.18l-64,176a12,12,0,0,0,7.18,15.37A11.79,11.79,0,0,0,96,228a12,12,0,0,0,11.28-7.9l64-176A12,12,0,0,0,164.1,28.72Z\"/>"]};
+  function phIcon(nome, size = 18, cls = '') {
+    const t = PI[nome];
+    if (!t) return '';
+    const dim = size ? ` width="${size}" height="${size}"` : '';
+    return `<svg class="ph${cls ? ' ' + cls : ''}"${dim} viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">${t[size && size > 20 ? 0 : 1]}</svg>`;
+  }
+  // Nomi storici usati nel codice -> simbolo Phosphor.
+  const ICONA_PH = {
+    cerca: 'magnifying-glass', chiudi: 'x', occhio: 'eye', 'occhio-off': 'eye-slash', matita: 'pencil-simple',
+    cartellaLinea: 'folder', cestino: 'trash', codice: 'code', immagine: 'image', musica: 'music-note',
+    video: 'video', documento: 'file-text',
   };
-  function iconaLinea(nome) {
-    return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
-      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${VECTOR_ICONS[nome] || ''}</svg>`;
+  // Dimensione dal CSS (.icon); "grande" usa il peso regular.
+  function iconaLinea(nome, grande = false) {
+    const t = PI[ICONA_PH[nome]];
+    return t ? `<svg class="icon ph" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">${t[grande ? 0 : 1]}</svg>` : '';
   }
 
   // Elenco unico delle app: alimenta il menu Avvio (computer e telefono).
@@ -744,7 +743,7 @@
         b.addEventListener('click', () => pickTabFav(i, paint));
         return b;
       };
-      prev.append(slot(0), slot(1), el(`<span class="tabbar-slot-plus">${strokeIcon('<path d="M12 5v14M5 12h14"/>')}</span>`), slot(2));
+      prev.append(slot(0), slot(1), el(`<span class="tabbar-slot-plus">${phIcon('plus', 24)}</span>`), slot(2));
       const more = el(`<span class="tabbar-slot tabbar-slot-fixed">${lineIcon('more')}<span></span></span>`);
       more.querySelector('span').textContent = tr('tab_sections');
       prev.appendChild(more);
@@ -854,8 +853,6 @@
     return a;
   }
 
-  const strokeIcon = (d) => `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
-
   function buildNavigation() {
     sidebarNav.innerHTML = '';
     sidebarSecondary.innerHTML = '';
@@ -877,8 +874,8 @@
       a.querySelector('span').textContent = label;
       return a;
     };
-    const button = (cls, label, path, onClick) => {
-      const b = el(`<button type="button" class="${cls}">${strokeIcon(path)}${label ? '<span></span>' : ''}</button>`);
+    const button = (cls, label, icon, onClick) => {
+      const b = el(`<button type="button" class="${cls}">${icon}${label ? '<span></span>' : ''}</button>`);
       if (label) b.querySelector('span').textContent = label;
       b.addEventListener('click', onClick);
       return b;
@@ -899,14 +896,13 @@
     };
     tabbar.appendChild(favTab(0));
     tabbar.appendChild(favTab(1));
-    const capture = button('tab-capture', '', '<path d="M12 5v14M5 12h14"/>', () => { closeSectionsSheet(); if (quickCaptureEl.classList.contains('hidden')) openQuickCapture(); else closeQuickCapture(); });
+    const capture = button('tab-capture', '', phIcon('plus', 18), () => { closeSectionsSheet(); if (quickCaptureEl.classList.contains('hidden')) openQuickCapture(); else closeQuickCapture(); });
     capture.setAttribute('aria-label', tr('title_quick_capture'));
     tabbar.appendChild(capture);
     tabbar.appendChild(favTab(2));
-    const more = button('tab', tr('tab_sections'), '', () => {
+    const more = button('tab', tr('tab_sections'), lineIcon('more'), () => {
       if (sectionsSheet.classList.contains('hidden')) openSectionsSheet(); else closeSectionsSheet();
     });
-    more.querySelector('svg').outerHTML = lineIcon('more');
     more.setAttribute('aria-haspopup', 'dialog');
     tabbar.appendChild(more);
     fitLabels(tabbar, '.tab > span');
@@ -1043,7 +1039,7 @@
       quickCaptureEl.classList.add('qc-inline');
     }
     const dossiers = await api('/dossiers').catch(() => []);
-    const dragHandle = el(`<div class="qc-drag-handle" title="${esc(tr('qc_drag_title'))}">⋮⋮⋮</div>`);
+    const dragHandle = el(`<div class="qc-drag-handle" title="${esc(tr('qc_drag_title'))}">${phIcon('dots-six', 18)}</div>`);
     const composer = el(`
       <div class="composer">
         <textarea id="qc-text" placeholder="${esc(tr('qc_placeholder'))}" rows="2"></textarea>
@@ -1073,7 +1069,7 @@
     function renderLinkBadge() {
       linkBadgeWrap.innerHTML = '';
       if (!qcSelectedDossier) return;
-      const badge = el(`<span class="composer-link-badge">→ ${esc(qcSelectedDossier.title)} <button type="button" title="${esc(tr('title_remove'))}">✕</button></span>`);
+      const badge = el(`<span class="composer-link-badge">${phIcon('arrow-right', 14)} ${esc(qcSelectedDossier.title)} <button type="button" title="${esc(tr('title_remove'))}">${phIcon('x', 12)}</button></span>`);
       badge.querySelector('button').addEventListener('click', () => { qcSelectedDossier = null; renderLinkBadge(); });
       linkBadgeWrap.appendChild(badge);
     }
@@ -1394,10 +1390,10 @@
     const d = new Date(String(value).slice(0, 10) + 'T00:00:00');
     return d.toLocaleDateString(I18N.getLang() === 'en' ? 'en-GB' : 'it-IT', { month: 'short' }).replace('.', '');
   }
-  const ICON_CHECK = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>';
-  const ICON_SNOOZE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/></svg>';
-  const ICON_COPY = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/></svg>';
-  const ICON_ARROW = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+  const ICON_CHECK = phIcon('check');
+  const ICON_SNOOZE = phIcon('clock-clockwise');
+  const ICON_COPY = phIcon('copy');
+  const ICON_ARROW = phIcon('caret-right');
 
   // Gesto: scorrere una riga verso destra (Fatto) o sinistra (Domani).
   function attachSwipe(row, { right, left }) {
@@ -1654,7 +1650,7 @@
     root.appendChild(el(`
       <div class="view-header">
         <h2>${esc(tr('nav_reminders_title'))}</h2>
-        <div class="view-header-actions">${backToDossierButtonHtml(opts)}<button class="btn btn-primary" id="new-reminder">${esc(tr('btn_new_reminder'))}</button></div>
+        <div class="view-header-actions">${backToDossierButtonHtml(opts)}<button class="btn btn-primary" id="new-reminder">${phIcon('plus', 16)}${esc(tr('btn_new_reminder'))}</button></div>
       </div>
     `));
     wireBackToDossier(root, opts);
@@ -1749,7 +1745,7 @@
     root.appendChild(el(`
       <div class="view-header">
         <h2>${esc(tr('nav_calendar_title'))}</h2>
-        <div class="view-header-actions"><button class="btn btn-primary" id="new-reminder-cal">${esc(tr('btn_new_reminder'))}</button></div>
+        <div class="view-header-actions"><button class="btn btn-primary" id="new-reminder-cal">${phIcon('plus', 16)}${esc(tr('btn_new_reminder'))}</button></div>
       </div>
     `));
     root.appendChild(switchBar);
@@ -1872,7 +1868,7 @@
     root.appendChild(el(`
       <div class="view-header">
         <h2>${esc(tr('nav_ideas_title'))}</h2>
-        <div class="view-header-actions">${backToDossierButtonHtml(opts)}<button class="btn btn-primary" id="new-idea">${esc(tr('btn_new_idea'))}</button></div>
+        <div class="view-header-actions">${backToDossierButtonHtml(opts)}<button class="btn btn-primary" id="new-idea">${phIcon('plus', 16)}${esc(tr('btn_new_idea'))}</button></div>
       </div>
     `));
     wireBackToDossier(root, opts);
@@ -2025,7 +2021,7 @@
         <button type="button" class="btn" id="explorer-up" disabled>${esc(tr('btn_up'))}</button>
         <span class="explorer-path" id="explorer-path">${esc(tr('nav_projects'))}</span>
         ${backToDossierButtonHtml(opts)}
-        <button type="button" class="btn btn-primary" id="new-project">${esc(tr('btn_new_project'))}</button>
+        <button type="button" class="btn btn-primary" id="new-project">${phIcon('plus', 16)}${esc(tr('btn_new_project'))}</button>
       </div>
     `);
     const bodyWrap = el('<div></div>');
@@ -2157,7 +2153,7 @@
             <label class="idea-checklist-item">
               <input type="checkbox" ${item.done ? 'checked' : ''} />
               <span>${esc(item.text)}</span>
-              ${item.done ? `<span class="idea-checklist-badge" title="${esc(tr('label_completed_title'))}">✓</span>` : ''}
+              ${item.done ? `<span class="idea-checklist-badge" title="${esc(tr('label_completed_title'))}">${phIcon('check', 12)}</span>` : ''}
             </label>
           `);
           row.querySelector('input').addEventListener('change', async (e) => {
@@ -2543,7 +2539,7 @@
         <div class="view-header-actions">${backToDossierButtonHtml(opts)}
           <label class="btn btn-ghost" style="cursor:pointer">${esc(tr('btn_import_csv'))}<input type="file" id="csv-input" accept=".csv" class="hidden" /></label>
           ${engine ? `<button class="btn" id="receive-qr">${esc(tr('qr_receive'))}</button>` : ''}
-          <button class="btn btn-primary" id="new-vault">${esc(tr('btn_new_vault_entry'))}</button>
+          <button class="btn btn-primary" id="new-vault">${phIcon('plus', 16)}${esc(tr('btn_new_vault_entry'))}</button>
         </div>
       </div>
     `));
@@ -2579,15 +2575,15 @@
       openModal(tr('modal_new_vault_entry'), form);
     };
     const VAULT_KINDS = [
-      { type: 'password', label: tr('vault_kind_account'), sub: tr('vault_kind_account_sub'), icon: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/>' },
-      { type: 'note', label: tr('vault_kind_note'), sub: tr('vault_kind_note_sub'), icon: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>' },
-      { type: 'code', label: tr('vault_kind_code'), sub: tr('vault_kind_code_sub'), icon: '<rect x="3" y="6" width="18" height="12" rx="3"/><path d="M7 12h.01M10.5 12h.01M14 12h.01M17.5 12h.01"/>' },
-      { type: 'card', label: tr('vault_kind_card'), sub: tr('vault_kind_card_sub'), icon: '<rect x="2.5" y="5.5" width="19" height="13" rx="3"/><path d="M2.5 10h19M6 14.5h4"/>' },
+      { type: 'password', label: tr('vault_kind_account'), sub: tr('vault_kind_account_sub'), icon: 'user' },
+      { type: 'note', label: tr('vault_kind_note'), sub: tr('vault_kind_note_sub'), icon: 'notepad' },
+      { type: 'code', label: tr('vault_kind_code'), sub: tr('vault_kind_code_sub'), icon: 'password' },
+      { type: 'card', label: tr('vault_kind_card'), sub: tr('vault_kind_card_sub'), icon: 'credit-card' },
     ];
     root.querySelector('#new-vault').addEventListener('click', () => {
       const wrap = el('<div class="kind-list"></div>');
       VAULT_KINDS.forEach((k) => {
-        const b = el(`<button type="button" class="kind-btn"><span class="kind-ic">${strokeIcon(k.icon)}</span><span class="kind-text"><b></b><small></small></span></button>`);
+        const b = el(`<button type="button" class="kind-btn"><span class="kind-ic">${phIcon(k.icon, 24)}</span><span class="kind-text"><b></b><small></small></span></button>`);
         b.querySelector('b').textContent = k.label;
         b.querySelector('small').textContent = k.sub;
         b.addEventListener('click', () => newEntry(k.type));
@@ -2947,7 +2943,7 @@
           <button type="button" data-kind="regalo">${esc(tr('card_kind_gift'))}</button>
         </div>
         <div class="form-row brand-row"><label>${esc(tr('card_field_name'))}</label>
-          <div class="brand-input"><img class="brand-chosen hidden" alt="" /><input type="text" name="name" required autocomplete="off" /><button type="button" class="icon-btn brand-clear hidden" aria-label="${esc(tr('card_brand_remove'))}">✕</button></div>
+          <div class="brand-input"><img class="brand-chosen hidden" alt="" /><input type="text" name="name" required autocomplete="off" /><button type="button" class="icon-btn brand-clear hidden" aria-label="${esc(tr('card_brand_remove'))}">${phIcon('x', 16)}</button></div>
           <div class="brand-suggest hidden" role="listbox"></div>
         </div>
         <div class="form-row">
@@ -3043,7 +3039,7 @@
     const highlightId = opts.highlight ? String(opts.highlight) : null;
     const cards = await api('/cards');
     root.innerHTML = '';
-    root.appendChild(el(`<div class="view-header"><h2>${esc(tr('nav_cards'))}</h2><div class="view-header-actions"><button class="btn btn-primary" id="new-card">${esc(tr('btn_new_card'))}</button></div></div>`));
+    root.appendChild(el(`<div class="view-header"><h2>${esc(tr('nav_cards'))}</h2><div class="view-header-actions"><button class="btn btn-primary" id="new-card">${phIcon('plus', 16)}${esc(tr('btn_new_card'))}</button></div></div>`));
 
     const edit = (existing) => {
       const form = cardModal(existing);
@@ -3063,9 +3059,9 @@
 
     // Pagina della carta (#/cards/ID): tessera con logo e codice grande,
     // azioni Note / Foto della tessera / Condividi, dati delle carte regalo.
-    const ICON_NOTES = '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>';
-    const ICON_CAMERA = '<path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.8l1.4-2h4.6l1.4 2h1.8A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.5" r="3.3"/>';
-    const ICON_SHARE = '<circle cx="18" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18.5" r="2.5"/><path d="m8.2 10.8 7.6-4.1M8.2 13.2l7.6 4.1"/>';
+    const ICON_NOTES = phIcon('notepad', 24);
+    const ICON_CAMERA = phIcon('camera', 24);
+    const ICON_SHARE = phIcon('share-network', 24);
     const groupNumber = (n) => {
       const v = String(n || '').trim();
       return /^\d{6,}$/.test(v) ? v.replace(/(\d{4})(?=\d)/g, '$1 ') : v;
@@ -3111,7 +3107,7 @@
       const page = el(`
         <div class="card-page">
           <div class="card-page-bar">
-            <a class="btn btn-ghost btn-sm" href="#/cards">← ${esc(tr('nav_cards'))}</a>
+            <a class="btn btn-ghost btn-sm btn-back" href="#/cards">${phIcon('arrow-left', 16)}${esc(tr('nav_cards'))}</a>
             <button type="button" class="btn btn-ghost btn-sm" data-edit>${esc(tr('btn_edit'))}</button>
           </div>
           <div class="card-visual">
@@ -3119,9 +3115,9 @@
             <div class="cv-bottom"><div class="card-code"></div><p class="cv-number"></p></div>
           </div>
           <div class="cv-actions">
-            <button type="button" data-notes>${strokeIcon(ICON_NOTES)}<span>${esc(tr('card_notes'))}</span></button>
-            <button type="button" data-photos>${strokeIcon(ICON_CAMERA)}<span>${esc(tr('card_photos'))}</span></button>
-            <button type="button" data-share>${strokeIcon(ICON_SHARE)}<span>${esc(tr('card_share'))}</span></button>
+            <button type="button" data-notes>${ICON_NOTES}<span>${esc(tr('card_notes'))}</span></button>
+            <button type="button" data-photos>${ICON_CAMERA}<span>${esc(tr('card_photos'))}</span></button>
+            <button type="button" data-share>${ICON_SHARE}<span>${esc(tr('card_share'))}</span></button>
           </div>
           <div class="card-facts"></div>
           <p class="card-notes-text"></p>
@@ -3214,7 +3210,7 @@
               rm.addEventListener('click', () => { photos.splice(i, 1); save(); });
               slot.append(img, rm);
             } else if (i === photos.length) {
-              const add = el(`<button type="button" class="photo-add">${strokeIcon(ICON_CAMERA)}<span>${esc(tr('card_photo_add'))}</span></button>`);
+              const add = el(`<button type="button" class="photo-add">${ICON_CAMERA}<span>${esc(tr('card_photo_add'))}</span></button>`);
               add.addEventListener('click', async () => {
                 const file = await pickImage();
                 if (!file) return;
@@ -3506,7 +3502,7 @@
     root.appendChild(el(`
       <div class="view-header">
         <h2>${esc(tr('nav_accounts_title'))}</h2>
-        <div class="view-header-actions">${backToDossierButtonHtml(opts)}<button class="btn btn-primary" id="new-account">${esc(tr('btn_new_account'))}</button></div>
+        <div class="view-header-actions">${backToDossierButtonHtml(opts)}<button class="btn btn-primary" id="new-account">${phIcon('plus', 16)}${esc(tr('btn_new_account'))}</button></div>
       </div>
     `));
     wireBackToDossier(root, opts);
@@ -3683,7 +3679,7 @@
     root.appendChild(el(`
       <div class="view-header">
         <h2>${esc(tr('nav_drive_title'))}</h2>
-        <div class="view-header-actions">${backToDossierButtonHtml(opts)}<button class="btn btn-primary" id="new-doc">${esc(tr('btn_upload_document'))}</button></div>
+        <div class="view-header-actions">${backToDossierButtonHtml(opts)}<button class="btn btn-primary" id="new-doc">${phIcon('plus', 16)}${esc(tr('btn_upload_document'))}</button></div>
       </div>
     `));
     wireBackToDossier(root, opts);
@@ -3733,7 +3729,7 @@
         <div class="doc-row row-card">
           <div style="display:flex;gap:10px;align-items:center;min-width:0">
             <div class="entry-doc${previewable ? ' entry-doc-clickable' : ''}" style="margin-top:0;flex:none">
-              ${iconaLinea(fileCategoryIcon(d.mime))}
+              ${iconaLinea(fileCategoryIcon(d.mime), true)}
               <span class="entry-doc-ext">${esc(ext || 'FILE')}</span>
             </div>
             <div style="min-width:0">
@@ -3823,7 +3819,7 @@
 
     // ---- Elenco delle cartelle: una scheda per cartella, un livello solo ----
     function renderRoot() {
-      const head = el(`<div class="view-header"><div class="view-header-actions"><button type="button" class="btn btn-primary" id="new-dossier">${esc(tr('btn_new_dossier'))}</button></div></div>`);
+      const head = el(`<div class="view-header"><div class="view-header-actions"><button type="button" class="btn btn-primary" id="new-dossier">${phIcon('plus', 16)}${esc(tr('btn_new_dossier'))}</button></div></div>`);
       head.querySelector('#new-dossier').addEventListener('click', () => openDossierForm(null));
       root.appendChild(head);
       if (!dossiers.length) {
@@ -3891,10 +3887,10 @@
           </div>
         </div>
       `);
-      head.querySelector('.dossier-back').textContent = '← ' + tr('nav_dossiers');
+      head.querySelector('.dossier-back').innerHTML = `${phIcon('arrow-left', 16)}${esc(tr('nav_dossiers'))}`;
       const desc = head.querySelector('.dossier-desc');
       if (d.description) desc.textContent = d.description; else desc.remove();
-      head.querySelector('[data-add]').textContent = tr('dossier_add_to', { title: d.title });
+      head.querySelector('[data-add]').innerHTML = `${phIcon('plus', 16)}${esc(tr('dossier_add_to', { title: d.title }))}`;
       head.querySelector('[data-edit]').textContent = tr('btn_edit');
       head.querySelector('[data-del]').textContent = tr('btn_delete');
       head.querySelector('[data-add]').addEventListener('click', () => openQuickCapture(d));

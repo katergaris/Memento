@@ -1399,3 +1399,9 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 }
 .fav-pick span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fav-pick.active { background: var(--accent-bg); color: var(--accent); }
+
+/* Simboli Phosphor in linea con il testo */
+.btn-back, .dossier-back { display: inline-flex; align-items: center; gap: 6px; }
+.composer-link-badge .ph, .idea-checklist-badge .ph { vertical-align: -2px; }
+.modal-close, .preview-close, .brand-clear { display: inline-flex; align-items: center; justify-content: center; }
+.qc-drag-handle { display: flex; justify-content: center; letter-spacing: 0; }
