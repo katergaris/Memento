@@ -910,7 +910,8 @@
     // Foglio "Sezioni" del telefono: tutte le sezioni come tessere grandi.
     sectionsSheet.innerHTML = '';
     const grid = el('<div class="sheet-grid"></div>');
-    visibleSections().filter((s) => !NAV_SKIP.has(s.view)).forEach((s) => {
+    // Solo cio' che non e' gia' nella barra.
+    visibleSections().filter((s) => !NAV_SKIP.has(s.view) && !favs.includes(s.view)).forEach((s) => {
       const a = el(`<a class="sheet-tile" href="#/${s.view}" data-view="${s.view}">${lineIcon(s.view, 30)}<span></span></a>`);
       a.querySelector('span').textContent = s.label;
       grid.appendChild(a);
