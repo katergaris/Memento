@@ -205,8 +205,9 @@
 
         // Ricevere da un altro telefono: ogni elemento va nella sua sezione.
         const recv = ui.el(`<div class="section-block"><h3>${esc(tr('local_receive_title'))}</h3>
-          <div class="card-actions" style="padding-top:4px"><button type="button" class="btn btn-primary" data-receive>${esc(tr('qr_receive'))}</button></div></div>`);
+          <div class="card-actions" style="padding-top:4px"><button type="button" class="btn btn-primary" data-receive>${esc(tr('qr_receive'))}</button><button type="button" class="btn" data-open-file>${esc(tr('transfer_open_file_btn'))}</button></div></div>`);
         recv.querySelector('[data-receive]').addEventListener('click', () => ui.receive());
+        recv.querySelector('[data-open-file]').addEventListener('click', () => ui.openTransferFile());
         root.appendChild(recv);
 
         // Sincronizzazione con Google Drive: solo se la build ha l'accesso a

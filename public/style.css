@@ -1138,9 +1138,10 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 .kind-text small { color: var(--text-muted); font-size: 13px; }
 
 /* ---------- Lettore di codici ---------- */
-.scanner-view { position: relative; border-radius: 18px; overflow: hidden; background: var(--block); aspect-ratio: 4 / 3; }
-.scanner-view video { width: 100%; height: 100%; object-fit: cover; display: block; }
-.scanner-frame { position: absolute; inset: 22% 12%; border: 3px solid var(--brand-lime); border-radius: 16px; box-shadow: 0 0 0 999px rgba(18, 19, 24, .35); }
+.scanner-view { position: relative; border-radius: 18px; overflow: hidden; background: var(--block); aspect-ratio: 1 / 1; width: min(100%, 420px); margin: 0 auto; }
+.scanner-view video { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .15s; }
+.scanner-view video.live { opacity: 1; }
+.scanner-frame { position: absolute; inset: 14%; border: 3px solid var(--brand-lime); border-radius: 16px; box-shadow: 0 0 0 999px rgba(18, 19, 24, .35); }
 .scanner-msg { min-height: 1.4em; margin: 10px 0 0; color: var(--text-muted); font-size: 14px; }
 
 /* ---------- Carte (portafoglio) ---------- */

@@ -172,11 +172,11 @@ Si può cambiare modalità quando si vuole: i dati di ciascuna restano dove sono
 
 Note, progetti, scadenze, spese ricorrenti, voci del vault, carte, documenti e cartelle (con tutto quello che contengono) si passano da un telefono all'altro, entrambi con l'app "Sul telefono".
 
-1. Chi riceve: Impostazioni → "Da un altro telefono" → **Ricevi**. Compare un QR.
-2. Chi manda: apre l'elemento, tocca l'icona **Condividi** e inquadra quel QR.
+1. Chi manda: apre l'elemento e tocca l'icona **Condividi**. Compare un QR.
+2. Chi riceve: Impostazioni → "Da un altro telefono" → **Ricevi**, e inquadra quel QR. Una sola scansione.
 3. L'elemento arriva e va da solo nella sua sezione; l'avviso dice quale e la apre.
 
-I dati passano direttamente tra i due telefoni (WebRTC con [PeerJS](https://peerjs.com)), cifrati per la chiave di chi riceve. Il server pubblico di PeerJS serve solo a mettere in contatto i due telefoni e non vede il contenuto. Se il collegamento diretto non riesce (alcune reti mobili lo impediscono), chi manda mostra il QR dell'elemento da inquadrare con "Inquadra il QR", oppure lo manda come file `.memento` (WhatsApp, email, Bluetooth) che chi riceve apre con "Apri file".
+Gli elementi piccoli (una nota, una carta, un abbonamento) stanno tutti nel QR, cifrati con una chiave che è nel QR stesso: arrivano anche senza rete. Per quelli grandi (documenti, cartelle) il QR porta la chiave e l'indirizzo del telefono che manda, e il contenuto passa direttamente tra i due telefoni (WebRTC con [PeerJS](https://peerjs.com)); il server pubblico di PeerJS mette solo in contatto i due telefoni e non vede il contenuto. Chi inquadra il QR può leggere l'elemento, come quando si mostra una password sullo schermo. Per mandare qualcosa a distanza c'è "Manda come file": un file `.memento` protetto da una password che si dice all'altra persona, da aprire con "Apri file".
 
 ### Compilare l'APK
 

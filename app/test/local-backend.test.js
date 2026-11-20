@@ -425,6 +425,45 @@ test('passaggio di una cartella con un documento: file .memento e campi ripuliti
   assert.notEqual(rec.id, 1);
 });
 
+test('una sola scansione: QR con la chiave, elemento piccolo dentro, grande dal collegamento', async () => {
+  const a = (await fresh()).be;
+  const b = (await fresh()).be;
+  const nota = (await call(a, '/ideas', 'POST', { title: 'Lista spesa', checklist: [{ text: 'pane', done: false }] })).data;
+  const sealed = await a.sealOneScan('idea', nota.id);
+  const { text, inline } = a.oneScanQrText(sealed, 'memento-abc123def4');
+  assert.equal(inline, true);
+  assert.ok(!text.includes('Lista spesa'));
+  const got = await b.receiveTransfer(text);
+  assert.equal(got.type, 'idea');
+  assert.equal((await call(b, '/ideas')).data[0].checklist[0].text, 'pane');
+  // documento grande: il QR porta solo chiave e indirizzo, il contenuto arriva a parte
+  const fd = new FormData();
+  fd.append('file', new Blob([new Uint8Array(50000).map((_, i) => (i * 7) % 256)], { type: 'application/pdf' }), 'grande.pdf');
+  const doc = (await call(a, '/drive', 'POST', fd)).data;
+  const big = await a.sealOneScan('document', doc.id);
+  const qr = a.oneScanQrText(big, 'memento-abc123def4');
+  assert.equal(qr.inline, false);
+  assert.ok(qr.text.length < 200);
+  await assert.rejects(b.receiveTransfer(qr.text), /collegamento diretto/);
+  const info = b.readOneScanQr(qr.text);
+  assert.equal(info.peer, 'memento-abc123def4');
+  const got2 = await b.openOneScan(info, big.ct);
+  assert.equal(got2.type, 'document');
+  await assert.rejects(b.openOneScan({ ...info, key: btoa('x'.repeat(32)) }, big.ct), /non leggibile/);
+});
+
+test('file da mandare a distanza con password', async () => {
+  const a = (await fresh()).be;
+  const b = (await fresh()).be;
+  const v = (await call(a, '/vault', 'POST', { site: 'Wi-Fi', password: 'segreta-wifi' })).data;
+  await assert.rejects(a.sealTransferFile('vault', v.id, 'ab'), /almeno 4/);
+  const env = await a.sealTransferFile('vault', v.id, 'gatto');
+  assert.ok(!JSON.stringify(env).includes('segreta-wifi'));
+  await assert.rejects(b.openTransferFile(env, 'cane'), /Password errata/);
+  const got = await b.openTransferFile(env, 'gatto');
+  assert.equal(got.label, 'Wi-Fi');
+});
+
 test('foto della tessera: al massimo due, solo immagini, non nell\'elenco', async () => {
   const { be } = await fresh();
   const c = (await call(be, '/cards', 'POST', { name: 'Negozio', number: '1' })).data;

@@ -223,9 +223,9 @@
     });
   }
   // Richiesta di un valore (es. importo) al posto di prompt().
-  function askValue(title, { label = '', inputmode = 'text', placeholder = '' } = {}) {
+  function askValue(title, { label = '', inputmode = 'text', placeholder = '', type = 'text' } = {}) {
     return new Promise((resolve) => {
-      const form = el(`<form class="modal-body" style="padding:0"><div class="form-row"><label></label><input type="text" name="v" required /></div>
+      const form = el(`<form class="modal-body" style="padding:0"><div class="form-row"><label></label><input type="${type === 'password' ? 'password' : 'text'}" name="v" required /></div>
         <div class="form-actions"><button type="button" class="btn btn-ghost" data-no>${esc(tr('btn_cancel'))}</button><button type="submit" class="btn btn-primary">${esc(tr('btn_confirm'))}</button></div></form>`);
       form.querySelector('label').textContent = label;
       form.v.setAttribute('inputmode', inputmode); form.v.placeholder = placeholder;
@@ -2304,7 +2304,8 @@
   const NATIVE_FORMATS = { qr_code: 'QR', code_128: 'CODE128', ean_13: 'EAN13', ean_8: 'EAN8', upc_a: 'UPC', upc_e: 'CODE128', code_39: 'CODE39', itf: 'ITF', codabar: 'CODE128' };
   // Fotocamera posteriore ad alta risoluzione: i codici lunghi e fitti
   // (es. 17 cifre) a 640x480 non si leggono.
-  const CAMERA = { video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: 'continuous' }] } };
+  // 1280x720 basta per QR e codici a barre e si accende prima del Full HD.
+  const CAMERA = { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 }, advanced: [{ focusMode: 'continuous' }] } };
   async function nativeDetector() {
     if (!('BarcodeDetector' in window)) return null;
     try {
@@ -2327,7 +2328,7 @@
     return new Promise((resolve) => {
       let reader = null, done = false, stream = null, timer = null;
       const wrap = el(`<div class="scanner">
-        <div class="scanner-view"><video playsinline muted></video><span class="scanner-frame"></span></div>
+        <div class="scanner-view"><video playsinline muted poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"></video><span class="scanner-frame"></span></div>
         <p class="scanner-msg"></p>
         <div class="form-actions"><label class="btn btn-ghost">${esc(tr('scan_from_photo'))}<input type="file" accept="image/*" class="hidden" /></label><button type="button" class="btn" data-cancel>${esc(tr('btn_cancel'))}</button></div>
       </div>`);
@@ -2358,7 +2359,14 @@
         reader = reader || zxingReader();
         foundZx(await reader.decodeFromImageUrl(URL.createObjectURL(file)));
       };
+      // Senza poster Android mostra l'icona "play" finche' non arriva il primo
+      // fotogramma: il video compare solo quando gira davvero.
+      video.addEventListener('playing', () => video.classList.add('live'));
       (async () => {
+        // Fotocamera e lettore partono insieme: prima uno aspettava l'altro.
+        const camera = navigator.mediaDevices && navigator.mediaDevices.getUserMedia
+          ? navigator.mediaDevices.getUserMedia(CAMERA).catch(() => navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })).catch(() => null)
+          : Promise.resolve(null);
         const detector = await nativeDetector();
         wrap.querySelector('input[type=file]').addEventListener('change', async (e) => {
           const file = e.target.files[0];
@@ -2372,9 +2380,8 @@
           } catch (_) { msg.textContent = tr('scan_not_found'); }
         });
         if (detector) {
-          try {
-            stream = await navigator.mediaDevices.getUserMedia(CAMERA);
-          } catch (_) { msg.textContent = tr('scan_no_camera'); return; }
+          stream = await camera;
+          if (!stream) { msg.textContent = tr('scan_no_camera'); return; }
           if (done) { stream.getTracks().forEach((t) => t.stop()); return; }
           video.srcObject = stream;
           await video.play().catch(() => {});
@@ -2391,6 +2398,13 @@
         }
         await loadScript('/vendor/zxing.min.js');
         reader = zxingReader();
+        stream = await camera;
+        if (done) { if (stream) stream.getTracks().forEach((t) => t.stop()); return; }
+        if (stream && reader.decodeFromStream) {
+          reader.decodeFromStream(stream, video, (result) => { if (result) foundZx(result); }).catch(() => { msg.textContent = tr('scan_no_camera'); });
+          return;
+        }
+        if (stream) stream.getTracks().forEach((t) => t.stop());
         reader.decodeFromConstraints(CAMERA, video, (result) => { if (result) foundZx(result); })
           .catch(() => reader.decodeFromConstraints({ video: { facingMode: 'environment' } }, video, (result) => { if (result) foundZx(result); }))
           .catch(() => { msg.textContent = tr('scan_no_camera'); });
@@ -2631,46 +2645,6 @@
       peer.on('error', (err) => { if (opened) return; clearTimeout(t); peer.destroy(); reject(err); });
     });
   }
-  function sendOnce(peer, peerId, sealed, onProgress) {
-    return new Promise((resolve, reject) => {
-      const conn = peer.connect(peerId, { reliable: true, serialization: 'json' });
-      let t = setTimeout(() => reject(new Error('timeout')), 12000);
-      const fail = (err) => { clearTimeout(t); reject(err || new Error('peer')); };
-      peer.on('error', fail);
-      conn.on('error', fail);
-      conn.on('close', () => fail(new Error('closed')));
-      conn.on('data', (msg) => {
-        if (msg && msg.t === 'ok') { clearTimeout(t); resolve(); }
-        else if (msg && msg.t === 'err') fail(Object.assign(new Error(msg.m || ''), { fromPeer: true }));
-      });
-      conn.on('open', async () => {
-        clearTimeout(t);
-        const text = JSON.stringify(sealed);
-        const n = Math.max(1, Math.ceil(text.length / PEER_CHUNK));
-        conn.send({ t: 'begin', n });
-        for (let i = 0; i < n; i++) {
-          const dc = conn.dataChannel;
-          while (dc && dc.bufferedAmount > 1000000) await new Promise((r) => setTimeout(r, 40));
-          conn.send({ t: 'part', i, s: text.slice(i * PEER_CHUNK, (i + 1) * PEER_CHUNK) });
-          if (onProgress) onProgress((i + 1) / n);
-        }
-        conn.send({ t: 'end' });
-        t = setTimeout(() => reject(new Error('timeout')), 120000);
-      });
-    });
-  }
-  async function sendByPeer(peerId, sealed, onProgress) {
-    const peer = await newPeer();
-    try {
-      try { await sendOnce(peer, peerId, sealed, onProgress); }
-      catch (err) {
-        // Chi riceve puo' non essersi ancora presentato al server: un secondo tentativo.
-        if (err.fromPeer || err.type !== 'peer-unavailable') throw err;
-        await new Promise((r) => setTimeout(r, 2500));
-        await sendOnce(peer, peerId, sealed, onProgress);
-      }
-    } finally { setTimeout(() => peer.destroy(), 600); }
-  }
   // Il nome del telefono si chiede una volta: e' quello che vede l'altro.
   function askPhoneName(engine) {
     if (engine.identityName()) return Promise.resolve(true);
@@ -2690,113 +2664,166 @@
       input.click();
     });
   }
-  async function saveTransferFile(sealed, label) {
+  async function saveTransferFile(envelope, label) {
     const name = `${String(label || 'memento').replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '').slice(0, 40) || 'memento'}.memento`;
-    const blob = new Blob([JSON.stringify(sealed)], { type: 'application/octet-stream' });
+    const blob = new Blob([JSON.stringify(envelope)], { type: 'application/octet-stream' });
     if (window.MementoShell && window.MementoShell.saveFile) { await window.MementoShell.saveFile(blob, name); return; }
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = name;
     document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   }
-  // Ricevere: QR con chiave e indirizzo, in attesa del collegamento diretto;
-  // in alternativa si inquadra il QR dell'elemento o si apre un file .memento.
-  async function receiveFlow() {
-    const engine = transferEngine();
-    if (!engine || !(await askPhoneName(engine))) return;
-    // Un avviso rimasto aperto coprirebbe il QR.
-    document.querySelectorAll('.toast').forEach((t) => t.remove());
-    const peerId = 'memento-' + [...crypto.getRandomValues(new Uint8Array(10))].map((b) => b.toString(16).padStart(2, '0')).join('');
-    let peer = null;
-    let closed = false;
-    let wrap = null;
-    const setStatus = (text) => { const p = wrap && wrap.querySelector('.qr-caption'); if (p) p.textContent = text; };
-    const accept = async (input, conn) => {
-      const got = await engine.receiveTransfer(input);
-      if (conn) { try { conn.send({ t: 'ok' }); } catch (_) { /* gia' chiuso */ } await new Promise((r) => setTimeout(r, 400)); }
-      closeModal();
-      // Ogni elemento e' gia' nella sua sezione: l'avviso dice quale e la apre.
-      const view = TYPE_TO_VIEW[got.type] || 'today';
-      const where = (SECTIONS.find((x) => x.view === view) || {}).label || '';
-      toast(tr(got.count > 1 ? 'transfer_received_many' : 'transfer_received', { what: got.label, from: got.from, n: got.count - 1, where }), {
-        action: tr('transfer_open'), onAction: () => render(view, { highlight: got.id }), duration: 8000,
-      });
-      if (currentView === 'security') render('security');
-    };
-    const scanBtn = el(`<button type="button" class="btn btn-ghost">${esc(tr('qr_scan_item'))}</button>`);
-    scanBtn.addEventListener('click', async () => {
-      closeModal();
-      const res = await scanCode();
-      if (!res) return;
-      try { await accept(res.text); } catch (err) { toast(err.message); }
+  const newPeerId = () => 'memento-' + [...crypto.getRandomValues(new Uint8Array(10))].map((b) => b.toString(16).padStart(2, '0')).join('');
+  // Avviso dopo un arrivo: ogni elemento e' gia' nella sua sezione.
+  function announceReceived(got) {
+    const view = TYPE_TO_VIEW[got.type] || 'today';
+    const where = (SECTIONS.find((x) => x.view === view) || {}).label || '';
+    toast(tr(got.count > 1 ? 'transfer_received_many' : 'transfer_received', { what: got.label, from: got.from, n: got.count - 1, where }), {
+      action: tr('transfer_open'), onAction: () => render(view, { highlight: got.id }), duration: 8000,
     });
-    const fileBtn = el(`<button type="button" class="btn btn-ghost">${esc(tr('transfer_open_file'))}</button>`);
-    fileBtn.addEventListener('click', async () => {
-      const file = await pickTransferFile();
-      if (!file) return;
-      try { await accept(await file.text()); } catch (err) { toast(err.message); }
-    });
-    wrap = await showQr(tr('transfer_receive_title'), await engine.identityQr(peerId), tr('transfer_waiting'), [fileBtn, scanBtn], {
-      onClose: () => { closed = true; if (peer) setTimeout(() => peer.destroy(), 500); },
-    });
-    newPeer(peerId).then((p) => {
-      if (closed) { p.destroy(); return; }
-      peer = p;
-      p.on('connection', (conn) => {
-        let parts = [];
-        conn.on('data', async (msg) => {
-          if (!msg || closed) return;
-          if (msg.t === 'begin') { parts = new Array(Math.min(Number(msg.n) || 1, 100000)); setStatus(tr('transfer_progress', { pct: 0 })); }
-          else if (msg.t === 'part' && msg.i >= 0 && msg.i < parts.length) {
-            parts[msg.i] = String(msg.s || '');
-            setStatus(tr('transfer_progress', { pct: Math.round((parts.filter((x) => x !== undefined).length / parts.length) * 100) }));
-          } else if (msg.t === 'end') {
-            try { await accept(JSON.parse(parts.join('')), conn); }
-            catch (err) { try { conn.send({ t: 'err', m: err.message }); } catch (_) { /* chiuso */ } setStatus(err.message); }
-          }
-        });
-      });
-    }).catch(() => { if (!closed) setStatus(tr('transfer_peer_off')); });
+    if (currentView === 'security') render('security');
   }
-  // Passare: si inquadra il QR di chi riceve e si manda l'elemento.
+
+  // Condividi: chi manda mostra un solo QR. Elemento piccolo: e' tutto nel QR.
+  // Elemento grande: il QR porta chiave e indirizzo, il contenuto parte quando
+  // l'altro telefono si collega. In entrambi i casi l'altro avvisa a cose fatte.
   async function passItem(type, id, label) {
     const engine = transferEngine();
     if (!engine) return;
     closeModal();
     if (!(await askPhoneName(engine))) return;
-    toast(tr('qr_scan_recipient'));
-    const res = await scanCode();
-    if (!res) return;
-    let who, sealed;
-    try {
-      who = await engine.readIdentityQr(res.text);
-      sealed = await engine.sealTransfer(type, id, who);
-    } catch (err) { toast(err.message); return; }
-    if (who.peer) {
-      const box = el(`<div class="qr-show"><p class="qr-caption"></p></div>`);
-      const cap = box.querySelector('.qr-caption');
-      cap.textContent = tr('transfer_sending', { who: who.label });
-      let cancelled = false;
-      openModal(label, box, { onClose: () => { cancelled = true; } });
-      try {
-        await sendByPeer(who.peer, sealed, (f) => { cap.textContent = tr('transfer_sending_pct', { who: who.label, pct: Math.round(f * 100) }); });
-        if (!cancelled) { closeModal(); toast(tr('transfer_sent', { who: who.label })); }
-        return;
-      } catch (err) {
-        if (cancelled) return;
-        if (err.fromPeer) { closeModal(); toast(err.message); return; }
-      }
-    }
+    let sealed;
+    try { sealed = await engine.sealOneScan(type, id); } catch (err) { toast(err.message); return; }
+    const peerId = newPeerId();
+    const { text, inline } = engine.oneScanQrText(sealed, peerId);
+    let peer = null;
+    let closed = false;
     const fileBtn = el(`<button type="button" class="btn btn-ghost">${esc(tr('transfer_send_file'))}</button>`);
-    fileBtn.addEventListener('click', () => saveTransferFile(sealed, label).catch((err) => toast(err.message)));
+    fileBtn.addEventListener('click', async () => {
+      const pw = await askValue(tr('transfer_file_password'), { type: 'password' });
+      if (!pw) return;
+      try { await saveTransferFile(await engine.sealTransferFile(type, id, pw), label); } catch (err) { toast(err.message); }
+    });
     const done = el(`<button type="button" class="btn btn-primary">${esc(tr('qr_done'))}</button>`);
     done.addEventListener('click', closeModal);
-    const qr = engine.transferQrText(sealed);
-    if (qr) { await showQr(label, qr, tr('qr_pass_hint', { who: who.label }), [fileBtn, done]); return; }
-    const box = el(`<div class="qr-show"><p class="qr-caption"></p><div class="form-actions"></div></div>`);
-    box.querySelector('.qr-caption').textContent = tr('transfer_file_only', { who: who.label });
-    box.querySelector('.form-actions').append(fileBtn, done);
-    openModal(label, box);
+    const wrap = await showQr(label, text, inline ? '' : tr('transfer_waiting'), [fileBtn, done], {
+      onClose: () => { closed = true; if (peer) setTimeout(() => peer.destroy(), 800); },
+    });
+    const setStatus = (t) => { const p = wrap.querySelector('.qr-caption'); if (p) p.textContent = t; };
+    newPeer(peerId).then((p) => {
+      if (closed) { p.destroy(); return; }
+      peer = p;
+      p.on('connection', (conn) => {
+        conn.on('data', async (msg) => {
+          if (!msg || closed) return;
+          if (msg.t === 'hello' && msg.need) {
+            const n = Math.max(1, Math.ceil(sealed.ct.length / PEER_CHUNK));
+            conn.send({ t: 'begin', n });
+            for (let i = 0; i < n; i++) {
+              const dc = conn.dataChannel;
+              while (dc && dc.bufferedAmount > 1000000) await new Promise((r) => setTimeout(r, 40));
+              conn.send({ t: 'part', i, s: sealed.ct.slice(i * PEER_CHUNK, (i + 1) * PEER_CHUNK) });
+              setStatus(tr('transfer_sending_pct', { who: msg.who || '', pct: Math.round(((i + 1) / n) * 100) }));
+            }
+            conn.send({ t: 'end' });
+          } else if (msg.t === 'ok') {
+            closeModal();
+            toast(msg.who ? tr('transfer_sent', { who: msg.who }) : tr('transfer_sent_plain'));
+          }
+        });
+      });
+    }).catch(() => { if (!closed && !inline) setStatus(tr('transfer_peer_off_file')); });
+  }
+
+  // Ricevi: si inquadra il QR di chi manda, e basta.
+  async function receiveFlow() {
+    const engine = transferEngine();
+    if (!engine) return;
+    document.querySelectorAll('.toast').forEach((t) => t.remove());
+    const res = await scanCode();
+    if (!res) return;
+    const info = engine.readOneScanQr(res.text);
+    if (!info) {
+      // QR delle versioni precedenti (voce del Vault cifrata per questo telefono).
+      try { announceReceived(await engine.receiveTransfer(res.text)); } catch (err) { toast(err.message); }
+      return;
+    }
+    const who = engine.identityName();
+    if (info.ct) {
+      let got;
+      try { got = await engine.openOneScan(info); } catch (err) { toast(err.message); return; }
+      announceReceived(got);
+      // Avviso a chi manda, se si riesce: non blocca nulla.
+      if (info.peer) {
+        newPeer().then((p) => {
+          const conn = p.connect(info.peer, { reliable: true, serialization: 'json' });
+          conn.on('open', () => { conn.send({ t: 'ok', who }); setTimeout(() => p.destroy(), 1500); });
+          setTimeout(() => p.destroy(), 15000);
+        }).catch(() => {});
+      }
+      return;
+    }
+    if (!info.peer) { toast(tr('transfer_peer_off_file')); return; }
+    const box = el(`<div class="qr-show"><p class="qr-caption"></p></div>`);
+    const cap = box.querySelector('.qr-caption');
+    cap.textContent = tr('transfer_connecting', { from: info.from });
+    let closed = false;
+    let peer = null;
+    openModal(tr('transfer_receive_title'), box, { onClose: () => { closed = true; if (peer) setTimeout(() => peer.destroy(), 500); } });
+    try {
+      peer = await newPeer();
+      const tryConnect = () => new Promise((resolve, reject) => {
+        const conn = peer.connect(info.peer, { reliable: true, serialization: 'json' });
+        let parts = [];
+        const t = setTimeout(() => reject(new Error('timeout')), 15000);
+        peer.on('error', reject);
+        conn.on('error', reject);
+        conn.on('open', () => { clearTimeout(t); conn.send({ t: 'hello', need: true, who }); });
+        conn.on('data', async (msg) => {
+          if (!msg || closed) return;
+          if (msg.t === 'begin') parts = new Array(Math.min(Number(msg.n) || 1, 100000));
+          else if (msg.t === 'part' && msg.i >= 0 && msg.i < parts.length) {
+            parts[msg.i] = String(msg.s || '');
+            cap.textContent = tr('transfer_progress', { pct: Math.round((parts.filter((x) => x !== undefined).length / parts.length) * 100) });
+          } else if (msg.t === 'end') {
+            try {
+              const got = await engine.openOneScan(info, parts.join(''));
+              try { conn.send({ t: 'ok', who }); } catch (_) { /* chiuso */ }
+              resolve(got);
+            } catch (err) { reject(err); }
+          }
+        });
+      });
+      let got;
+      try { got = await tryConnect(); } catch (err) {
+        if (err.type !== 'peer-unavailable' || closed) throw err;
+        await new Promise((r) => setTimeout(r, 2000));
+        got = await tryConnect();
+      }
+      await new Promise((r) => setTimeout(r, 300));
+      closeModal();
+      announceReceived(got);
+    } catch (err) {
+      if (!closed) cap.textContent = err && err.message && !/timeout|peer|Could not/i.test(err.message) ? err.message : tr('transfer_peer_off_file');
+    }
+  }
+  // Apre un file .memento ricevuto a distanza (con password) o delle versioni precedenti.
+  async function openTransferFileFlow() {
+    const engine = transferEngine();
+    if (!engine) return;
+    const file = await pickTransferFile();
+    if (!file) return;
+    let env;
+    try { env = JSON.parse(await file.text()); } catch (_) { toast(tr('err_unexpected')); return; }
+    try {
+      if (env && env.format === 'memento-transfer-pw') {
+        const pw = await askValue(tr('transfer_file_password'), { type: 'password' });
+        if (!pw) return;
+        announceReceived(await engine.openTransferFile(env, pw));
+      } else {
+        announceReceived(await engine.receiveTransfer(env));
+      }
+    } catch (err) { toast(err.message); }
   }
   // Icona "Condividi" delle schede (solo nell'app, modalita' "Sul telefono").
   function passButton(type, id, label) {
@@ -4929,7 +4956,7 @@
     e.preventDefault();
     window.MementoBackend.download(a.getAttribute('href')).catch((err) => toast(err.message));
   });
-  window.MementoUI = { receive: () => receiveFlow(), logoutBlock, el, esc, tr, toast, openModal, closeModal, render, sectionsBlock, totpBlock, loadScript, askConfirm, askValue, haptic, themeBlock, openQuickCapture, showQr, scanCode, isReady: () => !appRoot.classList.contains('hidden') };
+  window.MementoUI = { receive: () => receiveFlow(), openTransferFile: () => openTransferFileFlow(), logoutBlock, el, esc, tr, toast, openModal, closeModal, render, sectionsBlock, totpBlock, loadScript, askConfirm, askValue, haptic, themeBlock, openQuickCapture, showQr, scanCode, isReady: () => !appRoot.classList.contains('hidden') };
 
   // Molti handler fanno "await api(...)" senza try/catch: senza questa rete di
   // sicurezza un errore restava solo in console e per l'utente non succedeva nulla.

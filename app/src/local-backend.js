@@ -1131,6 +1131,11 @@
       if (typeof input === 'string') {
         const s = input.trim();
         if (s.startsWith('MEMENTO-V1:')) return this.receiveTransferV1(s);
+        const t3 = this.readOneScanQr(s);
+        if (t3) {
+          if (!t3.ct) fail(400, 'Serve il collegamento diretto con il telefono che manda');
+          return this.openOneScan(t3);
+        }
         const m = s.match(/^MEMENTO-V2:(.*)$/);
         if (m) {
           const [from, epk, wiv, wct, iv, ct, z] = m[1].split('|');
@@ -1190,6 +1195,57 @@
     }
     // Vecchio nome, usato dall'interfaccia delle versioni precedenti.
     receiveTransferQr(text) { return this.receiveTransfer(text); }
+
+    // ---------------- Passaggio con una sola scansione ----------------
+    // Chi manda mostra un QR con una chiave casuale (e, per gli elementi
+    // piccoli, l'elemento cifrato con quella chiave); chi riceve lo inquadra.
+    // Per gli elementi grandi il QR porta l'indirizzo PeerJS di chi manda e il
+    // contenuto arriva dal collegamento diretto, cifrato con la stessa chiave.
+    async sealOneScan(type, id) {
+      const pkg = await this.transferPackage(type, id);
+      const plain = new TextEncoder().encode(JSON.stringify(pkg));
+      const packed = await deflate(plain);
+      const rawKey = MC.randomBytes(32);
+      const { iv, ct } = await MC.encryptBytes(await MC.importKey(MC.toB64(rawKey)), packed || plain);
+      return { key: MC.toB64(rawKey), from: this.identityLabel(), iv, ct, z: packed ? 1 : 0, items: pkg.items.length };
+    }
+    // Testo del QR. Il contenuto entra nel QR solo se resta leggero (si legge
+    // in fretta); altrimenti serve il collegamento diretto (peerId).
+    oneScanQrText(sealed, peerId, { inlineMax = 600 } = {}) {
+      const base = `MEMENTO-T3:${sealed.key}:${peerId || ''}:${encodeURIComponent(sealed.from)}:${sealed.iv}:${sealed.z}`;
+      const withData = `${base}:${sealed.ct}`;
+      return { text: withData.length <= inlineMax ? withData : `${base}:`, inline: withData.length <= inlineMax };
+    }
+    readOneScanQr(text) {
+      const m = String(text || '').trim().match(/^MEMENTO-T3:([A-Za-z0-9+/=]+):([A-Za-z0-9_-]*):([^:]*):([A-Za-z0-9+/=]+):([01]):([A-Za-z0-9+/=]*)$/);
+      if (!m) return null;
+      return { key: m[1], peer: m[2] || null, from: decodeURIComponent(m[3]) || 'Memento', iv: m[4], z: Number(m[5]), ct: m[6] || null };
+    }
+    async openOneScan(info, ct) {
+      let pkg;
+      try {
+        let bytes = await MC.decryptBytes(await MC.importKey(info.key), info.iv, ct || info.ct);
+        if (info.z) bytes = await inflate(bytes);
+        pkg = JSON.parse(new TextDecoder().decode(bytes));
+      } catch (_) {
+        fail(400, 'Codice non leggibile');
+      }
+      return this.importTransfer(pkg, String(info.from || 'Memento').slice(0, 60));
+    }
+    // File da mandare a distanza, protetto da una password scelta da chi manda.
+    async sealTransferFile(type, id, password) {
+      if (!password || String(password).length < 4) fail(400, 'La password deve avere almeno 4 caratteri');
+      const pkg = await this.transferPackage(type, id);
+      return MC.sealWithPassword('memento-transfer-pw', String(password), { from: this.identityLabel(), pkg });
+    }
+    async openTransferFile(envelope, password) {
+      let value;
+      try { value = (await MC.openWithPassword(envelope, String(password || ''), 'memento-transfer-pw')).value; } catch (e) {
+        if (e.message === 'bad-password') fail(401, 'Password errata');
+        fail(400, 'File non riconosciuto');
+      }
+      return this.importTransfer(value.pkg, String(value.from || 'Memento').slice(0, 60));
+    }
 
     // Voci ricevute che non sono piu' accessibili (condivisione tolta).
     async dropMissingShares(accessibleIds) {
