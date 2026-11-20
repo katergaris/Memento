@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect id="bg" width="512" height="512" fill="#121318"/>
+  <rect id="bg" width="512" height="512" fill="#141B33"/>
   <g id="icon">
-    <rect x="118" y="132" width="240" height="172" rx="34" fill="#2F5BFF" transform="rotate(-10 238 218)"/>
-    <rect x="154" y="208" width="240" height="172" rx="34" fill="#C6F432"/>
-    <path d="M200 324v-44a26 26 0 0 1 52 0v44M252 280a26 26 0 0 1 52 0v44" fill="none" stroke="#121318" stroke-width="22" stroke-linecap="round"/>
+    <rect x="118" y="132" width="240" height="172" rx="34" fill="#FF6B4A" transform="rotate(-10 238 218)"/>
+    <rect x="154" y="208" width="240" height="172" rx="34" fill="#FFFFFF"/>
+    <path d="M200 324v-44a26 26 0 0 1 52 0v44M252 280a26 26 0 0 1 52 0v44" fill="none" stroke="#141B33" stroke-width="22" stroke-linecap="round"/>
   </g>
 </svg>

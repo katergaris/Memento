@@ -2548,7 +2548,7 @@
     sortSelect.value = sort;
     sortSelect.addEventListener('change', () => { sort = sortSelect.value; localStorage.setItem('memento-vault-sort', sort); paint(); });
 
-    const LOGO_TINTS = [['#E3E9FF', '#2448E0'], ['#FFE3DE', '#B4231A'], ['#EEFBC6', '#4B5E00'], ['#F3E8FF', '#7048E8'], ['#FFF0D6', '#A85A00'], ['#FCE4EE', '#B0285A']];
+    const LOGO_TINTS = [['#E3E9FF', '#2448E0'], ['#FFE3DE', '#B4231A'], ['#FFE4DC', '#B2401F'], ['#F3E8FF', '#7048E8'], ['#FFF0D6', '#A85A00'], ['#FCE4EE', '#B0285A']];
     const tintFor = (name) => LOGO_TINTS[[...String(name)].reduce((a, c) => a + c.charCodeAt(0), 0) % LOGO_TINTS.length];
 
     async function revealFull(entry) {
@@ -3520,7 +3520,7 @@
 
     const list = el('<div class="vault-list acc-list"></div>');
     withNext.forEach(({ a, next }) => {
-      const [bg, fg] = [['#E3E9FF', '#2448E0'], ['#F3E8FF', '#7048E8'], ['#FCE4EE', '#B0285A'], ['#FFF0D6', '#A85A00'], ['#EEFBC6', '#4B5E00']][[...a.service].reduce((x, c) => x + c.charCodeAt(0), 0) % 5];
+      const [bg, fg] = [['#E3E9FF', '#2448E0'], ['#F3E8FF', '#7048E8'], ['#FCE4EE', '#B0285A'], ['#FFF0D6', '#A85A00'], ['#FFE4DC', '#B2401F']][[...a.service].reduce((x, c) => x + c.charCodeAt(0), 0) % 5];
       const row = el(`<div class="vcard" tabindex="0" role="button"><span class="vlogo"></span><span class="vtext"><b></b><small></small></span><span class="date-cell"><b></b><small></small></span></div>`);
       const logo = row.querySelector('.vlogo'); logo.textContent = a.service.trim().charAt(0).toUpperCase(); logo.style.background = bg; logo.style.color = fg;
       row.querySelector('.vtext b').textContent = a.service;

@@ -8,7 +8,7 @@
     <TextView android:id="@+id/w_note" android:layout_width="0dp" android:layout_height="match_parent"
         android:layout_weight="1" android:layout_margin="4dp" android:gravity="center"
         android:background="@drawable/memento_widget_main" android:text="@string/shortcut_note"
-        android:textColor="#121318" android:textStyle="bold" android:textSize="13sp" />
+        android:textColor="#FFFFFF" android:textStyle="bold" android:textSize="13sp" />
     <TextView android:id="@+id/w_cards" android:layout_width="0dp" android:layout_height="match_parent"
         android:layout_weight="1" android:layout_margin="4dp" android:gravity="center"
         android:background="@drawable/memento_widget_btn" android:text="@string/shortcut_cards"

@@ -48,8 +48,8 @@ jobs:
         run: |
           npx cap add android
           npx capacitor-assets generate --android \
-            --iconBackgroundColor '#121318' --iconBackgroundColorDark '#121318' \
-            --splashBackgroundColor '#F2F3EE' --splashBackgroundColorDark '#121318'
+            --iconBackgroundColor '#141B33' --iconBackgroundColorDark '#141B33' \
+            --splashBackgroundColor '#F2F3EE' --splashBackgroundColorDark '#141B33'
           # Permessi, indirizzi memento://, scorciatoie, widget, icona a tema,
           # MainActivity con l'aggancio per Google: tutto in uno script.
           node scripts/patch-android.js
