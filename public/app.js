@@ -1726,6 +1726,8 @@
       form.querySelector('[data-cancel]').addEventListener('click', closeModal);
       const side = el(`<span class="form-actions-side"><button type="button" class="btn btn-ghost" data-link>${esc(tr('btn_link_folder'))}</button><button type="button" class="btn btn-ghost btn-danger" data-del>${esc(tr('btn_delete'))}</button></span>`);
       side.querySelector('[data-link]').addEventListener('click', () => { closeModal(); openLinkToDossierModal('reminder', r.id, r.label); });
+      const passR = passButton('reminder', r.id, r.label);
+      if (passR) side.insertBefore(passR, side.querySelector('[data-del]'));
       side.querySelector('[data-del]').addEventListener('click', async () => { closeModal(); await done(r, tr('toast_moved_trash')); });
       form.querySelector('.form-actions').prepend(side);
       openModal(tr('modal_edit_reminder'), form);
@@ -1959,6 +1961,8 @@
       const actions = form.querySelector('.form-actions');
       const side = el(`<span class="form-actions-side"><button type="button" class="btn btn-ghost" data-link>${esc(tr('btn_link_folder'))}</button><button type="button" class="btn btn-ghost btn-danger" data-del>${esc(tr('btn_delete'))}</button></span>`);
       side.querySelector('[data-link]').addEventListener('click', () => { closeModal(); openLinkToDossierModal('idea', idea.id, idea.title); });
+      const passI = passButton('idea', idea.id, idea.title);
+      if (passI) side.insertBefore(passI, side.querySelector('[data-del]'));
       side.querySelector('[data-del]').addEventListener('click', async () => {
         if (!(await askConfirm(tr('confirm_delete_idea')))) return;
         await api(`/ideas/${idea.id}`, { method: 'DELETE' });
@@ -2251,6 +2255,8 @@
         openModal(tr('modal_edit_project'), form);
       });
       panel.querySelector('[data-link]').addEventListener('click', () => openLinkToDossierModal('project', p.id, p.title));
+      const passP = passButton('project', p.id, p.title);
+      if (passP) panel.querySelector('[data-link]').after(passP);
       panel.querySelector('[data-del]').addEventListener('click', async () => {
         if (!(await askConfirm(tr('confirm_delete_project')))) return;
         await api(`/projects/${p.id}`, { method: 'DELETE' });
@@ -2591,7 +2597,7 @@
   }
 
   // QR grande da far inquadrare (passaggio diretto tra telefoni).
-  async function showQr(title, text, caption, actions) {
+  async function showQr(title, text, caption, actions, opts = {}) {
     await loadScript('/vendor/qrcode.js');
     const code = window.qrcode(0, 'L');
     code.addData(text, 'Byte');
@@ -2599,57 +2605,213 @@
     const wrap = el(`<div class="qr-show"><div class="qr-big">${code.createSvgTag({ cellSize: 4, margin: 3, scalable: true })}</div><p class="qr-caption"></p><div class="form-actions"></div></div>`);
     wrap.querySelector('.qr-caption').textContent = caption || '';
     (actions || []).forEach((b) => wrap.querySelector('.form-actions').appendChild(b));
-    openModal(title, wrap);
+    openModal(title, wrap, opts);
     return wrap;
+  }
+
+  // ---------- Passare elementi da un telefono all'altro ----------
+  // Chi riceve mostra un QR con la sua chiave pubblica e l'indirizzo PeerJS su
+  // cui aspetta. Chi passa lo inquadra e manda l'elemento cifrato per quella
+  // chiave direttamente (WebRTC; il server pubblico PeerJS presenta solo i due
+  // telefoni). Se il collegamento non riesce: QR dell'elemento o file .memento.
+  function transferEngine() { return (window.MementoBackend && window.MementoBackend.engine) || null; }
+  const PEER_CHUNK = 15000; // il canale JSON di PeerJS rifiuta messaggi oltre ~16 KB
+  // Server diverso da quello pubblico: localStorage "memento-peer-server" (es. peer.esempio.it:9000/app).
+  function peerOptions() {
+    const custom = (localStorage.getItem('memento-peer-server') || '').trim();
+    const m = custom && custom.match(/^(?:(https?):\/\/)?([^/:]+)(?::(\d+))?(\/.*)?$/);
+    if (!m) return { debug: 0 };
+    return { host: m[2], port: Number(m[3]) || (m[1] === 'http' ? 80 : 443), path: m[4] || '/', secure: m[1] !== 'http', debug: 0 };
+  }
+  async function newPeer(id) {
+    await loadScript('/vendor/peerjs.min.js');
+    return new Promise((resolve, reject) => {
+      const peer = id ? new window.Peer(id, peerOptions()) : new window.Peer(peerOptions());
+      let opened = false;
+      const t = setTimeout(() => { peer.destroy(); reject(new Error('timeout')); }, 10000);
+      peer.on('open', () => { opened = true; clearTimeout(t); resolve(peer); });
+      peer.on('error', (err) => { if (opened) return; clearTimeout(t); peer.destroy(); reject(err); });
+    });
+  }
+  function sendOnce(peer, peerId, sealed, onProgress) {
+    return new Promise((resolve, reject) => {
+      const conn = peer.connect(peerId, { reliable: true, serialization: 'json' });
+      let t = setTimeout(() => reject(new Error('timeout')), 12000);
+      const fail = (err) => { clearTimeout(t); reject(err || new Error('peer')); };
+      peer.on('error', fail);
+      conn.on('error', fail);
+      conn.on('close', () => fail(new Error('closed')));
+      conn.on('data', (msg) => {
+        if (msg && msg.t === 'ok') { clearTimeout(t); resolve(); }
+        else if (msg && msg.t === 'err') fail(Object.assign(new Error(msg.m || ''), { fromPeer: true }));
+      });
+      conn.on('open', async () => {
+        clearTimeout(t);
+        const text = JSON.stringify(sealed);
+        const n = Math.max(1, Math.ceil(text.length / PEER_CHUNK));
+        conn.send({ t: 'begin', n });
+        for (let i = 0; i < n; i++) {
+          const dc = conn.dataChannel;
+          while (dc && dc.bufferedAmount > 1000000) await new Promise((r) => setTimeout(r, 40));
+          conn.send({ t: 'part', i, s: text.slice(i * PEER_CHUNK, (i + 1) * PEER_CHUNK) });
+          if (onProgress) onProgress((i + 1) / n);
+        }
+        conn.send({ t: 'end' });
+        t = setTimeout(() => reject(new Error('timeout')), 120000);
+      });
+    });
+  }
+  async function sendByPeer(peerId, sealed, onProgress) {
+    const peer = await newPeer();
+    try {
+      try { await sendOnce(peer, peerId, sealed, onProgress); }
+      catch (err) {
+        // Chi riceve puo' non essersi ancora presentato al server: un secondo tentativo.
+        if (err.fromPeer || err.type !== 'peer-unavailable') throw err;
+        await new Promise((r) => setTimeout(r, 2500));
+        await sendOnce(peer, peerId, sealed, onProgress);
+      }
+    } finally { setTimeout(() => peer.destroy(), 600); }
+  }
+  // Il nome del telefono si chiede una volta: e' quello che vede l'altro.
+  function askPhoneName(engine) {
+    if (engine.identityName()) return Promise.resolve(true);
+    return new Promise((resolve) => {
+      const form = el(`<form class="modal-body" style="padding:0"><div class="form-row"><label>${esc(tr('qr_name_label'))}</label><input type="text" name="name" required maxlength="60" placeholder="${esc(tr('qr_name_placeholder'))}" /></div>
+        <div class="form-actions"><button type="button" class="btn btn-ghost" data-cancel>${esc(tr('btn_cancel'))}</button><button type="submit" class="btn btn-primary">${esc(tr('btn_confirm'))}</button></div></form>`);
+      form.addEventListener('submit', async (e) => { e.preventDefault(); await engine.setIdentityName(form.name.value); closeModal(); resolve(true); });
+      form.querySelector('[data-cancel]').addEventListener('click', () => { closeModal(); resolve(false); });
+      openModal(tr('qr_name_title'), form);
+    });
+  }
+  function pickTransferFile() {
+    return new Promise((resolve) => {
+      const input = el('<input type="file" class="hidden" />');
+      input.addEventListener('change', () => { resolve(input.files[0] || null); input.remove(); });
+      document.body.appendChild(input);
+      input.click();
+    });
+  }
+  async function saveTransferFile(sealed, label) {
+    const name = `${String(label || 'memento').replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '').slice(0, 40) || 'memento'}.memento`;
+    const blob = new Blob([JSON.stringify(sealed)], { type: 'application/octet-stream' });
+    if (window.MementoShell && window.MementoShell.saveFile) { await window.MementoShell.saveFile(blob, name); return; }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+  // Ricevere: QR con chiave e indirizzo, in attesa del collegamento diretto;
+  // in alternativa si inquadra il QR dell'elemento o si apre un file .memento.
+  async function receiveFlow() {
+    const engine = transferEngine();
+    if (!engine || !(await askPhoneName(engine))) return;
+    // Un avviso rimasto aperto coprirebbe il QR.
+    document.querySelectorAll('.toast').forEach((t) => t.remove());
+    const peerId = 'memento-' + [...crypto.getRandomValues(new Uint8Array(10))].map((b) => b.toString(16).padStart(2, '0')).join('');
+    let peer = null;
+    let closed = false;
+    let wrap = null;
+    const setStatus = (text) => { const p = wrap && wrap.querySelector('.qr-caption'); if (p) p.textContent = text; };
+    const accept = async (input, conn) => {
+      const got = await engine.receiveTransfer(input);
+      if (conn) { try { conn.send({ t: 'ok' }); } catch (_) { /* gia' chiuso */ } await new Promise((r) => setTimeout(r, 400)); }
+      closeModal();
+      // Ogni elemento e' gia' nella sua sezione: l'avviso dice quale e la apre.
+      const view = TYPE_TO_VIEW[got.type] || 'today';
+      const where = (SECTIONS.find((x) => x.view === view) || {}).label || '';
+      toast(tr(got.count > 1 ? 'transfer_received_many' : 'transfer_received', { what: got.label, from: got.from, n: got.count - 1, where }), {
+        action: tr('transfer_open'), onAction: () => render(view, { highlight: got.id }), duration: 8000,
+      });
+      if (currentView === 'security') render('security');
+    };
+    const scanBtn = el(`<button type="button" class="btn btn-ghost">${esc(tr('qr_scan_item'))}</button>`);
+    scanBtn.addEventListener('click', async () => {
+      closeModal();
+      const res = await scanCode();
+      if (!res) return;
+      try { await accept(res.text); } catch (err) { toast(err.message); }
+    });
+    const fileBtn = el(`<button type="button" class="btn btn-ghost">${esc(tr('transfer_open_file'))}</button>`);
+    fileBtn.addEventListener('click', async () => {
+      const file = await pickTransferFile();
+      if (!file) return;
+      try { await accept(await file.text()); } catch (err) { toast(err.message); }
+    });
+    wrap = await showQr(tr('transfer_receive_title'), await engine.identityQr(peerId), tr('transfer_waiting'), [fileBtn, scanBtn], {
+      onClose: () => { closed = true; if (peer) setTimeout(() => peer.destroy(), 500); },
+    });
+    newPeer(peerId).then((p) => {
+      if (closed) { p.destroy(); return; }
+      peer = p;
+      p.on('connection', (conn) => {
+        let parts = [];
+        conn.on('data', async (msg) => {
+          if (!msg || closed) return;
+          if (msg.t === 'begin') { parts = new Array(Math.min(Number(msg.n) || 1, 100000)); setStatus(tr('transfer_progress', { pct: 0 })); }
+          else if (msg.t === 'part' && msg.i >= 0 && msg.i < parts.length) {
+            parts[msg.i] = String(msg.s || '');
+            setStatus(tr('transfer_progress', { pct: Math.round((parts.filter((x) => x !== undefined).length / parts.length) * 100) }));
+          } else if (msg.t === 'end') {
+            try { await accept(JSON.parse(parts.join('')), conn); }
+            catch (err) { try { conn.send({ t: 'err', m: err.message }); } catch (_) { /* chiuso */ } setStatus(err.message); }
+          }
+        });
+      });
+    }).catch(() => { if (!closed) setStatus(tr('transfer_peer_off')); });
+  }
+  // Passare: si inquadra il QR di chi riceve e si manda l'elemento.
+  async function passItem(type, id, label) {
+    const engine = transferEngine();
+    if (!engine) return;
+    closeModal();
+    if (!(await askPhoneName(engine))) return;
+    toast(tr('qr_scan_recipient'));
+    const res = await scanCode();
+    if (!res) return;
+    let who, sealed;
+    try {
+      who = await engine.readIdentityQr(res.text);
+      sealed = await engine.sealTransfer(type, id, who);
+    } catch (err) { toast(err.message); return; }
+    if (who.peer) {
+      const box = el(`<div class="qr-show"><p class="qr-caption"></p></div>`);
+      const cap = box.querySelector('.qr-caption');
+      cap.textContent = tr('transfer_sending', { who: who.label });
+      let cancelled = false;
+      openModal(label, box, { onClose: () => { cancelled = true; } });
+      try {
+        await sendByPeer(who.peer, sealed, (f) => { cap.textContent = tr('transfer_sending_pct', { who: who.label, pct: Math.round(f * 100) }); });
+        if (!cancelled) { closeModal(); toast(tr('transfer_sent', { who: who.label })); }
+        return;
+      } catch (err) {
+        if (cancelled) return;
+        if (err.fromPeer) { closeModal(); toast(err.message); return; }
+      }
+    }
+    const fileBtn = el(`<button type="button" class="btn btn-ghost">${esc(tr('transfer_send_file'))}</button>`);
+    fileBtn.addEventListener('click', () => saveTransferFile(sealed, label).catch((err) => toast(err.message)));
+    const done = el(`<button type="button" class="btn btn-primary">${esc(tr('qr_done'))}</button>`);
+    done.addEventListener('click', closeModal);
+    const qr = engine.transferQrText(sealed);
+    if (qr) { await showQr(label, qr, tr('qr_pass_hint', { who: who.label }), [fileBtn, done]); return; }
+    const box = el(`<div class="qr-show"><p class="qr-caption"></p><div class="form-actions"></div></div>`);
+    box.querySelector('.qr-caption').textContent = tr('transfer_file_only', { who: who.label });
+    box.querySelector('.form-actions').append(fileBtn, done);
+    openModal(label, box);
+  }
+  // Icona "Condividi" delle schede (solo nell'app, modalita' "Sul telefono").
+  function passButton(type, id, label) {
+    if (!transferEngine()) return null;
+    const b = el(`<button type="button" class="icon-btn pass-btn" data-pass title="${esc(tr('btn_pass'))}" aria-label="${esc(tr('btn_pass'))}">${phIcon('share-network', 18)}</button>`);
+    b.addEventListener('click', (e) => { e.stopPropagation(); passItem(type, id, label); });
+    return b;
   }
 
   views.vault = async (root, opts = {}) => {
     const highlightId = opts.highlight ? String(opts.highlight) : null;
     const engine = window.MementoBackend && window.MementoBackend.engine;
 
-    // Il nome del telefono si chiede una volta: e' quello che vede l'altro.
-    function askPhoneName() {
-      if (engine.identityName()) return Promise.resolve(true);
-      return new Promise((resolve) => {
-        const form = el(`<form class="modal-body" style="padding:0"><div class="form-row"><label>${esc(tr('qr_name_label'))}</label><input type="text" name="name" required maxlength="60" placeholder="${esc(tr('qr_name_placeholder'))}" /></div>
-          <div class="form-actions"><button type="button" class="btn btn-ghost" data-cancel>${esc(tr('btn_cancel'))}</button><button type="submit" class="btn btn-primary">${esc(tr('btn_confirm'))}</button></div></form>`);
-        form.addEventListener('submit', async (e) => { e.preventDefault(); await engine.setIdentityName(form.name.value); closeModal(); resolve(true); });
-        form.querySelector('[data-cancel]').addEventListener('click', () => { closeModal(); resolve(false); });
-        openModal(tr('qr_name_title'), form);
-      });
-    }
-
-    // Ricevere: mostro il mio codice, poi inquadro la voce preparata per me.
-    async function receiveWithQr() {
-      if (!(await askPhoneName())) return;
-      const scanBtn = el(`<button type="button" class="btn btn-primary">${esc(tr('qr_scan_item'))}</button>`);
-      scanBtn.addEventListener('click', async () => {
-        closeModal();
-        const res = await scanCode();
-        if (!res) return;
-        try {
-          const got = await engine.receiveTransferQr(res.text);
-          toast(tr('qr_received', { what: got.site, from: got.from }));
-          render('vault', { highlight: got.id, fromHash: true });
-        } catch (err) { toast(err.message); }
-      });
-      await showQr(tr('qr_receive_title'), await engine.identityQr(), tr('qr_receive_hint'), [scanBtn]);
-    }
-    // Passare: inquadro il codice di chi riceve, poi mostro la voce cifrata per lui.
-    async function passWithQr(entry) {
-      closeModal();
-      if (!(await askPhoneName())) return;
-      toast(tr('qr_scan_recipient'));
-      const res = await scanCode();
-      if (!res) return;
-      try {
-        const who = await engine.readIdentityQr(res.text);
-        const text = await engine.transferQr(entry.id, who);
-        const done = el(`<button type="button" class="btn btn-primary">${esc(tr('qr_done'))}</button>`);
-        done.addEventListener('click', closeModal);
-        await showQr(entry.site, text, tr('qr_pass_hint', { who: who.label }), [done]);
-      } catch (err) { toast(err.message); }
-    }
     const entries = (await api('/vault')).filter(onlyFilter(opts));
     root.innerHTML = '';
     root.appendChild(el(`
@@ -2657,14 +2819,11 @@
         <h2>${esc(tr('nav_vault_title'))}</h2>
         <div class="view-header-actions">${backToDossierButtonHtml(opts)}
           <label class="icon-action" title="${esc(tr('btn_import_csv'))}" aria-label="${esc(tr('btn_import_csv'))}">${phIcon('file-csv', 22)}<input type="file" id="csv-input" accept=".csv" class="hidden" /></label>
-          ${engine ? `<button type="button" class="icon-action" id="receive-qr" title="${esc(tr('qr_receive'))}" aria-label="${esc(tr('qr_receive'))}">${phIcon('qr-code', 22)}</button>` : ''}
           <button type="button" class="icon-action icon-action-primary" id="new-vault" title="${esc(tr('btn_new_vault_entry'))}" aria-label="${esc(tr('btn_new_vault_entry'))}">${phIcon('plus', 22)}</button>
         </div>
       </div>
     `));
     wireBackToDossier(root, opts);
-    if (engine) root.querySelector('#receive-qr').addEventListener('click', () => receiveWithQr());
-    if (engine && opts.receive) setTimeout(() => receiveWithQr(), 300);
 
     root.querySelector('#csv-input').addEventListener('change', async (e) => {
       const file = e.target.files[0];
@@ -2867,12 +3026,8 @@
       if (actions.querySelector('[data-link]')) actions.querySelector('[data-link]').textContent = tr('btn_link_folder');
       actions.querySelector('[data-del]').textContent = received ? tr('share_leave') : tr('btn_delete');
       if (actions.querySelector('[data-edit]')) actions.querySelector('[data-edit]').textContent = tr('btn_edit');
-      if (engine && !received) {
-        const pass = el(`<button type="button" class="btn btn-ghost" data-pass-qr></button>`);
-        pass.textContent = tr('qr_pass');
-        pass.addEventListener('click', () => passWithQr(entry));
-        actions.querySelector('.form-actions-side').appendChild(pass);
-      }
+      const pass = !received && passButton('vault', entry.id, entry.site);
+      if (pass) actions.querySelector('.form-actions-side').appendChild(pass);
       if (canShare) {
         actions.querySelector('[data-share]').textContent = tr('btn_share');
         actions.querySelector('[data-share]').addEventListener('click', () => { closeModal(); openShare(entry); });
@@ -3340,7 +3495,16 @@
         toast(tr(on ? 'card_pinned' : 'card_unpinned'));
       });
       paintPin();
-      page.querySelector('[data-share]').addEventListener('click', () => shareCard(card));
+      // Nell'app "Condividi" offre anche il passaggio a un altro telefono Memento.
+      page.querySelector('[data-share]').addEventListener('click', () => {
+        if (!transferEngine()) { shareCard(card); return; }
+        const box = el(`<div class="form-actions" style="flex-direction:column;align-items:stretch"><button type="button" class="btn btn-primary" data-phone></button><button type="button" class="btn" data-text></button></div>`);
+        box.querySelector('[data-phone]').textContent = tr('card_share_phone');
+        box.querySelector('[data-text]').textContent = tr('card_share_text');
+        box.querySelector('[data-phone]').addEventListener('click', () => passItem('card', card.id, card.name));
+        box.querySelector('[data-text]').addEventListener('click', () => { closeModal(); shareCard(card); });
+        openModal(tr('card_share'), box);
+      });
       page.querySelector('[data-notes]').addEventListener('click', () => {
         const form = el(`<form class="modal-body" style="padding:0"><div class="form-row"><textarea name="notes" rows="5"></textarea></div>
           <div class="form-actions"><button type="button" class="btn btn-ghost" data-cancel>${esc(tr('btn_cancel'))}</button><button type="submit" class="btn btn-primary">${esc(tr('btn_save'))}</button></div></form>`);
@@ -3812,6 +3976,8 @@
       actions.querySelector('[data-del]').textContent = tr('btn_delete');
       actions.querySelector('[data-edit]').textContent = tr('btn_edit');
       actions.querySelector('[data-link]').addEventListener('click', () => { closeModal(); openLinkToDossierModal('account', a.id, a.service); });
+      const passA = passButton('account', a.id, a.service);
+      if (passA) actions.querySelector('[data-del]').before(passA);
       actions.querySelector('[data-vault]').addEventListener('click', () => { closeModal(); openLinkVaultModal(a); });
       actions.querySelector('[data-del]').addEventListener('click', async () => {
         closeModal();
@@ -3987,6 +4153,8 @@
         </div>
       `);
       if (previewable) row.querySelector('.entry-doc').addEventListener('click', () => openDocumentPreview(d));
+      const passD = passButton('document', d.id, d.display_name || d.original_name);
+      if (passD) row.querySelector('[data-del]').after(passD);
       row.querySelector('[data-edit]').addEventListener('click', () => {
         const currentIds = linkedDossiers.map((ds) => ds.id);
         const form = documentModal(d, dossiers, currentIds[0] || '');
@@ -4135,6 +4303,8 @@
       head.querySelector('[data-del]').textContent = tr('btn_delete');
       head.querySelector('[data-add]').addEventListener('click', () => openQuickCapture(d));
       head.querySelector('[data-edit]').addEventListener('click', () => openDossierForm(d));
+      const passF = passButton('dossier', d.id, d.title);
+      if (passF) head.querySelector('[data-edit]').before(passF);
       head.querySelector('[data-del]').addEventListener('click', async () => {
         if (!(await askConfirm(tr('confirm_delete_dossier')))) return;
         await api(`/dossiers/${d.id}`, { method: 'DELETE' });
@@ -4753,7 +4923,7 @@
     e.preventDefault();
     window.MementoBackend.download(a.getAttribute('href')).catch((err) => toast(err.message));
   });
-  window.MementoUI = { el, esc, tr, toast, openModal, closeModal, render, sectionsBlock, totpBlock, loadScript, askConfirm, askValue, haptic, themeBlock, openQuickCapture, showQr, scanCode, isReady: () => !appRoot.classList.contains('hidden') };
+  window.MementoUI = { receive: () => receiveFlow(), el, esc, tr, toast, openModal, closeModal, render, sectionsBlock, totpBlock, loadScript, askConfirm, askValue, haptic, themeBlock, openQuickCapture, showQr, scanCode, isReady: () => !appRoot.classList.contains('hidden') };
 
   // Molti handler fanno "await api(...)" senza try/catch: senza questa rete di
   // sicurezza un errore restava solo in console e per l'utente non succedeva nulla.

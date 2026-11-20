@@ -203,6 +203,12 @@
         data.querySelector('[data-import]').addEventListener('click', () => importFlow(ui).catch((e) => ui.toast(e.message)));
         root.appendChild(data);
 
+        // Ricevere da un altro telefono: ogni elemento va nella sua sezione.
+        const recv = ui.el(`<div class="section-block"><h3>${esc(tr('local_receive_title'))}</h3>
+          <div class="card-actions" style="padding-top:4px"><button type="button" class="btn btn-primary" data-receive>${esc(tr('qr_receive'))}</button></div></div>`);
+        recv.querySelector('[data-receive]').addEventListener('click', () => ui.receive());
+        root.appendChild(recv);
+
         // Sincronizzazione con Google Drive: solo se la build ha l'accesso a
         // Google (variabile GOOGLE_WEB_CLIENT_ID), altrimenti non si mostra.
         if (window.MementoNative && window.MementoNative.Sync.configured()) {
@@ -449,7 +455,7 @@
     pendingLink = null;
     if (what === 'nota') ui.openQuickCapture();
     else if (what === 'carte') ui.render('cards');
-    else if (what === 'ricevi') ui.render('vault', { receive: true });
+    else if (what === 'ricevi') { ui.render('security'); setTimeout(() => ui.receive(), 400); }
   }
   function wireDeepLinks() {
     const App = plugin('App');

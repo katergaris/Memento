@@ -362,6 +362,69 @@ test('passaggio di una voce con QR tra due telefoni, senza server', async () => 
   assert.equal(entry.notes, 'piano 2');
 });
 
+test('passaggio di abbonamenti, carte, scadenze e note: QR con il tipo giusto', async () => {
+  const a = (await fresh()).be;
+  const b = (await fresh()).be;
+  const who = await a.readIdentityQr(await b.identityQr('memento-abcdef1234'));
+  assert.equal(who.peer, 'memento-abcdef1234');
+  const acc = (await call(a, '/accounts', 'POST', { service: 'Palestra', amount: 39.9, billing_frequency: 'mensile', renewal_day: 5, vault_entry_id: null, notes: 'utente A' })).data;
+  const card = (await call(a, '/cards', 'POST', { name: 'Negozio', number: '12345', pin: '0000', kind: 'regalo', balance: 20 })).data;
+  const rem = (await call(a, '/reminders', 'POST', { label: 'Revisione auto', date: '2027-03-01' })).data;
+  const idea = (await call(a, '/ideas', 'POST', { title: 'Lista spesa', checklist: [{ text: 'pane', done: false }] })).data;
+  const proj = (await call(a, '/projects', 'POST', { title: 'Cucina', status: 'in_corso', budget: [{ label: 'mobili', amount: 900 }] })).data;
+  for (const [type, id] of [['account', acc.id], ['card', card.id], ['reminder', rem.id], ['idea', idea.id], ['project', proj.id]]) {
+    const sealed = await a.sealTransfer(type, id, who);
+    const qr = a.transferQrText(sealed);
+    assert.ok(qr && qr.startsWith('MEMENTO-V2:'));
+    const got = await b.receiveTransfer(qr);
+    assert.equal(got.type, type);
+  }
+  const [acc2] = (await call(b, '/accounts')).data;
+  assert.equal(acc2.service, 'Palestra');
+  assert.equal(acc2.amount, 39.9);
+  assert.equal(acc2.vault_entry_id, null);
+  const [card2] = (await call(b, '/cards')).data;
+  assert.equal(card2.hasPin, true);
+  assert.equal((await call(b, `/cards/${card2.id}/pin`)).data.pin, '0000');
+  assert.equal((await call(b, '/reminders')).data[0].date, '2027-03-01');
+  assert.equal((await call(b, '/ideas')).data[0].checklist[0].text, 'pane');
+  assert.equal((await call(b, '/projects')).data[0].status, 'in_corso');
+});
+
+test('passaggio di una cartella con un documento: file .memento e campi ripuliti', async () => {
+  const a = (await fresh()).be;
+  const b = (await fresh()).be;
+  const c = (await fresh()).be;
+  const who = await a.readIdentityQr(await b.identityQr());
+  const fd = new FormData();
+  fd.append('file', new Blob([new Uint8Array(200000).fill(7)], { type: 'application/pdf' }), 'contratto.pdf');
+  const doc = (await call(a, '/drive', 'POST', fd)).data;
+  const d = (await call(a, '/dossiers', 'POST', { title: 'Casa' })).data;
+  const nota = (await call(a, '/ideas', 'POST', { title: 'Numeri utili' })).data;
+  await call(a, `/dossiers/${d.id}/links`, 'POST', { item_type: 'document', item_id: doc.id });
+  await call(a, `/dossiers/${d.id}/links`, 'POST', { item_type: 'idea', item_id: nota.id });
+  const sealed = await a.sealTransfer('dossier', d.id, who);
+  assert.equal(sealed.items, 3);
+  const file = JSON.stringify(sealed);
+  assert.ok(!file.includes('Numeri utili'));
+  await c.identityQr();
+  await assert.rejects(c.receiveTransfer(file), /altro telefono/);
+  const got = await b.receiveTransfer(file);
+  assert.equal(got.type, 'dossier');
+  assert.equal(got.count, 3);
+  const d2 = (await call(b, `/dossiers/${got.id}`)).data;
+  assert.deepEqual(d2.items.map((x) => x.type).sort(), ['document', 'idea']);
+  const doc2 = (await call(b, '/drive')).data[0];
+  const { blob } = await b.fileBlob(doc2.id);
+  assert.equal(blob.size, 200000);
+  // un pacchetto con campi estranei non scrive cio' che non e' previsto
+  const odd = await b.importTransfer({ items: [{ type: 'vault', data: { site: 'X', password: 'p', type: 'boh', id: 1, share: { role: 'owner' } } }] }, 'utente A');
+  const rec = b.find('vault', odd.id);
+  assert.equal(rec.type, 'password');
+  assert.equal(rec.share, undefined);
+  assert.notEqual(rec.id, 1);
+});
+
 test('foto della tessera: al massimo due, solo immagini, non nell\'elenco', async () => {
   const { be } = await fresh();
   const c = (await call(be, '/cards', 'POST', { name: 'Negozio', number: '1' })).data;

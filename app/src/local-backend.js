@@ -26,6 +26,67 @@
   };
   const PREVIEWABLE_MIME = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf']);
 
+  // Campi che passano da un telefono all'altro (niente id, date interne,
+  // condivisioni, collegamenti al Vault o nomi dei file cifrati).
+  const TRANSFER_FIELDS = {
+    ideas: ['title', 'body', 'tags', 'checklist'],
+    projects: ['title', 'description', 'status', 'checklist', 'tags', 'deadline', 'contacts', 'budget'],
+    reminders: ['label', 'date', 'time', 'notes'],
+    accounts: ['service', 'type', 'email', 'plan', 'location', 'payment_method', 'start_date', 'renewal_day', 'renewal_month', 'installments', 'notes', 'tags', 'billing_frequency', 'amount'],
+    vault: ['site', 'username', 'password', 'url', 'notes', 'tags', 'type', 'totp_secret', 'card_cvv', 'card_expiry'],
+    cards: ['kind', 'name', 'brand', 'number', 'format', 'color', 'holder', 'pin', 'balance', 'currency', 'expiry_date', 'notes', 'tags', 'photos'],
+    documents: ['original_name', 'folder', 'mime', 'expiry_date', 'tags', 'display_name'],
+    dossiers: ['title', 'description'],
+  };
+  const TRANSFER_DEFAULTS = {
+    ideas: { title: 'Nota ricevuta', body: '', tags: [], checklist: [] },
+    projects: { title: 'Progetto ricevuto', description: '', status: 'da_fare', checklist: [], tags: [], deadline: null, contacts: [], budget: [] },
+    reminders: { label: 'Scadenza ricevuta', date: null, time: null, notes: '', notified_at: null },
+    accounts: { service: 'Abbonamento ricevuto', type: 'digitale', email: '', plan: '', location: '', payment_method: '', start_date: null, renewal_date: null, renewal_day: null, renewal_month: null, installments: null, notes: '', tags: [], billing_frequency: '', amount: null, vault_entry_id: null },
+    vault: { site: 'Voce ricevuta', username: '', password: '', url: '', notes: '', tags: [], type: 'password', totp_secret: null, card_cvv: null, card_expiry: null },
+    cards: { kind: 'fedelta', name: 'Carta ricevuta', brand: '', number: '', format: 'CODE128', color: '', holder: '', pin: null, balance: null, currency: 'EUR', expiry_date: null, notes: '', tags: [], photos: [] },
+    documents: { original_name: 'file', folder: '', mime: '', size: 0, expiry_date: null, tags: [], display_name: null },
+    dossiers: { title: 'Cartella ricevuta', description: '' },
+  };
+  const TRANSFER_ENUMS = {
+    'projects.status': ['da_fare', 'in_corso', 'fatto'],
+    'accounts.type': ['digitale', 'cartaceo', 'finanziamento'],
+    'vault.type': ['password', 'note', 'card', 'code'],
+    'cards.kind': ['fedelta', 'regalo'],
+    'cards.format': ['QR', 'CODE128', 'EAN13', 'EAN8', 'UPC', 'CODE39', 'ITF', 'NONE'],
+  };
+  function pickFields(rec, fields) {
+    const out = {};
+    fields.forEach((k) => { if (rec[k] !== undefined && rec[k] !== null && rec[k] !== '') out[k] = rec[k]; });
+    return out;
+  }
+  // Solo i campi previsti, con il tipo giusto: il resto prende il valore vuoto.
+  function cleanTransferData(t, data) {
+    const out = JSON.parse(JSON.stringify(TRANSFER_DEFAULTS[t]));
+    TRANSFER_FIELDS[t].forEach((k) => {
+      const v = data[k];
+      if (v === undefined || v === null) return;
+      const def = TRANSFER_DEFAULTS[t][k];
+      if (Array.isArray(def)) { if (Array.isArray(v)) out[k] = v; return; }
+      const allowed = TRANSFER_ENUMS[`${t}.${k}`];
+      if (allowed) { if (allowed.includes(v)) out[k] = v; return; }
+      if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') out[k] = v;
+    });
+    if (t === 'cards') out.photos = out.photos.filter((p) => typeof p === 'string' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(p)).slice(0, 2);
+    if (t === 'reminders' && !out.date) out.date = new Date().toISOString().slice(0, 10);
+    return out;
+  }
+  // Compressione (deflate) dove il motore la offre; altrimenti null.
+  async function streamBytes(bytes, Stream) {
+    const s = new Blob([bytes]).stream().pipeThrough(new Stream('deflate-raw'));
+    return new Uint8Array(await new Response(s).arrayBuffer());
+  }
+  async function deflate(bytes) {
+    if (typeof CompressionStream === 'undefined') return null;
+    try { return await streamBytes(bytes, CompressionStream); } catch (_) { return null; }
+  }
+  async function inflate(bytes) { return streamBytes(bytes, DecompressionStream); }
+
   class HttpError extends Error {
     constructor(status, message, data) { super(message); this.status = status; this.data = data || {}; }
   }
@@ -990,11 +1051,12 @@
       await this.save();
       return { status: 'ok' };
     }
-    // ---------------- Passaggio diretto con QR ----------------
-    // Chi riceve mostra il suo QR (nome e chiave pubblica); chi passa la voce
-    // la cifra per quella chiave e mostra un secondo QR che solo il telefono
-    // di chi riceve sa aprire. Nessun server.
-    // Nome con cui il telefono si presenta a chi riceve o passa una voce.
+    // ---------------- Passaggio diretto tra telefoni ----------------
+    // Chi riceve mostra il suo QR (nome, chiave pubblica e, se c'e', l'indirizzo
+    // PeerJS su cui aspetta). Chi passa cifra l'elemento per quella chiave e lo
+    // manda direttamente (WebRTC), oppure con un secondo QR o un file .memento.
+    // Il contenuto e' leggibile solo dal telefono di chi riceve.
+    // Nome con cui il telefono si presenta a chi riceve o passa un elemento.
     identityName() { return (this.state.settings.identity && this.state.settings.identity.name) || ''; }
     async setIdentityName(name) {
       if (!this.state.settings.identity) await this.ensureIdentity('');
@@ -1005,37 +1067,117 @@
       const ident = this.state.settings.identity;
       return (ident && (ident.name || ident.email)) || 'Memento';
     }
-    async identityQr() {
+    async identityQr(peerId) {
       if (!this.state.settings.identity) await this.ensureIdentity('');
       const raw = await MC.publicJwkToRaw(this.state.settings.identity.publicJwk);
-      return `MEMENTO-ID1:${raw}:${encodeURIComponent(this.identityLabel())}`;
+      const label = encodeURIComponent(this.identityLabel());
+      return peerId ? `MEMENTO-ID2:${raw}:${label}:${peerId}` : `MEMENTO-ID1:${raw}:${label}`;
     }
     async readIdentityQr(text) {
-      const m = String(text || '').match(/^MEMENTO-ID1:([A-Za-z0-9+/=]+):(.*)$/);
+      const m = String(text || '').match(/^MEMENTO-ID[12]:([A-Za-z0-9+/=]+):([^:]*)(?::([A-Za-z0-9_-]{8,64}))?$/);
       if (!m) fail(400, 'Non e\' il codice di un telefono Memento');
       const label = decodeURIComponent(m[2]) || 'Memento';
       const publicJwk = await MC.rawToPublicJwk(m[1]);
       // Chiave scambiata di persona: vale anche come contatto verificato.
       if (/^[^@\s]+@[^@\s]+$/.test(label)) await this.learnContact(label, publicJwk);
-      return { label, publicJwk };
+      return { label, publicJwk, peer: m[3] || null };
     }
-    async transferQr(entryId, recipient) {
-      const r = this.find('vault', entryId) || fail(404, 'Voce non trovata');
+    // Pacchetto in chiaro: l'elemento e, per una cartella, cio' che contiene.
+    async transferPackage(type, id) {
+      const t = TYPE_TABLE[type];
+      if (!t) fail(400, 'Tipo non valido');
+      const rec = this.find(t, id) || fail(404, 'Elemento non trovato');
+      const items = [];
+      const add = async (itemType, r) => {
+        const entry = { type: itemType, data: pickFields(r, TRANSFER_FIELDS[TYPE_TABLE[itemType]]) };
+        if (itemType === 'document') entry.file = MC.toB64((await this.fileBytes(r.id)).bytes);
+        items.push(entry);
+      };
+      await add(type, rec);
+      if (type === 'dossier') {
+        for (const l of this.rows('links')) {
+          if (l.deleted_at || String(l.dossier_id) !== String(rec.id) || l.item_type === 'dossier') continue;
+          const item = TYPE_TABLE[l.item_type] && this.find(TYPE_TABLE[l.item_type], l.item_id);
+          if (item) { try { await add(l.item_type, item); } catch (_) { /* file mancante: si passa il resto */ } }
+        }
+      }
+      return { v: 2, items };
+    }
+    // Busta cifrata per chi riceve (stringhe base64, va bene per QR, file e WebRTC).
+    async sealTransfer(type, id, recipient) {
+      const pkg = await this.transferPackage(type, id);
+      const plain = new TextEncoder().encode(JSON.stringify(pkg));
+      const packed = await deflate(plain);
       const key = MC.randomBytes(32);
-      const fields = {};
-      ['site', 'username', 'password', 'url', 'notes', 'tags', 'type', 'totp_secret', 'card_cvv', 'card_expiry'].forEach((k) => { if (r[k] != null && r[k] !== '') fields[k] = r[k]; });
-      const { iv, ct } = await MC.encryptBytes(await MC.importKey(MC.toB64(key)), new TextEncoder().encode(JSON.stringify(fields)));
+      const { iv, ct } = await MC.encryptBytes(await MC.importKey(MC.toB64(key)), packed || plain);
       const w = await MC.wrapFor(recipient.publicJwk, key);
-      const epk = await MC.publicJwkToRaw(w.epk);
-      const payload = [this.identityLabel(), epk, w.iv, w.ct, iv, ct].map(encodeURIComponent).join('|');
-      const text = `MEMENTO-V1:${payload}`;
-      if (text.length > 2600) fail(413, 'Voce troppo lunga per un QR: usa l\'esportazione');
+      return { format: 'memento-transfer', v: 2, from: this.identityLabel(), epk: await MC.publicJwkToRaw(w.epk), wiv: w.iv, wct: w.ct, iv, ct, z: packed ? 1 : 0, items: pkg.items.length };
+    }
+    // Testo del QR, o null se l'elemento e' troppo grande per un QR.
+    transferQrText(sealed) {
+      const text = `MEMENTO-V2:${[encodeURIComponent(sealed.from), sealed.epk, sealed.wiv, sealed.wct, sealed.iv, sealed.ct, sealed.z].join('|')}`;
+      return text.length > 2600 ? null : text;
+    }
+    // Compatibilita': QR di una voce del Vault (come nelle versioni precedenti).
+    async transferQr(entryId, recipient) {
+      const text = this.transferQrText(await this.sealTransfer('vault', entryId, recipient));
+      if (!text) fail(413, 'Voce troppo lunga per un QR: usa l\'esportazione');
       return text;
     }
-    async receiveTransferQr(text) {
-      const m = String(text || '').match(/^MEMENTO-V1:(.*)$/);
-      if (!m) fail(400, 'Non e\' il codice di una voce Memento');
-      const [from, epk, wiv, wct, iv, ct] = m[1].split('|').map(decodeURIComponent);
+    // Accetta il testo di un QR (V1 o V2), il contenuto di un file .memento o
+    // la busta arrivata via WebRTC. Crea gli elementi e dice cosa e' arrivato.
+    async receiveTransfer(input) {
+      let env = input;
+      if (typeof input === 'string') {
+        const s = input.trim();
+        if (s.startsWith('MEMENTO-V1:')) return this.receiveTransferV1(s);
+        const m = s.match(/^MEMENTO-V2:(.*)$/);
+        if (m) {
+          const [from, epk, wiv, wct, iv, ct, z] = m[1].split('|');
+          env = { from: decodeURIComponent(from || ''), epk, wiv, wct, iv, ct, z: Number(z) || 0 };
+        } else {
+          try { env = JSON.parse(s); } catch (_) { fail(400, 'Non e\' il codice di un elemento Memento'); }
+        }
+      }
+      if (!env || typeof env !== 'object' || !env.epk || !env.ct) fail(400, 'Non e\' il codice di un elemento Memento');
+      if (!this.state.settings.identity) fail(400, 'Mostra prima il tuo codice a chi ti passa l\'elemento');
+      let pkg;
+      try {
+        const key = await MC.unwrapWith(this.state.settings.identity.privateJwk, { epk: await MC.rawToPublicJwk(env.epk), iv: env.wiv, ct: env.wct });
+        let bytes = await MC.decryptBytes(await MC.importKey(MC.toB64(key)), env.iv, env.ct);
+        if (env.z) bytes = await inflate(bytes);
+        pkg = JSON.parse(new TextDecoder().decode(bytes));
+      } catch (_) {
+        fail(400, 'Questo codice e\' stato preparato per un altro telefono');
+      }
+      return this.importTransfer(pkg, String(env.from || 'Memento').slice(0, 60));
+    }
+    async importTransfer(pkg, from) {
+      const items = pkg && Array.isArray(pkg.items) ? pkg.items : [];
+      const made = [];
+      let dossier = null;
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i] || {};
+        const t = TYPE_TABLE[it.type];
+        if (!t || (it.type === 'dossier' && i > 0)) continue;
+        const data = cleanTransferData(t, it.data || {});
+        if (it.type === 'document') {
+          if (typeof it.file !== 'string') continue;
+          const bytes = MC.fromB64(it.file);
+          data.stored_name = await this.putFile(bytes);
+          data.size = bytes.length;
+        }
+        const rec = this.insert(t, data);
+        if (i === 0 && it.type === 'dossier') dossier = rec;
+        else if (dossier) this.insert('links', { dossier_id: dossier.id, item_type: it.type, item_id: rec.id });
+        made.push({ type: it.type, id: rec.id, label: LABEL[it.type](rec) });
+      }
+      if (!made.length) fail(400, 'Il codice non contiene elementi');
+      await this.save();
+      return { ...made[0], site: made[0].label, from, count: made.length };
+    }
+    async receiveTransferV1(text) {
+      const [from, epk, wiv, wct, iv, ct] = text.slice('MEMENTO-V1:'.length).split('|').map(decodeURIComponent);
       if (!this.state.settings.identity) fail(400, 'Mostra prima il tuo codice a chi ti passa la voce');
       let fields;
       try {
@@ -1044,15 +1186,10 @@
       } catch (_) {
         fail(400, 'Questo codice e\' stato preparato per un altro telefono');
       }
-      const VALID = ['password', 'note', 'card', 'code'];
-      const rec = this.insert('vault', {
-        site: fields.site || 'Voce ricevuta', username: fields.username || '', password: fields.password || '', url: fields.url || '',
-        notes: fields.notes || '', tags: Array.isArray(fields.tags) ? fields.tags : [], type: VALID.includes(fields.type) ? fields.type : 'password',
-        totp_secret: fields.totp_secret || null, card_cvv: fields.card_cvv || null, card_expiry: fields.card_expiry || null,
-      });
-      await this.save();
-      return { id: rec.id, site: rec.site, from };
+      return this.importTransfer({ items: [{ type: 'vault', data: fields }] }, from);
     }
+    // Vecchio nome, usato dall'interfaccia delle versioni precedenti.
+    receiveTransferQr(text) { return this.receiveTransfer(text); }
 
     // Voci ricevute che non sono piu' accessibili (condivisione tolta).
     async dropMissingShares(accessibleIds) {
