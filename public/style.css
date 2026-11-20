@@ -1369,3 +1369,33 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 .update-version { font-weight: 700; font-size: 1.05rem; margin: 0 0 14px; }
 .update-bar { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; margin-bottom: 14px; }
 .update-bar > span { display: block; height: 100%; width: 0; background: var(--coral); transition: width .2s; }
+
+/* Barra in basso: scelta dei preferiti (solo telefono) */
+.tabbar-block { display: none; }
+@media (max-width: 760px) { .tabbar-block { display: block; } }
+.tabbar-preview {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center;
+  height: 64px; padding: 0 4px; margin-top: 10px; border-radius: 20px; background: var(--block);
+}
+.tabbar-slot {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  height: 52px; margin: 0 2px; border: none; border-radius: 14px; background: rgba(255, 255, 255, .1);
+  padding: 0; color: #fff; font: inherit; font-size: 10.5px; font-weight: 700; cursor: pointer; min-width: 0;
+}
+.tabbar-slot span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 1px; letter-spacing: -.01em; }
+.tabbar-slot svg { width: 22px; height: 22px; flex: none; }
+.tabbar-slot-fixed { background: none; color: var(--ink-dim); cursor: default; }
+.tabbar-slot-plus {
+  justify-self: center; width: 46px; height: 46px; border-radius: 15px; background: var(--coral); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+.tabbar-slot-plus svg { width: 24px; height: 24px; stroke-width: 2.4; }
+.tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab { min-width: 0; padding: 0; -webkit-touch-callout: none; user-select: none; }
+.fav-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 6px; }
+.fav-pick {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 2px; border: none; border-radius: 16px;
+  background: none; color: var(--text); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; min-width: 0;
+}
+.fav-pick span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fav-pick.active { background: var(--accent-bg); color: var(--accent); }

@@ -684,7 +684,78 @@
   }
   function isHidden(view) { return hiddenViews().has(view); }
   function visibleSections() { const h = hiddenViews(); return SECTIONS.filter((s) => !h.has(s.view)); }
+  // Barra in basso del telefono: tre posti scelti dall'utente (oltre a + e
+  // Altro). Una sezione spenta lascia il posto alla prima libera.
+  const TAB_FAVS_KEY = 'memento-tab-favs';
+  const TAB_FAVS_DEFAULT = ['today', 'ideas', 'vault'];
+  const favCandidates = () => visibleSections().filter((s) => !NAV_SKIP.has(s.view)).map((s) => s.view);
+  function tabFavs() {
+    let saved;
+    try { saved = JSON.parse(localStorage.getItem(TAB_FAVS_KEY) || 'null'); } catch (_) { saved = null; }
+    if (!Array.isArray(saved) || saved.length !== 3) saved = TAB_FAVS_DEFAULT;
+    const ok = favCandidates();
+    const out = [];
+    saved.forEach((v) => { out.push(ok.includes(v) && !out.includes(v) ? v : null); });
+    const spare = [...TAB_FAVS_DEFAULT, ...ok].filter((v) => ok.includes(v) && !saved.includes(v));
+    return out.map((v) => v || spare.shift() || null);
+  }
+  function setTabFav(slot, view) {
+    const favs = tabFavs();
+    const other = favs.indexOf(view);
+    if (other >= 0) favs[other] = favs[slot]; // gia' in barra: si scambiano di posto
+    favs[slot] = view;
+    localStorage.setItem(TAB_FAVS_KEY, JSON.stringify(favs));
+    buildNavigation();
+    markActiveNav(currentView);
+  }
+  // Griglia delle sezioni per scegliere cosa mettere in un posto.
+  function pickTabFav(slot, onDone) {
+    const favs = tabFavs();
+    const grid = el('<div class="fav-grid"></div>');
+    favCandidates().forEach((view) => {
+      const b = el(`<button type="button" class="fav-pick${favs[slot] === view ? ' active' : ''}">${appIcon(view, 48)}<span></span></button>`);
+      b.querySelector('span').textContent = VIEW_LABELS[view];
+      b.addEventListener('click', () => { setTabFav(slot, view); closeModal(); haptic(); if (onDone) onDone(); });
+      grid.appendChild(b);
+    });
+    openModal(tr('tabbar_pick_title', { n: slot + 1 }), grid);
+  }
+  // Etichette lunghe (es. "Abbonamenti") nella barra: carattere ridotto
+  // quanto basta perche' entrino, mai sotto gli 8px.
+  function fitLabels(root, sel) {
+    requestAnimationFrame(() => root.querySelectorAll(sel).forEach((sp) => {
+      sp.style.fontSize = '';
+      const avail = sp.parentElement.clientWidth - 2;
+      if (sp.scrollWidth > avail && avail > 0) {
+        const fs = parseFloat(getComputedStyle(sp).fontSize);
+        sp.style.fontSize = `${Math.max(8, Math.floor(fs * avail / sp.scrollWidth * 10) / 10)}px`;
+      }
+    }));
+  }
+  function tabbarBlock() {
+    const block = el(`<div class="section-block tabbar-block"><h3>${esc(tr('section_tabbar'))}</h3><div class="tabbar-preview"></div></div>`);
+    const prev = block.querySelector('.tabbar-preview');
+    const paint = () => {
+      prev.innerHTML = '';
+      const favs = tabFavs();
+      const slot = (i) => {
+        const b = el(`<button type="button" class="tabbar-slot">${favs[i] ? lineIcon(favs[i]) : ''}<span></span></button>`);
+        b.querySelector('span').textContent = favs[i] ? VIEW_LABELS[favs[i]] : '—';
+        b.addEventListener('click', () => pickTabFav(i, paint));
+        return b;
+      };
+      prev.append(slot(0), slot(1), el(`<span class="tabbar-slot-plus">${strokeIcon('<path d="M12 5v14M5 12h14"/>')}</span>`), slot(2));
+      const more = el(`<span class="tabbar-slot tabbar-slot-fixed">${lineIcon('more')}<span></span></span>`);
+      more.querySelector('span').textContent = tr('tab_sections');
+      prev.appendChild(more);
+      fitLabels(prev, '.tabbar-slot > span');
+    };
+    paint();
+    return block;
+  }
+
   function sectionsBlock() {
+    const frag = document.createDocumentFragment();
     const block = el(`<div class="section-block"><h3>${esc(tr('section_visible_sections'))}</h3><div class="toggle-list"></div></div>`);
     const list = block.querySelector('.toggle-list');
     HIDEABLE_VIEWS.forEach((view) => {
@@ -699,10 +770,13 @@
         if (window.MementoNative && window.MementoBackend) window.MementoNative.Notify.reschedule(window.MementoBackend).catch(() => {});
         buildNavigation();
         markActiveNav(currentView);
+        const tb = block.parentNode && block.parentNode.querySelector('.tabbar-block');
+        if (tb) tb.replaceWith(tabbarBlock());
       });
       list.appendChild(row);
     });
-    return block;
+    frag.append(block, tabbarBlock());
+    return frag;
   }
 
   // Tema: automatico (come il telefono), chiaro o scuro. Il primo calcolo e'
@@ -794,7 +868,8 @@
     esci.addEventListener('click', logout);
     sidebarSecondary.appendChild(esci);
 
-    // Telefono: Oggi, Note, + (cattura), Vault, Altro (tutto il resto).
+    // Telefono: tre preferiti (Oggi, Note, Vault se non scelti), + (cattura),
+    // Altro (tutto il resto).
     // La ricerca sta nell'intestazione (lente), non occupa un posto qui.
     tabbar.innerHTML = '';
     const tab = (view, label) => {
@@ -808,18 +883,33 @@
       b.addEventListener('click', onClick);
       return b;
     };
-    tabbar.appendChild(tab('today', tr('nav_today')));
-    tabbar.appendChild(tab('ideas', tr('nav_ideas')));
+    const favs = tabFavs();
+    // Pressione lunga su un posto: scegli cosa metterci.
+    const favTab = (i) => {
+      const view = favs[i];
+      const a = view ? tab(view, VIEW_LABELS[view]) : el('<span class="tab"></span>');
+      let timer = null;
+      let fired = false;
+      const cancel = () => { clearTimeout(timer); timer = null; };
+      a.addEventListener('pointerdown', () => { fired = false; timer = setTimeout(() => { fired = true; haptic(); pickTabFav(i); }, 550); });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => a.addEventListener(ev, cancel));
+      a.addEventListener('click', (e) => { if (fired) { e.preventDefault(); fired = false; } });
+      a.addEventListener('contextmenu', (e) => e.preventDefault());
+      return a;
+    };
+    tabbar.appendChild(favTab(0));
+    tabbar.appendChild(favTab(1));
     const capture = button('tab-capture', '', '<path d="M12 5v14M5 12h14"/>', () => { closeSectionsSheet(); if (quickCaptureEl.classList.contains('hidden')) openQuickCapture(); else closeQuickCapture(); });
     capture.setAttribute('aria-label', tr('title_quick_capture'));
     tabbar.appendChild(capture);
-    tabbar.appendChild(tab('vault', tr('nav_vault')));
+    tabbar.appendChild(favTab(2));
     const more = button('tab', tr('tab_sections'), '', () => {
       if (sectionsSheet.classList.contains('hidden')) openSectionsSheet(); else closeSectionsSheet();
     });
     more.querySelector('svg').outerHTML = lineIcon('more');
     more.setAttribute('aria-haspopup', 'dialog');
     tabbar.appendChild(more);
+    fitLabels(tabbar, '.tab > span');
 
     // Foglio "Sezioni" del telefono: tutte le sezioni come tessere grandi.
     sectionsSheet.innerHTML = '';
