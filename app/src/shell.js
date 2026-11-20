@@ -184,7 +184,7 @@
         if (url.startsWith('/api/backup')) { await exportFlow(); return; }
         throw new Error(tr('err_unexpected'));
       },
-      // Sezione Sicurezza sul telefono: dati, password, modalita'.
+      // Sezione Impostazioni sul telefono: dati, password, modalita'.
       async renderSettings(root, ui) {
         root.innerHTML = '';
         root.appendChild(ui.el(`<div class="view-header"><h2>${esc(tr('nav_security_title'))}</h2></div>`));

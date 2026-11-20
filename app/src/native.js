@@ -417,7 +417,7 @@
       };
       show();
     },
-    // Blocco in Sicurezza: versione installata e controllo a mano.
+    // Blocco nelle Impostazioni: versione installata e controllo a mano.
     block(ui) {
       const b = ui.el(`<div class="section-block"><h3>${esc(tr('update_section'))}</h3><p class="card-sub" data-ver></p>
         <div class="card-actions" style="padding-top:10px"><button type="button" class="btn" data-check>${esc(tr('update_check'))}</button></div></div>`);

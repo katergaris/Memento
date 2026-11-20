@@ -834,7 +834,7 @@
     async vaultShare(method, id, email, body, ser) {
       const r = this.find('vault', id) || fail(404, 'Voce non trovata');
       const me = this.myEmail();
-      if (!me) fail(400, 'Collega Google Drive in Sicurezza per condividere');
+      if (!me) fail(400, 'Collega Google Drive nelle Impostazioni per condividere');
       if (r.share && r.share.role !== 'owner') fail(403, 'Solo chi ha creato la voce puo\' condividerla');
       if (method === 'POST') {
         const who = String(body.email || '').trim().toLowerCase();
