@@ -886,7 +886,8 @@
     sidebarSecondary.appendChild(esci);
 
     // Telefono: tre preferiti (Oggi, Note, Vault se non scelti), + (cattura),
-    // Altro (tutto il resto).
+    // Altro (tutto il resto). Se Oggi non e' tra i preferiti, fuori da Oggi
+    // prende il posto del primo; gli altri due non si spostano.
     // La ricerca sta nell'intestazione (lente), non occupa un posto qui.
     tabbar.innerHTML = '';
     const tab = (view, label) => {
@@ -901,12 +902,9 @@
       return b;
     };
     const favs = tabFavs();
-    // Fuori da Oggi il primo tasto e' sempre Oggi (se non e' gia' tra i
-    // preferiti): i preferiti scorrono di un posto, il terzo va in Altro.
     const shown = favs.map((view, slot) => ({ view, slot }));
     if (currentView && currentView !== 'today' && !favs.includes('today') && !isHidden('today')) {
-      shown.splice(0, 0, { view: 'today', slot: null });
-      shown.length = 3;
+      shown[0] = { view: 'today', slot: null };
     }
     const shownViews = shown.map((x) => x.view);
     // Pressione lunga su un posto: scegli cosa metterci.
