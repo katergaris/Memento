@@ -157,7 +157,7 @@ L'APK si scarica dalle **[Release](https://github.com/katergaris/Memento/release
 
 Al primo avvio si sceglie come usarla:
 
-- **Sul telefono**: i dati stanno solo nel telefono, in un archivio cifrato (AES-GCM, chiave ricavata dalla password principale). Funziona senza rete e senza server. Sblocco con l'impronta, notifiche delle scadenze, passaggio di una voce del vault a un altro telefono con un QR.
+- **Sul telefono**: i dati stanno solo nel telefono, in un archivio cifrato (AES-GCM, chiave ricavata dalla password principale). Funziona senza rete e senza server. Sblocco con l'impronta, notifiche delle scadenze, condivisione di qualunque elemento con un altro telefono.
 - **Collegata al server**: l'app usa il tuo server Memento, come il browser.
 
 Si può cambiare modalità quando si vuole: i dati di ciascuna restano dove sono.
@@ -167,6 +167,16 @@ Si può cambiare modalità quando si vuole: i dati di ciascuna restano dove sono
 - **File cifrato**: Impostazioni → Dati → "Esporta file cifrato" crea un file `.memento` (documenti compresi), protetto da una password, da reimportare su un altro telefono.
 - **Backup sul server di casa**: nelle Impostazioni del server (dal browser) "Backup dell'app Android" → "Collega un telefono" mostra un QR; nell'app, Impostazioni → "Backup sul server" → "Leggi il QR del server". Da quel momento l'app salva sul server una copia **cifrata con la password principale** (il server non la può leggere) dopo ogni modifica e ogni volta che torni nell'app. La copia finisce anche nel backup normale del server. Su un telefono nuovo: stessa password principale, stesso collegamento, e i dati vengono ripristinati.
 - **Dal server all'app**: Impostazioni del server → "Esporta per l'app" crea un file `.memento` con i dati del server, da importare nell'app.
+
+### Condividere con un altro telefono
+
+Note, progetti, scadenze, spese ricorrenti, voci del vault, carte, documenti e cartelle (con tutto quello che contengono) si passano da un telefono all'altro, entrambi con l'app "Sul telefono".
+
+1. Chi riceve: Impostazioni → "Da un altro telefono" → **Ricevi**. Compare un QR.
+2. Chi manda: apre l'elemento, tocca l'icona **Condividi** e inquadra quel QR.
+3. L'elemento arriva e va da solo nella sua sezione; l'avviso dice quale e la apre.
+
+I dati passano direttamente tra i due telefoni (WebRTC con [PeerJS](https://peerjs.com)), cifrati per la chiave di chi riceve. Il server pubblico di PeerJS serve solo a mettere in contatto i due telefoni e non vede il contenuto. Se il collegamento diretto non riesce (alcune reti mobili lo impediscono), chi manda mostra il QR dell'elemento da inquadrare con "Inquadra il QR", oppure lo manda come file `.memento` (WhatsApp, email, Bluetooth) che chi riceve apre con "Apri file".
 
 ### Compilare l'APK
 
@@ -252,6 +262,7 @@ rm -rf data uploads   # attenzione: cancella tutti i dati salvati
 - La rivelazione di una password del vault può essere protetta per-dispositivo con impronta/Face ID (WebAuthn); senza dispositivi registrati funziona come prima, con la sola sessione autenticata.
 - Dopo 10 tentativi di accesso falliti dallo stesso indirizzo, il login si blocca per 15 minuti.
 - Questo è uno strumento pensato per uso personale su una rete che controlli (rete domestica, VPN, NAS). Non ha avuto un audit di sicurezza professionale: per password particolarmente critiche, valuta di affiancare uno strumento dedicato e verificato come Vaultwarden, usando Memento per il resto.
+- Nell'app, la condivisione con un altro telefono usa il server pubblico di PeerJS (`0.peerjs.com`) solo per presentare i due telefoni: vede due identificativi casuali, non il contenuto, che viaggia cifrato da telefono a telefono.
 - Se esponi Memento su internet, mettilo dietro HTTPS (es. reverse proxy con Caddy/Traefik/Nginx) e considera un livello aggiuntivo di autenticazione (es. VPN).
 
 ## Struttura del progetto
