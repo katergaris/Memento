@@ -24,6 +24,9 @@
   --brand-lime: #FF6B4A;
   --coral: #FF6B4A;
   --coral-soft: #FFE4DC;
+  /* Testo e icone sopra il corallo: il bianco arriva a 2,8:1, il blu notte a 6:1. */
+  --on-coral: #141B33;
+  --coral-hover: #F2552F;
   --navy: #141B33;
   --brand-pink: #E5484D;
   --brand-lilac: #C9D6FF;
@@ -241,8 +244,8 @@ input:focus, textarea:focus, select:focus {
 }
 .btn:hover { background: var(--surface-hover); }
 .btn:focus-visible { outline: 2px solid var(--accent-soft); outline-offset: 2px; }
-.btn-primary { background: var(--accent-soft); color: #FFFFFF; box-shadow: none; font-weight: 700; }
-.btn-primary:hover { background: var(--accent); }
+.btn-primary { background: var(--coral); color: var(--on-coral); box-shadow: none; font-weight: 700; }
+.btn-primary:hover { background: var(--coral-hover); }
 .btn-ghost { background: transparent; box-shadow: none; color: var(--accent-soft); }
 .btn-ghost:hover { background: var(--accent-bg); }
 .btn-danger { color: var(--danger-soft); }
@@ -315,9 +318,9 @@ input:focus, textarea:focus, select:focus {
 
 .btn.btn-capture {
   height: 46px; padding: 0 18px; border-radius: 14px; box-shadow: none;
-  background: var(--coral); color: #FFFFFF; font-weight: 700; font-size: 15px;
+  background: var(--coral); color: var(--on-coral); font-weight: 700; font-size: 15px;
 }
-.btn.btn-capture:hover { background: #F2552F; }
+.btn.btn-capture:hover { background: var(--coral-hover); }
 
 .view-host { flex: 1; min-height: 0; overflow-y: auto; overflow-x: clip; padding: 4px 32px 40px; }
 .view { max-width: 1280px; }
@@ -363,7 +366,7 @@ input:focus, textarea:focus, select:focus {
   .tab.active { color: #fff; }
   .tab-capture {
     justify-self: center; width: 52px; height: 52px; border-radius: 17px; border: none; cursor: pointer;
-    background: var(--coral); color: #FFFFFF; display: flex; align-items: center; justify-content: center;
+    background: var(--coral); color: var(--on-coral); display: flex; align-items: center; justify-content: center;
   }
   .tab-capture svg { width: 26px; height: 26px; stroke-width: 2.4; }
 
@@ -474,10 +477,12 @@ input:focus, textarea:focus, select:focus {
 .focus-text small { font-size: 13px; opacity: .7; }
 .focus-text .pill { align-self: flex-start; margin-top: 4px; }
 .focus-text small:empty { display: none; }
-.focus-empty { font-size: 15px; opacity: .8; padding: 4px 0; }
+.focus-empty { font-size: 15px; padding: 4px 0; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.focus-empty > span { opacity: .8; }
+.focus-head .focus-num:empty { display: none; }
 .pill { font-style: normal; font-size: 12.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
 .pill-late { background: #E5484D; color: #FFFFFF; }
-.pill-today { background: var(--coral); color: #FFFFFF; }
+.pill-today { background: var(--coral); color: var(--on-coral); }
 
 /* Azioni quadrate, sempre nello stesso posto */
 .row-acts { display: flex; gap: 6px; flex: none; }
@@ -1392,7 +1397,7 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 .tabbar-slot svg { width: 22px; height: 22px; flex: none; }
 .tabbar-slot-fixed { background: none; color: var(--ink-dim); cursor: default; }
 .tabbar-slot-plus {
-  justify-self: center; width: 46px; height: 46px; border-radius: 15px; background: var(--coral); color: #fff;
+  justify-self: center; width: 46px; height: 46px; border-radius: 15px; background: var(--coral); color: var(--on-coral);
   display: flex; align-items: center; justify-content: center;
 }
 .tabbar-slot-plus svg { width: 24px; height: 24px; stroke-width: 2.4; }
@@ -1474,10 +1479,10 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 /* Selezione multipla: pressione lunga su una voce, barra al posto di quella in basso. */
 [data-sel-type] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 .is-selected { outline: 3px solid var(--coral); outline-offset: 2px; position: relative; }
-.is-selected::after { content: ''; position: absolute; top: -7px; left: -7px; width: 22px; height: 22px; border-radius: 50%; background: var(--coral) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath fill='white' d='M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z'/%3E%3C/svg%3E") center / 14px no-repeat; pointer-events: none; z-index: 2; }
+.is-selected::after { content: ''; position: absolute; top: -7px; left: -7px; width: 22px; height: 22px; border-radius: 50%; background: var(--coral) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath fill='%23141B33' d='M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z'/%3E%3C/svg%3E") center / 14px no-repeat; pointer-events: none; z-index: 2; }
 .select-bar { position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 1200; display: flex; align-items: center; gap: 6px; padding: 8px; border-radius: 22px; background: var(--block, #141B33); color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.25); animation: selbar-in .18s ease-out; }
 @media (min-width: 761px) { .select-bar { left: 50%; right: auto; transform: translateX(-50%); bottom: 24px; min-width: 420px; } }
-.select-bar .sel-count { flex: none; min-width: 32px; height: 32px; padding: 0 8px; border-radius: 16px; background: var(--coral); color: #fff; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; margin-right: auto; }
+.select-bar .sel-count { flex: none; min-width: 32px; height: 32px; padding: 0 8px; border-radius: 16px; background: var(--coral); color: var(--on-coral); font-weight: 700; display: inline-flex; align-items: center; justify-content: center; margin-right: auto; }
 .select-bar button { flex: none; background: transparent; border: none; color: inherit; display: inline-flex; align-items: center; gap: 6px; padding: 10px 10px; border-radius: 14px; font: inherit; font-weight: 600; cursor: pointer; min-height: 44px; }
 .select-bar button:hover { background: rgba(255,255,255,.1); }
 .select-bar .sel-danger { color: #FF8A7A; }

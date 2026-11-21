@@ -29,7 +29,7 @@ window.MementoI18n = (() => {
 
       auth_sub_setup: 'Primo avvio: crea il tuo accesso personale.',
       auth_sub_login: '',
-      auth_username: 'Username',
+      auth_username: 'Nome utente',
       auth_password: 'Password',
       auth_code: 'Codice di verifica',
       auth_code_placeholder: '6 cifre dall\'app',
@@ -385,7 +385,7 @@ window.MementoI18n = (() => {
       vault_type_password: 'Password',
       vault_type_note: 'Nota sicura',
       vault_type_card: 'Carta di credito',
-      field_username: 'Username',
+      field_username: 'Nome utente',
       field_password: 'Password',
       field_url: 'URL',
       leave_blank_m: ' (lascia vuoto per non cambiarlo)',

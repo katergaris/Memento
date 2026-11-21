@@ -1519,7 +1519,9 @@
     const focus = relevant.filter((x) => x.days <= 1);
     const later = relevant.filter((x) => x.days > 1);
     const KIND_VIEW = { reminder: 'reminders', project: 'projects', account: 'accounts', document: 'drive', card: 'cards' };
-    const open = (x) => render(KIND_VIEW[x.kind], { highlight: x.item.id });
+    // Da Oggi si apre il dettaglio della voce, non solo la sua sezione;
+    // "indietro" riporta a Oggi (la sezione e' un passo nuovo nella cronologia).
+    const open = (x) => render(KIND_VIEW[x.kind], { highlight: x.item.id, openItem: true });
 
     async function snooze(r) {
       const t = new Date(); t.setDate(t.getDate() + 1);
@@ -1561,10 +1563,18 @@
         <ul class="focus-list"></ul>
       </section>
     `);
-    focusTile.querySelector('.focus-num').textContent = String(focus.length);
+    // Con zero voci niente "0" in corallo (sembrava un allarme): solo la
+    // frase e il tasto per annotare.
+    focusTile.querySelector('.focus-num').textContent = focus.length ? String(focus.length) : '';
     focusTile.querySelector('.focus-label').textContent = tr('today_focus_label');
     const focusList = focusTile.querySelector('.focus-list');
-    if (!focus.length) focusList.appendChild(el(`<li class="focus-empty">${esc(tr('today_focus_empty'))}</li>`));
+    if (!focus.length) {
+      const empty = el(`<li class="focus-empty"><span></span><button type="button" class="btn btn-capture"></button></li>`);
+      empty.querySelector('span').textContent = tr('today_focus_empty');
+      empty.querySelector('button').textContent = tr('btn_capture');
+      empty.querySelector('button').addEventListener('click', () => openQuickCapture());
+      focusList.appendChild(empty);
+    }
     focus.forEach((x) => {
       const li = el(`<li class="focus-row" tabindex="0" role="button"><span class="focus-text"><b></b><small></small><em class="pill"></em></span></li>`);
       li.querySelector('b').textContent = x.title;
@@ -1586,7 +1596,8 @@
     upTile.querySelector('h2').textContent = tr('today_upcoming_title');
     upTile.querySelector('.tile-head a').textContent = tr('nav_calendar');
     const dateList = upTile.querySelector('.date-list');
-    if (!later.length) dateList.appendChild(el(`<p class="panel-empty">${esc(tr('today_due_empty'))}</p>`));
+    // Tutto vuoto: "Niente in scadenza" lo dice gia' il blocco scuro, una volta sola.
+    if (!later.length && focus.length) dateList.appendChild(el(`<p class="panel-empty">${esc(tr('today_due_empty'))}</p>`));
     later.slice(0, TODAY_MAX_DEADLINES).forEach((x) => {
       const row = el(`<div class="date-row" tabindex="0" role="button"><span class="date-cell"><b></b><small></small></span><span class="date-text"><b></b><small></small></span></div>`);
       const day = String(x.date).slice(8, 10);
@@ -1604,7 +1615,7 @@
     if (later.length > TODAY_MAX_DEADLINES) {
       dateList.appendChild(el(`<a class="panel-more" href="#/calendar">${esc(tr('today_more', { n: later.length - TODAY_MAX_DEADLINES }))}</a>`));
     }
-    board.appendChild(upTile);
+    if (later.length || focus.length) board.appendChild(upTile);
 
     // --- Progetti: avanzamento a tacche e prossimo passo spuntabile ---
     const active = isHidden('projects') ? [] : projects.filter((p) => p.status === 'in_corso')
@@ -1696,6 +1707,7 @@
 
   views.reminders = async (root, opts = {}) => {
     const highlightId = opts.highlight ? String(opts.highlight) : null;
+    let toOpen = null; // voce da aprire subito (arrivo da Oggi)
     const reminders = (await api('/reminders')).filter(onlyFilter(opts));
     root.innerHTML = '';
     root.appendChild(el(`
@@ -1777,12 +1789,13 @@
         attachSwipe(row, { right: () => done(r), left: () => tomorrow(r) });
         row.addEventListener('click', () => edit(r));
         row.addEventListener('keydown', (e) => { if (e.key === 'Enter') edit(r); });
-        if (highlightId && String(r.id) === highlightId) row.classList.add('card-highlight');
+        if (highlightId && String(r.id) === highlightId) { row.classList.add('card-highlight'); if (opts.openItem) toOpen = r; }
         box.appendChild(row);
       });
       root.appendChild(tile);
     });
     if (highlightId) { const t = root.querySelector('.card-highlight'); if (t) t.scrollIntoView({ block: 'center' }); }
+    if (toOpen) edit(toOpen);
   };
 
   // Calendario: griglia mensile, riusa l'API e il modulo delle Scadenze —
@@ -3998,6 +4011,7 @@
 
   views.accounts = async (root, opts = {}) => {
     const highlightId = opts.highlight ? String(opts.highlight) : null;
+    let toOpen = null; // voce da aprire subito (arrivo da Oggi)
     const accounts = (await api('/accounts')).filter(onlyFilter(opts));
     root.innerHTML = '';
     root.appendChild(el(`
@@ -4129,7 +4143,7 @@
       else cell.classList.add('hidden');
       row.addEventListener('click', () => openDetail(a, next));
       row.addEventListener('keydown', (e) => { if (e.key === 'Enter') openDetail(a, next); });
-      if (highlightId && String(a.id) === highlightId) row.classList.add('card-highlight');
+      if (highlightId && String(a.id) === highlightId) { row.classList.add('card-highlight'); if (opts.openItem) toOpen = () => openDetail(a, next); }
       list.appendChild(row);
     });
     root.appendChild(list);
@@ -4137,6 +4151,7 @@
       const target = list.querySelector('.card-highlight');
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+    if (toOpen) toOpen();
   };
 
   // ==================================================================
@@ -4214,6 +4229,7 @@
 
   views.drive = async (root, opts = {}) => {
     const highlightId = opts.highlight ? String(opts.highlight) : null;
+    let toOpen = null; // voce da aprire subito (arrivo da Oggi)
     const [docsAll, dossiers] = await Promise.all([api('/drive'), api('/dossiers')]);
     const docs = docsAll.filter(onlyFilter(opts));
     // Documento -> cartelle a cui e' collegato (di norma una sola, il menu a
@@ -4288,13 +4304,17 @@
         await api(`/drive/${d.id}`, { method: 'DELETE' });
         toast(tr('toast_document_deleted')); render('drive');
       });
-      if (highlightId && String(d.id) === highlightId) row.classList.add('card-highlight');
+      if (highlightId && String(d.id) === highlightId) {
+        row.classList.add('card-highlight');
+        if (opts.openItem) toOpen = () => (previewable ? openDocumentPreview(d) : row.querySelector('[data-edit]').click());
+      }
       root.appendChild(row);
     });
     if (highlightId) {
       const target = root.querySelector('.card-highlight');
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+    if (toOpen) toOpen();
   };
 
   // ==================================================================
