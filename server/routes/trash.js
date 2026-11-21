@@ -18,6 +18,7 @@ const RESOURCES = {
 };
 
 router.get('/', (req, res) => {
+  require('./cards').expireFlights();
   const items = [];
   for (const [type, def] of Object.entries(RESOURCES)) {
     const rows = db.prepare(`SELECT * FROM ${def.table} WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`).all();

@@ -6,8 +6,8 @@ const { encrypt, decrypt } = require('../crypto');
 // cassa): resta in chiaro e si cerca; il PIN delle carte regalo e' cifrato.
 const router = express.Router();
 
-const KINDS = ['fedelta', 'regalo'];
-const FORMATS = ['QR', 'CODE128', 'EAN13', 'EAN8', 'UPC', 'CODE39', 'ITF', 'NONE'];
+const KINDS = ['fedelta', 'regalo', 'volo'];
+const FORMATS = ['QR', 'CODE128', 'EAN13', 'EAN8', 'UPC', 'CODE39', 'ITF', 'AZTEC', 'PDF417', 'DATAMATRIX', 'NONE'];
 
 // Nell'elenco le foto non viaggiano (pesano): solo quante sono; la carta
 // singola (GET /:id) le ha tutte.
@@ -39,7 +39,23 @@ function cleanColor(raw) {
 }
 const get = (id) => db.prepare('SELECT * FROM cards WHERE id = ?').get(id);
 
+// Carte d'imbarco (kind "volo", expiry_date = giorno dell'ultimo volo): il
+// giorno dopo vanno nel Cestino da sole; dopo 30 giorni nel Cestino si
+// cancellano del tutto. Si controlla quando si leggono le carte o il Cestino.
+function expireFlights() {
+  db.prepare("UPDATE cards SET deleted_at = datetime('now') WHERE kind = 'volo' AND deleted_at IS NULL AND expiry_date IS NOT NULL AND date(expiry_date) < date('now', 'localtime')").run();
+  const old = db.prepare("SELECT id FROM cards WHERE kind = 'volo' AND deleted_at IS NOT NULL AND deleted_at < datetime('now', '-30 days')").all();
+  if (!old.length) return;
+  db.transaction(() => {
+    for (const { id } of old) {
+      db.prepare('DELETE FROM cards WHERE id = ?').run(id);
+      db.prepare("DELETE FROM dossier_links WHERE item_type = 'card' AND item_id = ?").run(id);
+    }
+  })();
+}
+
 router.get('/', (req, res) => {
+  expireFlights();
   const rows = db.prepare('SELECT * FROM cards WHERE deleted_at IS NULL ORDER BY updated_at DESC').all();
   res.json(rows.map(serialize));
 });
@@ -125,3 +141,4 @@ router.post('/:id/restore', (req, res) => {
 
 module.exports = router;
 module.exports.FORMATS = FORMATS;
+module.exports.expireFlights = expireFlights;

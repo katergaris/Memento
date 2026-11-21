@@ -1508,6 +1508,10 @@
       const days = calendarDaysFromToday(d.expiry_date);
       if (days !== null) deadlines.push({ kind: 'document', item: d, days, date: d.expiry_date, title: d.display_name || d.original_name, sub: tr('type_document') });
     });
+    if (!isHidden('cards')) cards.filter((c) => c.kind === 'volo' && c.expiry_date).forEach((c) => {
+      const days = calendarDaysFromToday(c.expiry_date);
+      if (days !== null) deadlines.push({ kind: 'card', item: c, days, date: c.expiry_date, title: c.name, sub: tr('type_flight') });
+    });
     if (!isHidden('cards')) cards.filter((c) => c.kind === 'regalo' && c.expiry_date && (c.balance == null || c.balance > 0)).forEach((c) => {
       const days = calendarDaysFromToday(c.expiry_date);
       const bal = c.balance != null ? ` · ${fmtMoney(c.balance)}` : '';
@@ -2317,9 +2321,9 @@
     }
     return loadedScripts[src];
   }
-  const ZXING_FORMATS = { QR_CODE: 'QR', CODE_128: 'CODE128', EAN_13: 'EAN13', EAN_8: 'EAN8', UPC_A: 'UPC', CODE_39: 'CODE39', ITF: 'ITF' };
+  const ZXING_FORMATS = { QR_CODE: 'QR', CODE_128: 'CODE128', EAN_13: 'EAN13', EAN_8: 'EAN8', UPC_A: 'UPC', CODE_39: 'CODE39', ITF: 'ITF', AZTEC: 'AZTEC', PDF_417: 'PDF417', DATA_MATRIX: 'DATAMATRIX' };
   // Lettore integrato del telefono (Android: Shape Detection API).
-  const NATIVE_FORMATS = { qr_code: 'QR', code_128: 'CODE128', ean_13: 'EAN13', ean_8: 'EAN8', upc_a: 'UPC', upc_e: 'CODE128', code_39: 'CODE39', itf: 'ITF', codabar: 'CODE128' };
+  const NATIVE_FORMATS = { qr_code: 'QR', code_128: 'CODE128', ean_13: 'EAN13', ean_8: 'EAN8', upc_a: 'UPC', upc_e: 'CODE128', code_39: 'CODE39', itf: 'ITF', codabar: 'CODE128', aztec: 'AZTEC', pdf417: 'PDF417', data_matrix: 'DATAMATRIX' };
   // Fotocamera posteriore ad alta risoluzione: i codici lunghi e fitti
   // (es. 17 cifre) a 640x480 non si leggono.
   // 1280x720 basta per QR e codici a barre e si accende prima del Full HD.
@@ -2435,6 +2439,16 @@
     target.innerHTML = '';
     const number = String(card.number || '');
     if (!number || card.format === 'NONE') return false;
+    // Carte d'imbarco: stesso formato del biglietto originale (bwip-js, caricato solo qui).
+    const BWIP = { AZTEC: 'azteccode', PDF417: 'pdf417', DATAMATRIX: 'datamatrix' };
+    if (BWIP[card.format]) {
+      await loadScript('/vendor/bwip-js.min.js');
+      target.innerHTML = window.bwipjs.toSVG({ bcid: BWIP[card.format], text: number, scale: 3, paddingwidth: 2, paddingheight: 2, backgroundcolor: 'FFFFFF', ...(card.format === 'PDF417' ? { columns: 6 } : {}) });
+      const svg = target.querySelector('svg');
+      if (svg) { svg.removeAttribute('width'); svg.removeAttribute('height'); svg.setAttribute('preserveAspectRatio', 'xMidYMid meet'); }
+      target.dataset.code = card.format === 'PDF417' ? 'pdf' : 'qr';
+      return true;
+    }
     if (card.format === 'QR') {
       await loadScript('/vendor/qrcode.js');
       const qr = window.qrcode(0, 'M');
@@ -3301,7 +3315,7 @@
   // ==================================================================
   const CARD_COLORS = ['#121318', '#2F5BFF', '#E8590C', '#D6336C', '#2F9E44', '#7048E8', '#C77700', '#1C7ED6'];
   const CARD_FORMATS = [
-    ['CODE128', 'Code 128'], ['EAN13', 'EAN-13'], ['QR', 'QR'], ['EAN8', 'EAN-8'], ['UPC', 'UPC-A'], ['CODE39', 'Code 39'], ['ITF', 'ITF'], ['NONE', tr('card_format_none')],
+    ['CODE128', 'Code 128'], ['EAN13', 'EAN-13'], ['QR', 'QR'], ['EAN8', 'EAN-8'], ['UPC', 'UPC-A'], ['CODE39', 'Code 39'], ['ITF', 'ITF'], ['AZTEC', 'Aztec'], ['PDF417', 'PDF417'], ['DATAMATRIX', 'Data Matrix'], ['NONE', tr('card_format_none')],
   ];
   // Loghi dei negozi (public/brands, licenza in LICENZA.txt): si mostrano
   // senza modifiche, solo per riconoscere la tessera del negozio.
@@ -3347,7 +3361,9 @@
         <div class="seg seg-form" role="radiogroup">
           <button type="button" data-kind="fedelta">${esc(tr('card_kind_loyalty'))}</button>
           <button type="button" data-kind="regalo">${esc(tr('card_kind_gift'))}</button>
+          <button type="button" data-kind="volo">${esc(tr('card_kind_flight'))}</button>
         </div>
+        <div data-flight class="form-row"><button type="button" class="btn btn-primary" data-scan-flight style="width:100%">${phIcon('camera', 18)}${esc(tr('card_flight_scan'))}</button></div>
         <div class="form-row brand-row"><label>${esc(tr('card_field_name'))}</label>
           <div class="brand-input"><img class="brand-chosen hidden" alt="" /><input type="text" name="name" required autocomplete="off" /><button type="button" class="icon-btn brand-clear hidden" aria-label="${esc(tr('card_brand_remove'))}">${phIcon('x', 16)}</button></div>
           <div class="brand-suggest hidden" role="listbox"></div>
@@ -3363,6 +3379,10 @@
             <div class="form-row" style="flex:1"><label>${esc(tr('card_field_expiry'))}</label><input type="date" name="expiry_date" /></div>
           </div>
           <div class="form-row"><label>${esc(tr('card_field_pin'))}${existing && existing.hasPin ? esc(tr('leave_blank_m')) : ''}</label><input type="text" name="pin" inputmode="numeric" autocomplete="off" /></div>
+        </div>
+        <div data-flight>
+          <div class="form-row"><label>${esc(tr('card_flight_date'))}</label><input type="date" name="flight_date" /></div>
+          <div class="form-row"><label>${esc(tr('card_flight_passenger'))}</label><input type="text" name="holder" autocomplete="off" /></div>
         </div>
         <div class="form-row"><label>${esc(tr('card_field_color'))}</label><div class="swatches">${CARD_COLORS.map((c) => `<button type="button" class="swatch" data-color="${c}" style="background:${c}" aria-label="${c}"></button>`).join('')}</div></div>
         <div class="form-row"><label>${esc(tr('field_notes'))}</label><textarea name="notes" rows="2"></textarea></div>
@@ -3407,6 +3427,18 @@
     const syncKind = () => {
       form.querySelectorAll('[data-kind]').forEach((b) => b.classList.toggle('on', b.dataset.kind === kind));
       form.querySelector('[data-gift]').classList.toggle('hidden', kind !== 'regalo');
+      form.querySelectorAll('[data-flight]').forEach((x) => x.classList.toggle('hidden', kind !== 'volo'));
+    };
+    // Carta d'imbarco letta: nome (tratta e volo), data dell'ultimo volo, passeggero.
+    const applyBoardingPass = (text) => {
+      const bp = window.MementoBCBP && window.MementoBCBP.parse(text);
+      if (!bp) return false;
+      kind = 'volo'; syncKind();
+      if (brand) { brand = ''; syncBrand(); }
+      form.name.value = bp.title;
+      if (bp.lastDate) form.flight_date.value = bp.lastDate;
+      form.holder.value = bp.passenger;
+      return true;
     };
     const syncColor = () => form.querySelectorAll('.swatch').forEach((b) => b.classList.toggle('on', b.dataset.color === color));
     form.querySelectorAll('[data-kind]').forEach((b) => b.addEventListener('click', () => { kind = b.dataset.kind; syncKind(); }));
@@ -3419,6 +3451,17 @@
       if (!result) return;
       form.number.value = result.text;
       form.format.value = result.format;
+      applyBoardingPass(result.text);
+    });
+    form.querySelector('[data-scan-flight]').addEventListener('click', async () => {
+      const backdrop = form.closest('.modal-backdrop');
+      if (backdrop) backdrop.remove();
+      const result = await scanCode();
+      if (backdrop) { document.body.appendChild(backdrop); activeModal = backdrop; }
+      if (!result) return;
+      form.number.value = result.text;
+      form.format.value = result.format;
+      if (!applyBoardingPass(result.text)) toast(tr('card_flight_not_bcbp'));
     });
     if (existing) {
       form.name.value = existing.name;
@@ -3427,6 +3470,8 @@
       form.balance.value = existing.balance == null ? '' : String(existing.balance).replace('.', ',');
       form.expiry_date.value = existing.expiry_date ? existing.expiry_date.slice(0, 10) : '';
       form.notes.value = existing.notes || '';
+      form.holder.value = existing.holder || '';
+      if (existing.kind === 'volo' && existing.expiry_date) form.flight_date.value = existing.expiry_date.slice(0, 10);
     }
     syncKind(); syncColor(); syncBrand();
     form.collect = () => {
@@ -3435,6 +3480,10 @@
         body.balance = form.balance.value.trim();
         body.expiry_date = form.expiry_date.value || null;
         if (form.pin.value.trim()) body.pin = form.pin.value.trim();
+      }
+      if (kind === 'volo') {
+        body.expiry_date = form.flight_date.value || null;
+        body.holder = form.holder.value.trim();
       }
       return body;
     };
@@ -3600,6 +3649,17 @@
           pinRow.querySelector('.vd-acts').appendChild(eye);
         }
       }
+      if (card.kind === 'volo') {
+        const bp = window.MementoBCBP && window.MementoBCBP.parse(card.number);
+        if (card.holder || bp) fact(tr('card_flight_passenger'), card.holder || bp.passenger);
+        if (card.expiry_date) fact(tr('card_flight_date'), `${card.expiry_date.slice(0, 10).split('-').reverse().join('/')} · ${relativeDayLabel(calendarDaysFromToday(card.expiry_date))}`);
+        if (bp) {
+          bp.legs.forEach((l) => {
+            fact(`${tr('card_flight_flight')} ${l.carrier} ${l.flight}`, [`${l.from} → ${l.to}`, l.date ? l.date.split('-').reverse().slice(0, 2).join('/') : '', l.seat ? `${tr('card_flight_seat')} ${l.seat}` : ''].filter(Boolean).join(' · '));
+          });
+          if (bp.legs[0].pnr) fact(tr('card_flight_pnr'), bp.legs[0].pnr, 'mono');
+        }
+      }
       const notesText = page.querySelector('.card-notes-text');
       notesText.textContent = card.notes || '';
 
@@ -3716,11 +3776,13 @@
     });
     // Le fissate restano nel loro gruppo, in cima e con la puntina.
     const pins = pinnedIds();
-    const groups = [['fedelta', tr('card_kind_loyalty_pl')], ['regalo', tr('card_kind_gift_pl')]];
+    const groups = [['volo', tr('card_kind_flight_pl')], ['fedelta', tr('card_kind_loyalty_pl')], ['regalo', tr('card_kind_gift_pl')]];
     groups.forEach(([kind, title]) => {
       const used = usedMap();
       const pinRank = (c) => { const i = pins.indexOf(String(c.id)); return i < 0 ? Infinity : i; };
-      const list = cards.filter((c) => c.kind === kind).sort((a, b) => (pinRank(a) - pinRank(b)) || (used[b.id] || 0) - (used[a.id] || 0) || a.name.localeCompare(b.name));
+      const list = cards.filter((c) => c.kind === kind).sort((a, b) => kind === 'volo'
+        ? String(a.expiry_date || '').localeCompare(String(b.expiry_date || ''))
+        : (pinRank(a) - pinRank(b)) || (used[b.id] || 0) - (used[a.id] || 0) || a.name.localeCompare(b.name));
       if (!list.length) return;
       root.appendChild(el(`<h3 class="group-title">${esc(title)}</h3>`));
       const grid = el('<div class="wallet-grid"></div>');
@@ -3751,7 +3813,7 @@
         }
         const meta = [];
         if (c.kind === 'regalo' && c.balance != null) meta.push(fmtBalance(c));
-        if (c.kind === 'regalo' && c.expiry_date) meta.push(relativeDayLabel(calendarDaysFromToday(c.expiry_date)));
+        if ((c.kind === 'regalo' || c.kind === 'volo') && c.expiry_date) meta.push(relativeDayLabel(calendarDaysFromToday(c.expiry_date)));
         tile.querySelector('.wc-meta').textContent = meta.join(' · ');
         tile.addEventListener('click', () => openCard(c));
         if (highlightId && String(c.id) === highlightId) tile.classList.add('card-highlight');

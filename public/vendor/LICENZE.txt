@@ -3,6 +3,7 @@ Librerie di terze parti incluse senza modifiche (licenza MIT).
 zxing.min.js  = @zxing/library 0.21.3 (lettura di QR e codici a barre dalla fotocamera)
 jsbarcode.min.js = jsbarcode 3.12.3 (disegno dei codici a barre delle carte)
 qrcode.js = qrcode-generator 2.0.4 (disegno dei QR delle carte)
+bwip-js.min.js = bwip-js 4.11.4 (disegno di Aztec, PDF417 e Data Matrix delle carte d'imbarco)
 peerjs.min.js = peerjs 1.5.5 (collegamento diretto tra telefoni per passare elementi, WebRTC)
 Icone delle sezioni (in public/app.js) = @phosphor-icons/core 2.1.1
 
@@ -322,3 +323,28 @@ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
 LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+===== bwip-js/LICENSE
+bwip-js : Barcode Writer in Pure JavaScript
+
+Copyright (c) 2011-2026 Mark Warren
+
+The MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.

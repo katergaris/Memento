@@ -52,8 +52,8 @@
     'projects.status': ['da_fare', 'in_corso', 'fatto'],
     'accounts.type': ['digitale', 'cartaceo', 'finanziamento'],
     'vault.type': ['password', 'note', 'card', 'code'],
-    'cards.kind': ['fedelta', 'regalo'],
-    'cards.format': ['QR', 'CODE128', 'EAN13', 'EAN8', 'UPC', 'CODE39', 'ITF', 'NONE'],
+    'cards.kind': ['fedelta', 'regalo', 'volo'],
+    'cards.format': ['QR', 'CODE128', 'EAN13', 'EAN8', 'UPC', 'CODE39', 'ITF', 'AZTEC', 'PDF417', 'DATAMATRIX', 'NONE'],
   };
   function pickFields(rec, fields) {
     const out = {};
@@ -647,6 +647,7 @@
         }
         case 'trash': {
           if (!id && method === 'GET') {
+            if (this.expireFlights()) await this.save();
             const items = [];
             Object.entries(TYPE_TABLE).forEach(([type, t]) => {
               this.rows(t).filter((r) => r.deleted_at).forEach((r) => items.push({ type, id: r.id, label: LABEL[type](r), deleted_at: r.deleted_at }));
@@ -702,6 +703,28 @@
     }
 
     live(t) { return this.rows(t).filter((r) => !r.deleted_at); }
+
+    // Carte d'imbarco: nel Cestino il giorno dopo l'ultimo volo, cancellate del
+    // tutto dopo 30 giorni nel Cestino (come server/routes/cards.js). true = cambiato.
+    expireFlights() {
+      const d = new Date();
+      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const limit = sqlNow(new Date(Date.now() - 30 * 86400000));
+      let changed = false;
+      this.rows('cards').filter((c) => c.kind === 'volo').forEach((c) => {
+        if (!c.deleted_at && c.expiry_date && String(c.expiry_date).slice(0, 10) < today) { this.touch(c, { deleted_at: sqlNow() }); changed = true; }
+        else if (c.deleted_at && c.deleted_at < limit) {
+          this.state.tables.cards = this.rows('cards').filter((x) => x !== c);
+          this.state.purged.push({ table: 'cards', id: c.id, at: Date.now() });
+          this.rows('links').filter((l) => l.item_type === 'card' && String(l.item_id) === String(c.id)).forEach((l) => {
+            this.state.tables.links = this.rows('links').filter((x) => x !== l);
+            this.state.purged.push({ table: 'links', id: l.id, at: Date.now() });
+          });
+          changed = true;
+        }
+      });
+      return changed;
+    }
     sorted(t) { return this.live(t).sort((x, y) => ((x._rev || 0) < (y._rev || 0) ? 1 : -1)); }
 
     serDossier(d) {
@@ -768,8 +791,8 @@
     }
 
     cards(method, id, sub, body, h) {
-      const KINDS = ['fedelta', 'regalo'];
-      const FORMATS = ['QR', 'CODE128', 'EAN13', 'EAN8', 'UPC', 'CODE39', 'ITF', 'NONE'];
+      const KINDS = TRANSFER_ENUMS['cards.kind'];
+      const FORMATS = TRANSFER_ENUMS['cards.format'];
       const amount = (raw) => { if (raw === undefined) return undefined; if (raw === null || raw === '') return null; const n = Number(String(raw).replace(',', '.')); return Number.isFinite(n) ? Math.round(n * 100) / 100 : null; };
       const color = (raw) => (/^#[0-9a-fA-F]{6}$/.test(String(raw || '')) ? raw : '');
       const brand = (raw) => (/^[a-z0-9-]{1,60}$/.test(String(raw || '')) ? raw : '');
@@ -780,7 +803,7 @@
         return out;
       };
       const cleanPhotos = (raw) => (Array.isArray(raw) ? raw.filter((p) => typeof p === 'string' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(p) && p.length <= 900000).slice(0, 2) : undefined);
-      if (!id && method === 'GET') return this.sorted('cards').map((r) => ser(r));
+      if (!id && method === 'GET') return this.expireFlights() ? h.mutate(() => this.sorted('cards').map((r) => ser(r))) : this.sorted('cards').map((r) => ser(r));
       if (id && !sub && method === 'GET') return ser(this.find('cards', id) || fail(404, 'Carta non trovata'), true);
       if (!id && method === 'POST') {
         if (!body.name) fail(400, 'Il nome e\' obbligatorio');

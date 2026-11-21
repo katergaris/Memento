@@ -62,3 +62,26 @@ test('carta regalo: saldo, spesa, PIN cifrato', async () => {
     assert.equal((await call(`/${g.id}`, 'PUT', { pin: '-' })).data.hasPin, false);
   });
 });
+
+test('carta d\'imbarco: nel Cestino il giorno dopo il volo, cancellata dopo 30 giorni', async () => {
+  await withServer(async (call) => {
+    const iso = (days) => { const d = new Date(); d.setDate(d.getDate() + days); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+    const domani = (await call('', 'POST', { kind: 'volo', name: 'CTA → FCO · AZ 1754', number: 'M1UTENTE/A', format: 'AZTEC', expiry_date: iso(1), holder: 'A Utente' })).data;
+    assert.equal(domani.kind, 'volo');
+    assert.equal(domani.format, 'AZTEC');
+    assert.equal(domani.holder, 'A Utente');
+    const oggi = (await call('', 'POST', { kind: 'volo', name: 'FCO → CTA', format: 'PDF417', expiry_date: iso(0) })).data;
+    const ieri = (await call('', 'POST', { kind: 'volo', name: 'CTA → MXP', format: 'QR', expiry_date: iso(-1) })).data;
+    const ids = (await call('')).data.map((c) => c.id);
+    assert.ok(ids.includes(domani.id) && ids.includes(oggi.id));
+    assert.ok(!ids.includes(ieri.id));
+    assert.ok(db.prepare('SELECT deleted_at FROM cards WHERE id = ?').get(ieri.id).deleted_at);
+    // nel Cestino da 31 giorni: sparisce del tutto
+    db.prepare("UPDATE cards SET deleted_at = datetime('now', '-31 days') WHERE id = ?").run(ieri.id);
+    await call('');
+    assert.equal(db.prepare('SELECT id FROM cards WHERE id = ?').get(ieri.id), undefined);
+    // le carte regalo scadute non si toccano
+    const regalo = (await call('', 'POST', { kind: 'regalo', name: 'Libreria', expiry_date: iso(-5) })).data;
+    assert.ok((await call('')).data.some((c) => c.id === regalo.id));
+  });
+});
