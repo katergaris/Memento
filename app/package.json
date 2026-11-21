@@ -1,6 +1,6 @@
 {
   "name": "memento-app",
-  "version": "0.13.1",
+  "version": "0.14.0",
   "private": true,
   "description": "App Android di Memento (Capacitor): modalita' collegata al server o dati sul telefono.",
   "scripts": {
