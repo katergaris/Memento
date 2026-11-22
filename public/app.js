@@ -3344,6 +3344,72 @@
     return best;
   }
   const brandSrc = (id) => `/brands/${encodeURIComponent(id)}.png`;
+  // Carte d'imbarco: compagnia, tratta e date dal codice del biglietto (o,
+  // per le carte scritte a mano, dal nome "CTA → BGY · XZ 2825").
+  function flightInfo(card) {
+    const bp = window.MementoBCBP && window.MementoBCBP.parse(card.number);
+    const A = window.MementoAirlines;
+    const name = String(card.name || '');
+    const legs = bp ? bp.legs : [];
+    const m = name.match(/\b([A-Z]{3})\s*(?:→|->|-)\s*([A-Z]{3})\b/);
+    const f = name.match(/\b([A-Z0-9]{2})\s?(\d{1,4})\b/);
+    const from = legs.length ? legs[0].from : (m ? m[1] : '');
+    const to = legs.length ? legs[legs.length - 1].to : (m ? m[2] : '');
+    const carrier = legs.length ? legs[0].carrier : (f ? f[1] : '');
+    const flights = legs.length ? [...new Set(legs.map((l) => `${l.carrier} ${l.flight}`))] : (f ? [`${f[1]} ${f[2]}`] : []);
+    return {
+      bp, legs, from, to, carrier, flights,
+      airline: A ? A.airline(carrier) : null,
+      fromCity: A ? A.city(from) : '',
+      toCity: A ? A.city(to) : '',
+    };
+  }
+  // Logo della compagnia: si scarica una volta da pics.avs.io e resta sul
+  // dispositivo (serve anche in aeroporto senza rete).
+  function airlineLogo(code) {
+    const key = `memento-airline-logo:${code}`;
+    try { const c = localStorage.getItem(key); if (c) return Promise.resolve(c); } catch (_) { /* niente memoria */ }
+    return new Promise((resolve) => {
+      const img = new Image();
+      const timer = setTimeout(() => resolve(null), 8000);
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        clearTimeout(timer);
+        try {
+          const c = document.createElement('canvas');
+          c.width = img.naturalWidth; c.height = img.naturalHeight;
+          c.getContext('2d').drawImage(img, 0, 0);
+          const url = c.toDataURL('image/png');
+          try { localStorage.setItem(key, url); } catch (_) { /* memoria piena */ }
+          resolve(url);
+        } catch (_) { resolve(img.src); }
+      };
+      img.onerror = () => { clearTimeout(timer); resolve(null); };
+      img.src = `https://pics.avs.io/240/80/${encodeURIComponent(code)}.png`;
+    });
+  }
+  // Riquadro bianco con il logo della compagnia (o il nome, finche' il logo
+  // non c'e').
+  function airlineChip(info) {
+    const chip = el('<span class="fl-chip"></span>');
+    const a = info.airline;
+    chip.textContent = a ? a.name : '';
+    if (a) chip.style.color = isLightColor(a.color) ? a.text : a.color;
+    if (!chip.textContent) chip.classList.add('hidden');
+    if (a) airlineLogo(a.code).then((url) => {
+      if (!url) return;
+      const img = el('<img alt="" />');
+      img.alt = a.name;
+      img.onload = () => { chip.textContent = ''; chip.classList.add('has-img'); chip.appendChild(img); };
+      img.src = url;
+    });
+    return chip;
+  }
+  const PLANE_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>';
+  const flightDayLabel = (iso, opts = { weekday: 'long', day: 'numeric', month: 'long' }) => {
+    const [y, mo, d] = String(iso).slice(0, 10).split('-').map(Number);
+    return new Date(y, mo - 1, d).toLocaleDateString(I18N.getLang() === 'en' ? 'en-GB' : 'it-IT', opts);
+  };
   const normName = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
   const cardColor = (c) => c.color || CARD_COLORS[[...String(c.name)].reduce((a, ch) => a + ch.charCodeAt(0), 0) % CARD_COLORS.length];
   // Colore chiaro (es. bianco, giallo): sopra ci va testo scuro.
@@ -3553,11 +3619,14 @@
 
     async function renderCardPage(id) {
       const card = await api(`/cards/${id}`);
-      if (!card.brand) {
+      if (!card.brand && card.kind !== 'volo') {
         const b = brandForName(await loadBrands(), card.name);
         if (b) { card.brand = b.id; if (!card.color) card.color = b.color; }
       }
-      viewTitle.textContent = card.name;
+      const flight = card.kind === 'volo' ? flightInfo(card) : null;
+      const cityTitle = flight && `${flight.fromCity || flight.from} → ${flight.toCity || flight.to}`;
+      // Titolo corto: citta' se ci stanno su una riga, altrimenti i codici.
+      viewTitle.textContent = flight && flight.from && flight.to ? (cityTitle.length <= 20 ? cityTitle : `${flight.from} → ${flight.to}`) : card.name;
       root.innerHTML = '';
       const page = el(`
         <div class="card-page">
@@ -3577,13 +3646,39 @@
           </div>
           <div class="card-facts"></div>
           <p class="card-notes-text"></p>
-          <div class="card-page-foot"><button type="button" class="btn btn-ghost btn-danger btn-sm" data-del>${esc(tr('card_delete'))}</button>${card.brand ? `<p class="brands-note">${esc(tr('cards_brands_note'))}</p>` : ''}</div>
+          <div class="card-page-foot"><button type="button" class="btn btn-ghost btn-danger btn-sm" data-del>${esc(tr('card_delete'))}</button>${card.brand || card.kind === 'volo' ? `<p class="brands-note">${esc(tr('cards_brands_note'))}</p>` : ''}</div>
         </div>
       `);
       root.appendChild(page);
       const top = page.querySelector('.cv-top');
       top.style.background = cardColor(card);
-      if (card.brand) {
+      if (flight) {
+        // Carta d'imbarco: colori della compagnia, logo, tratta grande.
+        const a = flight.airline;
+        const bg = a ? a.color : cardColor(card);
+        top.style.background = bg;
+        top.style.color = a ? a.text : (isLightColor(bg) ? '#121318' : '#fff');
+        top.classList.add('fl-top');
+        if (isLightColor(bg)) top.classList.add('on-light');
+        top.appendChild(airlineChip(flight));
+        if (flight.from && flight.to) {
+          const route = el(`<div class="fl-route"><span class="fl-ap"><b></b><small></small></span><span class="fl-path">${PLANE_SVG}</span><span class="fl-ap fl-ap-to"><b></b><small></small></span></div>`);
+          const [ap1, ap2] = route.querySelectorAll('.fl-ap');
+          ap1.querySelector('b').textContent = flight.from; ap1.querySelector('small').textContent = flight.fromCity;
+          ap2.querySelector('b').textContent = flight.to; ap2.querySelector('small').textContent = flight.toCity;
+          top.appendChild(route);
+        } else {
+          top.appendChild(el(`<span class="cv-name">${esc(card.name)}</span>`));
+        }
+        const leg = flight.legs[0];
+        const day = (leg && leg.date) || (card.expiry_date && card.expiry_date.slice(0, 10));
+        const bits = [flight.flights.join(' · '), day ? flightDayLabel(day, { weekday: 'short', day: 'numeric', month: 'short' }) : '', flight.legs.length === 1 && leg.seat ? `${tr('card_flight_seat')} ${leg.seat}` : ''].filter(Boolean);
+        if (bits.length) {
+          const meta = el('<div class="fl-meta"></div>');
+          bits.forEach((b) => meta.appendChild(el(`<span>${esc(b)}</span>`)));
+          top.appendChild(meta);
+        }
+      } else if (card.brand) {
         const img = el(`<img alt="" />`);
         img.src = brandSrc(card.brand); img.alt = card.name;
         img.addEventListener('error', () => { top.innerHTML = `<span class="cv-name">${esc(card.name)}</span>`; });
@@ -3649,15 +3744,35 @@
           pinRow.querySelector('.vd-acts').appendChild(eye);
         }
       }
-      if (card.kind === 'volo') {
-        const bp = window.MementoBCBP && window.MementoBCBP.parse(card.number);
-        if (card.holder || bp) fact(tr('card_flight_passenger'), card.holder || bp.passenger);
-        if (card.expiry_date) fact(tr('card_flight_date'), `${card.expiry_date.slice(0, 10).split('-').reverse().join('/')} · ${relativeDayLabel(calendarDaysFromToday(card.expiry_date))}`);
-        if (bp) {
-          bp.legs.forEach((l) => {
-            fact(`${tr('card_flight_flight')} ${l.carrier} ${l.flight}`, [`${l.from} → ${l.to}`, l.date ? l.date.split('-').reverse().slice(0, 2).join('/') : '', l.seat ? `${tr('card_flight_seat')} ${l.seat}` : ''].filter(Boolean).join(' · '));
+      if (flight) {
+        // Dati del volo a riquadri: etichetta sopra, valore sotto (le
+        // etichette lunghe non si accavallano piu' al valore).
+        facts.classList.add('fl-facts');
+        const tile = (label, value, cls = '') => {
+          const t = el(`<div class="fl-fact ${cls}"><span class="fl-label"></span><span class="fl-value"></span></div>`);
+          t.querySelector('.fl-label').textContent = label;
+          t.querySelector('.fl-value').textContent = value;
+          facts.appendChild(t);
+          return t;
+        };
+        const { bp, legs } = flight;
+        const passenger = card.holder || (bp && bp.passenger);
+        if (passenger) tile(tr('card_flight_passenger'), passenger, 'wide');
+        const day = (legs[0] && legs[0].date) || (card.expiry_date && card.expiry_date.slice(0, 10));
+        if (day) {
+          const rel = relativeDayLabel(calendarDaysFromToday(day));
+          tile(tr('card_flight_date'), flightDayLabel(day), 'wide').querySelector('.fl-value').appendChild(el(`<em class="fl-rel">${esc(rel)}</em>`));
+        }
+        if (legs.length === 1) {
+          if (legs[0].seat) tile(tr('card_flight_seat'), legs[0].seat, 'big');
+          if (legs[0].pnr) tile(tr('card_flight_pnr'), legs[0].pnr, 'big mono');
+        } else if (legs.length > 1) {
+          legs.forEach((l) => {
+            const A = window.MementoAirlines;
+            const route = `${(A && A.city(l.from)) || l.from} → ${(A && A.city(l.to)) || l.to}`;
+            tile(`${tr('card_flight_flight')} ${l.carrier} ${l.flight}`, [route, l.date ? flightDayLabel(l.date, { day: 'numeric', month: 'short' }) : '', l.seat ? `${tr('card_flight_seat')} ${l.seat}` : ''].filter(Boolean).map((x, i) => (i ? x.replace(/ /g, '\u00a0') : x)).join(' · '), 'wide');
           });
-          if (bp.legs[0].pnr) fact(tr('card_flight_pnr'), bp.legs[0].pnr, 'mono');
+          if (legs[0].pnr) tile(tr('card_flight_pnr'), legs[0].pnr, 'wide mono');
         }
       }
       const notesText = page.querySelector('.card-notes-text');
@@ -3770,7 +3885,7 @@
     // Carte create senza scegliere il suggerimento: logo dal nome, se coincide.
     const brands = await loadBrands();
     cards.forEach((c) => {
-      if (c.brand) return;
+      if (c.brand || c.kind === 'volo') return;
       const b = brandForName(brands, c.name);
       if (b) { c.brand = b.id; if (!c.color) c.color = b.color; }
     });
@@ -3787,6 +3902,25 @@
       root.appendChild(el(`<h3 class="group-title">${esc(title)}</h3>`));
       const grid = el('<div class="wallet-grid"></div>');
       list.forEach((c) => {
+        if (c.kind === 'volo') {
+          // Carta d'imbarco: colori e logo della compagnia, tratta in grande.
+          const info = flightInfo(c);
+          const bg = info.airline ? info.airline.color : cardColor(c);
+          const tile = el(`<button type="button" class="wallet-card fl-tile"><span class="fl-tile-route"></span><span class="wc-meta"></span></button>`);
+          tagSelectable(tile, 'card', c.id, c.name);
+          tile.style.setProperty('--card', bg);
+          tile.style.color = info.airline ? info.airline.text : (isLightColor(bg) ? '#121318' : '#fff');
+          if (isLightColor(bg)) tile.classList.add('on-light');
+          tile.prepend(airlineChip(info));
+          tile.querySelector('.fl-tile-route').textContent = info.from && info.to ? `${info.from} → ${info.to}` : c.name;
+          tile.setAttribute('aria-label', c.name);
+          const meta = [info.flights[0] || '', c.expiry_date ? relativeDayLabel(calendarDaysFromToday(c.expiry_date)) : ''].filter(Boolean);
+          tile.querySelector('.wc-meta').textContent = meta.join(' · ');
+          tile.addEventListener('click', () => openCard(c));
+          if (highlightId && String(c.id) === highlightId) tile.classList.add('card-highlight');
+          grid.appendChild(tile);
+          return;
+        }
         // Come una tessera vera: logo con i margini in alto, nome in basso;
         // testo chiaro o scuro secondo il colore di fondo.
         const tile = el(c.brand
@@ -3821,7 +3955,7 @@
       });
       root.appendChild(grid);
     });
-    if (cards.some((c) => c.brand)) root.appendChild(el(`<p class="brands-note">${esc(tr('cards_brands_note'))}</p>`));
+    if (cards.some((c) => c.brand || c.kind === 'volo')) root.appendChild(el(`<p class="brands-note">${esc(tr('cards_brands_note'))}</p>`));
   };
 
   // ==================================================================
