@@ -3362,6 +3362,8 @@
       airline: A ? A.airline(carrier) : null,
       fromCity: A ? A.city(from) : '',
       toCity: A ? A.city(to) : '',
+      fromAirport: A ? A.airportName(from) : '',
+      toAirport: A ? A.airportName(to) : '',
     };
   }
   // Logo della compagnia: si scarica una volta da pics.avs.io e resta sul
@@ -3662,10 +3664,11 @@
         if (isLightColor(bg)) top.classList.add('on-light');
         top.appendChild(airlineChip(flight));
         if (flight.from && flight.to) {
-          const route = el(`<div class="fl-route"><span class="fl-ap"><b></b><small></small></span><span class="fl-path">${PLANE_SVG}</span><span class="fl-ap fl-ap-to"><b></b><small></small></span></div>`);
+          const route = el(`<div class="fl-route"><span class="fl-ap"><b></b><small></small><i></i></span><span class="fl-path">${PLANE_SVG}</span><span class="fl-ap fl-ap-to"><b></b><small></small><i></i></span></div>`);
+          // Sotto la sigla: citta' e nome dell'aeroporto (CTA = Catania, Fontanarossa).
           const [ap1, ap2] = route.querySelectorAll('.fl-ap');
-          ap1.querySelector('b').textContent = flight.from; ap1.querySelector('small').textContent = flight.fromCity;
-          ap2.querySelector('b').textContent = flight.to; ap2.querySelector('small').textContent = flight.toCity;
+          ap1.querySelector('b').textContent = flight.from; ap1.querySelector('small').textContent = flight.fromCity; ap1.querySelector('i').textContent = flight.fromAirport;
+          ap2.querySelector('b').textContent = flight.to; ap2.querySelector('small').textContent = flight.toCity; ap2.querySelector('i').textContent = flight.toAirport;
           top.appendChild(route);
         } else {
           top.appendChild(el(`<span class="cv-name">${esc(card.name)}</span>`));

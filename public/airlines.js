@@ -3,7 +3,7 @@
 // Compagnia dal codice IATA del volo (BCBP): nome e colori del marchio.
 // Il logo si scarica da pics.avs.io la prima volta (app.js) e resta in
 // memoria sul dispositivo; senza rete si mostra il nome nei colori giusti.
-// Aeroporto dal codice IATA: citta' da mostrare sotto il codice.
+// Aeroporto dal codice IATA: citta' e nome dell'aeroporto sotto il codice.
 (function (root) {
   // codice: [nome, colore di fondo, colore del testo]
   const AIRLINES = {
@@ -69,38 +69,63 @@
     TG: ['Thai Airways', '#4B1E78', '#FFFFFF'],
   };
 
-  // Citta' (nome italiano) per i codici IATA degli aeroporti piu' comuni.
+  // Aeroporto dal codice IATA: [citta' (in italiano), nome dell'aeroporto].
   const AIRPORTS = {
     // Italia
-    CTA: 'Catania', PMO: 'Palermo', TPS: 'Trapani', CIY: 'Comiso', REG: 'Reggio Calabria', SUF: 'Lamezia Terme',
-    CRV: 'Crotone', NAP: 'Napoli', SAL: 'Salerno', BRI: 'Bari', BDS: 'Brindisi', FOG: 'Foggia', PSR: 'Pescara',
-    FCO: 'Roma Fiumicino', CIA: 'Roma Ciampino', FLR: 'Firenze', PSA: 'Pisa', BLQ: 'Bologna', FRL: 'Forlì',
-    RMI: 'Rimini', AOI: 'Ancona', PEG: 'Perugia', VCE: 'Venezia', TSF: 'Treviso', VRN: 'Verona', TRS: 'Trieste',
-    BZO: 'Bolzano', MXP: 'Milano Malpensa', LIN: 'Milano Linate', BGY: 'Bergamo', TRN: 'Torino', CUF: 'Cuneo',
-    GOA: 'Genova', PMF: 'Parma', CAG: 'Cagliari', OLB: 'Olbia', AHO: 'Alghero', LMP: 'Lampedusa', PNL: 'Pantelleria',
+    CTA: ['Catania', 'Fontanarossa'], PMO: ['Palermo', 'Falcone e Borsellino'], TPS: ['Trapani', 'Birgi'],
+    CIY: ['Comiso', 'Pio La Torre'], REG: ['Reggio Calabria', 'Tito Minniti'], SUF: ['Lamezia Terme', 'Aeroporto internazionale'],
+    CRV: ['Crotone', 'Sant\'Anna'], NAP: ['Napoli', 'Capodichino'], SAL: ['Salerno', 'Costa d\'Amalfi'],
+    BRI: ['Bari', 'Karol Wojtyła'], BDS: ['Brindisi', 'Papola Casale'], FOG: ['Foggia', 'Gino Lisa'],
+    PSR: ['Pescara', 'Abruzzo'], FCO: ['Roma', 'Fiumicino'], CIA: ['Roma', 'Ciampino'],
+    FLR: ['Firenze', 'Peretola'], PSA: ['Pisa', 'Galileo Galilei'], BLQ: ['Bologna', 'Guglielmo Marconi'],
+    FRL: ['Forlì', 'Luigi Ridolfi'], RMI: ['Rimini', 'Federico Fellini'], AOI: ['Ancona', 'Falconara'],
+    PEG: ['Perugia', 'San Francesco d\'Assisi'], VCE: ['Venezia', 'Marco Polo'], TSF: ['Treviso', 'Antonio Canova'],
+    VRN: ['Verona', 'Villafranca'], TRS: ['Trieste', 'Ronchi dei Legionari'], BZO: ['Bolzano', 'Aeroporto di Bolzano'],
+    MXP: ['Milano', 'Malpensa'], LIN: ['Milano', 'Linate'], BGY: ['Bergamo', 'Orio al Serio'],
+    TRN: ['Torino', 'Caselle'], CUF: ['Cuneo', 'Levaldigi'], GOA: ['Genova', 'Cristoforo Colombo'],
+    PMF: ['Parma', 'Giuseppe Verdi'], CAG: ['Cagliari', 'Elmas'], OLB: ['Olbia', 'Costa Smeralda'],
+    AHO: ['Alghero', 'Fertilia'], LMP: ['Lampedusa', 'Aeroporto di Lampedusa'], PNL: ['Pantelleria', 'Aeroporto di Pantelleria'],
     // Europa
-    LHR: 'Londra Heathrow', LGW: 'Londra Gatwick', STN: 'Londra Stansted', LTN: 'Londra Luton', LCY: 'Londra City',
-    MAN: 'Manchester', EDI: 'Edimburgo', DUB: 'Dublino', CDG: 'Parigi CDG', ORY: 'Parigi Orly', BVA: 'Parigi Beauvais',
-    NCE: 'Nizza', MRS: 'Marsiglia', LYS: 'Lione', TLS: 'Tolosa', BOD: 'Bordeaux', NTE: 'Nantes',
-    AMS: 'Amsterdam', EIN: 'Eindhoven', BRU: 'Bruxelles', CRL: 'Charleroi', LUX: 'Lussemburgo',
-    FRA: 'Francoforte', HHN: 'Francoforte Hahn', MUC: 'Monaco di Baviera', BER: 'Berlino', HAM: 'Amburgo',
-    DUS: 'Düsseldorf', CGN: 'Colonia', STR: 'Stoccarda', NUE: 'Norimberga', MMX: 'Malmö', ZRH: 'Zurigo',
-    GVA: 'Ginevra', BSL: 'Basilea', VIE: 'Vienna', SZG: 'Salisburgo', PRG: 'Praga', BUD: 'Budapest',
-    WAW: 'Varsavia', WMI: 'Varsavia Modlin', KRK: 'Cracovia', GDN: 'Danzica', OTP: 'Bucarest', CLJ: 'Cluj',
-    SOF: 'Sofia', BEG: 'Belgrado', ZAG: 'Zagabria', SPU: 'Spalato', DBV: 'Dubrovnik', LJU: 'Lubiana',
-    TIA: 'Tirana', SKP: 'Skopje', ATH: 'Atene', SKG: 'Salonicco', HER: 'Heraklion', CFU: 'Corfù', RHO: 'Rodi',
-    JTR: 'Santorini', JMK: 'Mykonos', MLA: 'Malta', LCA: 'Larnaca', PFO: 'Paphos', IST: 'Istanbul',
-    SAW: 'Istanbul Sabiha', AYT: 'Antalya', MAD: 'Madrid', BCN: 'Barcellona', VLC: 'Valencia', AGP: 'Malaga',
-    ALC: 'Alicante', SVQ: 'Siviglia', PMI: 'Palma di Maiorca', IBZ: 'Ibiza', MAH: 'Minorca', BIO: 'Bilbao',
-    TFS: 'Tenerife Sud', TFN: 'Tenerife Nord', LPA: 'Gran Canaria', ACE: 'Lanzarote', FUE: 'Fuerteventura',
-    LIS: 'Lisbona', OPO: 'Porto', FAO: 'Faro', CPH: 'Copenaghen', ARN: 'Stoccolma', OSL: 'Oslo', HEL: 'Helsinki',
-    RIX: 'Riga', VNO: 'Vilnius', TLL: 'Tallinn', KEF: 'Reykjavík',
+    LHR: ['Londra', 'Heathrow'], LGW: ['Londra', 'Gatwick'], STN: ['Londra', 'Stansted'], LTN: ['Londra', 'Luton'],
+    LCY: ['Londra', 'London City'], MAN: ['Manchester', 'Aeroporto di Manchester'], EDI: ['Edimburgo', 'Aeroporto di Edimburgo'],
+    DUB: ['Dublino', 'Aeroporto di Dublino'], CDG: ['Parigi', 'Charles de Gaulle'], ORY: ['Parigi', 'Orly'],
+    BVA: ['Parigi', 'Beauvais-Tillé'], NCE: ['Nizza', 'Costa Azzurra'], MRS: ['Marsiglia', 'Provenza'],
+    LYS: ['Lione', 'Saint-Exupéry'], TLS: ['Tolosa', 'Blagnac'], BOD: ['Bordeaux', 'Mérignac'], NTE: ['Nantes', 'Atlantique'],
+    AMS: ['Amsterdam', 'Schiphol'], EIN: ['Eindhoven', 'Aeroporto di Eindhoven'], BRU: ['Bruxelles', 'Zaventem'],
+    CRL: ['Bruxelles', 'Charleroi'], LUX: ['Lussemburgo', 'Findel'], FRA: ['Francoforte', 'Aeroporto di Francoforte'],
+    HHN: ['Francoforte', 'Hahn'], MUC: ['Monaco di Baviera', 'Franz Josef Strauss'], BER: ['Berlino', 'Willy Brandt'],
+    HAM: ['Amburgo', 'Helmut Schmidt'], DUS: ['Düsseldorf', 'Aeroporto di Düsseldorf'], CGN: ['Colonia', 'Colonia-Bonn'],
+    STR: ['Stoccarda', 'Aeroporto di Stoccarda'], NUE: ['Norimberga', 'Albrecht Dürer'], MMX: ['Malmö', 'Sturup'],
+    ZRH: ['Zurigo', 'Kloten'], GVA: ['Ginevra', 'Cointrin'], BSL: ['Basilea', 'EuroAirport'],
+    VIE: ['Vienna', 'Schwechat'], SZG: ['Salisburgo', 'W. A. Mozart'], PRG: ['Praga', 'Václav Havel'],
+    BUD: ['Budapest', 'Ferenc Liszt'], WAW: ['Varsavia', 'Chopin'], WMI: ['Varsavia', 'Modlin'],
+    KRK: ['Cracovia', 'Giovanni Paolo II'], GDN: ['Danzica', 'Lech Wałęsa'], OTP: ['Bucarest', 'Henri Coandă'],
+    CLJ: ['Cluj-Napoca', 'Avram Iancu'], SOF: ['Sofia', 'Aeroporto di Sofia'], BEG: ['Belgrado', 'Nikola Tesla'],
+    ZAG: ['Zagabria', 'Franjo Tuđman'], SPU: ['Spalato', 'Aeroporto di Spalato'], DBV: ['Dubrovnik', 'Čilipi'],
+    LJU: ['Lubiana', 'Jože Pučnik'], TIA: ['Tirana', 'Madre Teresa'], SKP: ['Skopje', 'Aeroporto internazionale'],
+    ATH: ['Atene', 'Eleftherios Venizelos'], SKG: ['Salonicco', 'Macedonia'], HER: ['Heraklion', 'Nikos Kazantzakis'],
+    CFU: ['Corfù', 'Ioannis Kapodistrias'], RHO: ['Rodi', 'Diagoras'], JTR: ['Santorini', 'Thira'], JMK: ['Mykonos', 'Aeroporto di Mykonos'],
+    MLA: ['Malta', 'Luqa'], LCA: ['Larnaca', 'Aeroporto internazionale'], PFO: ['Paphos', 'Aeroporto internazionale'],
+    IST: ['Istanbul', 'Aeroporto di Istanbul'], SAW: ['Istanbul', 'Sabiha Gökçen'], AYT: ['Antalya', 'Aeroporto di Antalya'],
+    MAD: ['Madrid', 'Barajas'], BCN: ['Barcellona', 'El Prat'], VLC: ['Valencia', 'Manises'],
+    AGP: ['Malaga', 'Costa del Sol'], ALC: ['Alicante', 'Elche'], SVQ: ['Siviglia', 'San Pablo'],
+    PMI: ['Palma di Maiorca', 'Son Sant Joan'], IBZ: ['Ibiza', 'Aeroporto di Ibiza'], MAH: ['Minorca', 'Mahón'],
+    BIO: ['Bilbao', 'Loiu'], TFS: ['Tenerife', 'Tenerife Sud'], TFN: ['Tenerife', 'Tenerife Nord'],
+    LPA: ['Gran Canaria', 'Gando'], ACE: ['Lanzarote', 'César Manrique'], FUE: ['Fuerteventura', 'Aeroporto di Fuerteventura'],
+    LIS: ['Lisbona', 'Humberto Delgado'], OPO: ['Porto', 'Francisco Sá Carneiro'], FAO: ['Faro', 'Aeroporto di Faro'],
+    CPH: ['Copenaghen', 'Kastrup'], ARN: ['Stoccolma', 'Arlanda'], OSL: ['Oslo', 'Gardermoen'], HEL: ['Helsinki', 'Vantaa'],
+    RIX: ['Riga', 'Aeroporto internazionale'], VNO: ['Vilnius', 'Aeroporto internazionale'], TLL: ['Tallinn', 'Lennart Meri'],
+    KEF: ['Reykjavík', 'Keflavík'],
     // Fuori Europa
-    TUN: 'Tunisi', CMN: 'Casablanca', RAK: 'Marrakech', CAI: 'Il Cairo', SSH: 'Sharm el-Sheikh', HRG: 'Hurghada',
-    TLV: 'Tel Aviv', DXB: 'Dubai', AUH: 'Abu Dhabi', DOH: 'Doha', JFK: 'New York JFK', EWR: 'New York Newark',
-    BOS: 'Boston', MIA: 'Miami', ORD: 'Chicago', LAX: 'Los Angeles', SFO: 'San Francisco', YYZ: 'Toronto',
-    YUL: 'Montréal', GRU: 'San Paolo', EZE: 'Buenos Aires', BKK: 'Bangkok', SIN: 'Singapore', HND: 'Tokyo Haneda',
-    NRT: 'Tokyo Narita', PEK: 'Pechino', HKG: 'Hong Kong', DEL: 'Delhi', MLE: 'Malé', ZNZ: 'Zanzibar',
+    TUN: ['Tunisi', 'Cartagine'], CMN: ['Casablanca', 'Mohammed V'], RAK: ['Marrakech', 'Menara'], CAI: ['Il Cairo', 'Aeroporto internazionale'],
+    SSH: ['Sharm el-Sheikh', 'Aeroporto internazionale'], HRG: ['Hurghada', 'Aeroporto internazionale'], TLV: ['Tel Aviv', 'Ben Gurion'],
+    DXB: ['Dubai', 'Aeroporto internazionale'], AUH: ['Abu Dhabi', 'Zayed'], DOH: ['Doha', 'Hamad'],
+    JFK: ['New York', 'John F. Kennedy'], EWR: ['New York', 'Newark Liberty'], BOS: ['Boston', 'Logan'], MIA: ['Miami', 'Aeroporto internazionale'],
+    ORD: ['Chicago', 'O\'Hare'], LAX: ['Los Angeles', 'Aeroporto internazionale'], SFO: ['San Francisco', 'Aeroporto internazionale'],
+    YYZ: ['Toronto', 'Pearson'], YUL: ['Montréal', 'Pierre Elliott Trudeau'], GRU: ['San Paolo', 'Guarulhos'], EZE: ['Buenos Aires', 'Ezeiza'],
+    BKK: ['Bangkok', 'Suvarnabhumi'], SIN: ['Singapore', 'Changi'], HND: ['Tokyo', 'Haneda'], NRT: ['Tokyo', 'Narita'],
+    PEK: ['Pechino', 'Capitale'], HKG: ['Hong Kong', 'Aeroporto internazionale'], DEL: ['Delhi', 'Indira Gandhi'],
+    MLE: ['Malé', 'Velana'], ZNZ: ['Zanzibar', 'Abeid Amani Karume'],
   };
 
   function airline(code) {
@@ -108,9 +133,12 @@
     const a = AIRLINES[c];
     return a ? { code: c, name: a[0], color: a[1], text: a[2] } : null;
   }
-  const city = (code) => AIRPORTS[String(code || '').trim().toUpperCase()] || '';
+  const ap = (code) => AIRPORTS[String(code || '').trim().toUpperCase()] || null;
+  const city = (code) => (ap(code) || [''])[0];
+  // Nome dell'aeroporto; vuoto se e' solo "Aeroporto di <citta'>".
+  const airportName = (code) => { const a = ap(code); return a && !/^Aeroporto di /.test(a[1]) ? a[1] : ''; };
 
-  const api = { airline, city, AIRLINES, AIRPORTS };
+  const api = { airline, city, airportName, AIRLINES, AIRPORTS };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.MementoAirlines = api;
 })(typeof window !== 'undefined' ? window : globalThis);

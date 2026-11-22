@@ -23,3 +23,10 @@ test('citta dal codice dell aeroporto', () => {
   assert.equal(city('bgy'), 'Bergamo');
   assert.equal(city('ZZZ'), '');
 });
+
+test('nome dell aeroporto', () => {
+  const { airportName } = require('../public/airlines');
+  assert.equal(airportName('CTA'), 'Fontanarossa');
+  assert.equal(airportName('MAN'), '');
+  assert.equal(airportName('ZZZ'), '');
+});
